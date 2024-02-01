@@ -1,5 +1,6 @@
 use signature::Signer;
 
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct IdCsr {
     pub pub_key: String,
     pub federation_id: FederationId,
@@ -37,6 +38,7 @@ pub struct FederationId {
     pub tld: String,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct IdCert {
     pub pub_key: String,
     pub federation_id: FederationId,
@@ -46,6 +48,7 @@ pub struct IdCert {
     pub signature: Signature,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct IdCertTBS {
     pub pub_key: String,
     pub federation_id: FederationId,
@@ -80,6 +83,7 @@ impl IdCertTBS {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Signature {
     pub(crate) signature: String,
     pub algorithm: SignatureAlgorithm,
