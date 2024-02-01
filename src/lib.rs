@@ -8,22 +8,24 @@ pub struct IdCsr {
 }
 
 impl IdCsr {
-    pub fn sign(&self, private_key: impl Signer<Signature>) -> IdCert {
-        let id_cert_tbs = IdCertTBS {
+    pub fn to_id_cert_tbs(&self, expiry: u64, serial: &str) -> IdCertTBS {
+        IdCertTBS {
             pub_key: self.pub_key.clone(),
             federation_id: self.federation_id.clone(),
             session_id: self.session_id.clone(),
-            expiry: self.expiry.unwrap_or(0),
-            serial: "".to_string(),
-        };
-        let signature = private_key.sign(&id_cert_tbs.to_bytes());
-        IdCert {
-            pub_key: id_cert_tbs.pub_key,
-            federation_id: id_cert_tbs.federation_id,
-            session_id: id_cert_tbs.session_id,
-            expiry: self.expiry.unwrap_or(0),
-            serial: "".to_string(),
-            signature,
+            expiry,
+            serial: serial.to_string(),
+        }
+    }
+}
+
+impl From<IdCertTBS> for IdCsr {
+    fn from(value: IdCertTBS) -> Self {
+        IdCsr {
+            pub_key: value.pub_key,
+            federation_id: value.federation_id,
+            session_id: value.session_id,
+            expiry: Some(value.expiry),
         }
     }
 }
@@ -63,6 +65,18 @@ impl IdCertTBS {
         bytes.extend_from_slice(&self.expiry.to_be_bytes());
         bytes.extend_from_slice(self.serial.as_bytes());
         bytes.to_vec()
+    }
+
+    pub fn sign(&self, private_key: impl Signer<Signature>) -> IdCert {
+        let signature = private_key.sign(&self.to_bytes());
+        IdCert {
+            pub_key: self.pub_key.clone(),
+            federation_id: self.federation_id.clone(),
+            session_id: self.session_id.clone(),
+            expiry: self.expiry,
+            serial: self.serial.clone(),
+            signature,
+        }
     }
 }
 
