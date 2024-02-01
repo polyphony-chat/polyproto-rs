@@ -9,13 +9,21 @@ pub struct IdCsr {
 
 impl IdCsr {
     pub fn sign(&self, private_key: impl Signer<Signature>) -> IdCert {
-        IdCert {
+        let id_cert_tbs = IdCertTBS {
             pub_key: self.pub_key.clone(),
             federation_id: self.federation_id.clone(),
             session_id: self.session_id.clone(),
-            expiry: self.expiry.unwrap_or(0b1),
-            serial: String::from("wow"),
-            signature: private_key.sign(todo!()),
+            expiry: self.expiry.unwrap_or(0),
+            serial: "".to_string(),
+        };
+        let signature = private_key.sign(&id_cert_tbs.to_bytes());
+        IdCert {
+            pub_key: id_cert_tbs.pub_key,
+            federation_id: id_cert_tbs.federation_id,
+            session_id: id_cert_tbs.session_id,
+            expiry: self.expiry.unwrap_or(0),
+            serial: "".to_string(),
+            signature,
         }
     }
 }
@@ -27,27 +35,24 @@ pub struct FederationId {
     pub tld: String,
 }
 
-#[derive(Clone)]
-pub(crate) struct IdCertTBS {
-    pub(crate) pub_key: String,
-    pub(crate) federation_id: FederationId,
-    pub(crate) session_id: String,
-    pub(crate) expiry: u64,
-    pub(crate) serial: String,
+pub struct IdCert {
+    pub pub_key: String,
+    pub federation_id: FederationId,
+    pub session_id: String,
+    pub expiry: u64,
+    pub serial: String,
+    pub signature: Signature,
+}
+
+pub struct IdCertTBS {
+    pub pub_key: String,
+    pub federation_id: FederationId,
+    pub session_id: String,
+    pub expiry: u64,
+    pub serial: String,
 }
 
 impl IdCertTBS {
-    fn sign(&self, private_key: impl Signer<Signature>) -> IdCert {
-        IdCert {
-            pub_key: self.pub_key.clone(),
-            federation_id: self.federation_id.clone(),
-            session_id: self.session_id.clone(),
-            expiry: self.expiry,
-            serial: self.serial.clone(),
-            signature: private_key.sign(&self.to_bytes()),
-        }
-    }
-
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(self.pub_key.as_bytes());
@@ -57,17 +62,8 @@ impl IdCertTBS {
         bytes.extend_from_slice(self.session_id.as_bytes());
         bytes.extend_from_slice(&self.expiry.to_be_bytes());
         bytes.extend_from_slice(self.serial.as_bytes());
-        bytes
+        bytes.to_vec()
     }
-}
-
-pub struct IdCert {
-    pub pub_key: String,
-    pub federation_id: FederationId,
-    pub session_id: String,
-    pub expiry: u64,
-    pub serial: String,
-    pub signature: Signature,
 }
 
 pub struct Signature {
