@@ -70,28 +70,27 @@ pub struct IdCert {
     pub signature: Signature,
 }
 
-#[allow(non_camel_case_types)]
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
-pub enum Signature {
-    ECDSA_SECP256R1_SHA256(String),
-    ECDSA_SECP384R1_SHA384(String),
-    ECDSA_SECP521R1_SHA512(String),
-    ED25519(String),
-    ED448(String),
+pub struct Signature {
+    pub(crate) signature: String,
+    pub algorithm: SignatureAlgorithm,
 }
 
 impl Signature {
-    pub fn as_string(&self) -> String {
-        match self {
-            Signature::ECDSA_SECP256R1_SHA256(s) => s.clone(),
-            Signature::ECDSA_SECP384R1_SHA384(s) => s.clone(),
-            Signature::ECDSA_SECP521R1_SHA512(s) => s.clone(),
-            Signature::ED25519(s) => s.clone(),
-            Signature::ED448(s) => s.clone(),
-        }
+    pub fn as_bytes(&self) -> &[u8] {
+        self.signature.as_bytes()
     }
 
-    pub fn as_bytes(&self) -> &[u8] {
-        self.as_string().as_bytes()
+    pub fn as_str(&self) -> &str {
+        &self.signature
     }
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+pub enum SignatureAlgorithm {
+    ECDSA_SECP256R1_SHA256,
+    ECDSA_SECP384R1_SHA384,
+    ECDSA_SECP521R1_SHA512,
+    ED25519,
+    ED448,
 }
