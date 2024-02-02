@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 use signature::Signer;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
@@ -101,17 +105,26 @@ impl Signature {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[repr(u8)]
 pub enum SignatureMode {
     Single(SignatureAlgorithm),
     Hybrid(SignatureAlgorithm, SignatureAlgorithm),
 }
 
+impl Default for SignatureMode {
+    fn default() -> Self {
+        SignatureMode::Single(SignatureAlgorithm::ED25519)
+    }
+}
+
 #[allow(non_camel_case_types)]
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Default)]
+#[repr(u8)]
 pub enum SignatureAlgorithm {
     ECDSA_SECP256R1_SHA256,
     ECDSA_SECP384R1_SHA384,
     ECDSA_SECP521R1_SHA512,
+    #[default]
     ED25519,
     ED448,
     RSASSA_PKCS1_v_1_5_SHA256,
