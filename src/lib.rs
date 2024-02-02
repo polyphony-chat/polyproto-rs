@@ -86,7 +86,7 @@ impl IdCertTBS {
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Signature {
     pub(crate) signature: String,
-    pub algorithm: SignatureAlgorithm,
+    pub algorithm: SignatureMode,
 }
 
 impl Signature {
@@ -101,10 +101,32 @@ impl Signature {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+pub enum SignatureMode {
+    Single(SignatureAlgorithm),
+    Hybrid(SignatureAlgorithm, SignatureAlgorithm),
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum SignatureAlgorithm {
     ECDSA_SECP256R1_SHA256,
     ECDSA_SECP384R1_SHA384,
     ECDSA_SECP521R1_SHA512,
     ED25519,
     ED448,
+    RSASSA_PKCS1_v_1_5_SHA256,
+    RSASSA_PKCS1_v_1_5_SHA384,
+    RSASSA_PKCS1_v_1_5_SHA512,
+    RSASSA_PSS_SHA256,
+    RSASSA_PSS_SHA384,
+    RSASSA_PSS_SHA512,
+    ECDSA_BRAINPOOLP256R1_SHA256,
+    ECDSA_BRAINPOOLP384R1_SHA384,
+    ECDSA_BRAINPOOLP512R1_SHA512,
+    CRYSTALS_DILITHIUM2,
+    CRYSTALS_DILITHIUM3,
+    CRYSTALS_DILITHIUM5,
+    CRYSTALS_DILITHIUM2_AES,
+    CRYSTALS_DILITHIUM3_AES,
+    CRYSTALS_DILITHIUM5_AES,
 }
