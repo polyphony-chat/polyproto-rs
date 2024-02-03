@@ -4,7 +4,6 @@
 
 pub mod certificates;
 pub mod error;
-pub mod keys;
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]

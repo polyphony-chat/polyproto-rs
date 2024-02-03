@@ -4,7 +4,6 @@
 
 use signature::Signer;
 
-use crate::keys::Key;
 use crate::{HasSignatureType, SignatureType};
 
 /// A certificate signing request (CSR) for a polyproto identity certificate.
@@ -12,7 +11,8 @@ use crate::{HasSignatureType, SignatureType};
 /// The certificate authority can choose to ignore this field and issue a certificate with a different expiry.
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct IdCsr {
-    pub pub_key: Key,
+    pub pub_key: String,
+    pub pub_key_algorithm: SignatureType,
     pub federation_id: FederationId,
     pub session_id: String,
     pub expiry: Option<u64>,
@@ -24,6 +24,7 @@ impl IdCsr {
     pub fn to_id_cert_tbs(&self, expiry: u64, serial: &str) -> IdCertTBS {
         IdCertTBS {
             pub_key: self.pub_key.clone(),
+            pub_key_algorithm: self.pub_key_algorithm,
             federation_id: self.federation_id.clone(),
             session_id: self.session_id.clone(),
             expiry,
@@ -36,6 +37,7 @@ impl From<IdCertTBS> for IdCsr {
     fn from(value: IdCertTBS) -> Self {
         IdCsr {
             pub_key: value.pub_key,
+            pub_key_algorithm: value.pub_key_algorithm,
             federation_id: value.federation_id,
             session_id: value.session_id,
             expiry: Some(value.expiry),
@@ -56,7 +58,8 @@ pub struct FederationId {
 /// The certificate authority is represented by the `domain` and `tld` fields of the [`federation_id`](FederationId).
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct IdCert {
-    pub pub_key: Key,
+    pub pub_key: String,
+    pub pub_key_algorithm: SignatureType,
     pub federation_id: FederationId,
     pub session_id: String,
     pub expiry: u64,
@@ -79,7 +82,8 @@ pub struct Signature<T: Copy> {
 /// specification's standards.
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct IdCertTBS {
-    pub pub_key: Key,
+    pub pub_key: String,
+    pub pub_key_algorithm: SignatureType,
     pub federation_id: FederationId,
     pub session_id: String,
     pub expiry: u64,
@@ -89,7 +93,8 @@ pub struct IdCertTBS {
 impl IdCertTBS {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = Vec::new();
-        bytes.extend_from_slice(&self.pub_key.to_vec());
+        bytes.extend_from_slice(&self.pub_key.len().to_be_bytes());
+        bytes.extend_from_slice(self.pub_key.as_bytes());
         bytes.extend_from_slice(&self.federation_id.actor_name.len().to_be_bytes());
         bytes.extend_from_slice(self.federation_id.actor_name.as_bytes());
         bytes.extend_from_slice(&self.federation_id.domain.len().to_be_bytes());
@@ -108,15 +113,16 @@ impl IdCertTBS {
         self,
         private_key: &P,
     ) -> Result<IdCert, crate::error::Error> {
-        if private_key.signature_type() != self.pub_key.signature_type {
+        if private_key.signature_type() != self.pub_key_algorithm {
             Err(crate::error::Error::SignatureTypeMismatch(
                 private_key.signature_type(),
-                self.pub_key.signature_type,
+                self.pub_key_algorithm,
             ))?
         }
         let signature = private_key.sign(&self.to_bytes());
         Ok(IdCert {
             pub_key: self.pub_key,
+            pub_key_algorithm: self.pub_key_algorithm,
             federation_id: self.federation_id,
             session_id: self.session_id,
             expiry: self.expiry,
@@ -130,7 +136,6 @@ impl IdCertTBS {
 mod tests {
     use signature::Signer;
 
-    use crate::keys::Key;
     use crate::{HasSignatureType, SignatureType};
 
     use super::{IdCsr, Signature};
@@ -180,10 +185,8 @@ mod tests {
             _algorithm: SignatureType::Single(crate::SignatureAlgorithm::ED25519),
         };
         let csr = IdCsr {
-            pub_key: Key {
-                key: "mykey".to_string(),
-                signature_type: SignatureType::Single(crate::SignatureAlgorithm::ED25519),
-            },
+            pub_key: "my_key".to_string(),
+            pub_key_algorithm: SignatureType::Single(crate::SignatureAlgorithm::ED25519),
             federation_id: super::FederationId {
                 actor_name: "xenia".to_string(),
                 domain: "transperson".to_string(),
@@ -212,33 +215,10 @@ mod tests {
             ),
         };
         let csr = IdCsr {
-            pub_key: Key {
-                key: "mykey".to_string(),
-                signature_type: SignatureType::Single(crate::SignatureAlgorithm::ED25519),
-            },
-            federation_id: super::FederationId {
-                actor_name: "xenia".to_string(),
-                domain: "transperson".to_string(),
-                tld: "rocks".to_string(),
-            },
-            session_id: "34898945754789sdfa".to_string(),
-            expiry: None,
-        };
-
-        let cert_tbs = csr.to_id_cert_tbs(123890890, "0983hf45yncwe84");
-        assert!(cert_tbs.try_sign(&private_key).is_err());
-
-        let private_key = MyKey {
-            _key: "a key".to_string(),
-            _algorithm: SignatureType::Single(
-                crate::SignatureAlgorithm::ED25519,
+            pub_key: "mykey".to_string(),
+            pub_key_algorithm: SignatureType::Single(
+                crate::SignatureAlgorithm::CRYSTALS_DILITHIUM2,
             ),
-        };
-        let csr = IdCsr {
-            pub_key: Key {
-                key: "mykey".to_string(),
-                signature_type: SignatureType::Single(crate::SignatureAlgorithm::ECDSA_BRAINPOOLP256R1_SHA256),
-            },
             federation_id: super::FederationId {
                 actor_name: "xenia".to_string(),
                 domain: "transperson".to_string(),
