@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::SignatureType;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq, Clone, Hash)]
 pub enum Error {
     #[error("Signature type mismatch: {0:?} != {1:?}")]
     SignatureTypeMismatch(SignatureType, SignatureType),
