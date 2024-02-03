@@ -4,6 +4,7 @@
 
 use signature::Signer;
 
+use crate::keys::Key;
 use crate::{HasSignatureType, SignatureType};
 
 /// A certificate signing request (CSR) for a polyproto identity certificate.
