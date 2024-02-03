@@ -6,7 +6,7 @@ pub mod certificates;
 pub mod keys;
 
 #[allow(non_camel_case_types)]
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 #[repr(u8)]
 pub enum SignatureType {
     Single(SignatureAlgorithm),
