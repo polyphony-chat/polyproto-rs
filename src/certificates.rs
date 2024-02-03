@@ -55,7 +55,7 @@ pub struct IdCert {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-pub struct Signature<T> {
+pub struct Signature<T: Copy> {
     pub signature_type: T,
     pub signature: String,
 }
@@ -73,23 +73,28 @@ impl IdCertTBS {
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = Vec::new();
         bytes.extend_from_slice(self.pub_key.as_bytes());
+        bytes.extend_from_slice(&self.federation_id.actor_name.len().to_be_bytes());
         bytes.extend_from_slice(self.federation_id.actor_name.as_bytes());
+        bytes.extend_from_slice(&self.federation_id.domain.len().to_be_bytes());
         bytes.extend_from_slice(self.federation_id.domain.as_bytes());
+        bytes.extend_from_slice(&self.federation_id.tld.len().to_be_bytes());
         bytes.extend_from_slice(self.federation_id.tld.as_bytes());
+        bytes.extend_from_slice(&self.session_id.len().to_be_bytes());
         bytes.extend_from_slice(self.session_id.as_bytes());
         bytes.extend_from_slice(&self.expiry.to_be_bytes());
+        bytes.extend_from_slice(&self.serial.len().to_be_bytes());
         bytes.extend_from_slice(self.serial.as_bytes());
         bytes.to_vec()
     }
 
-    pub fn sign<P: Signer<Signature<SignatureType>>>(&self, private_key: P) -> IdCert {
+    pub fn sign<P: Signer<Signature<SignatureType>>>(self, private_key: P) -> IdCert {
         let signature = private_key.sign(&self.to_bytes());
         IdCert {
-            pub_key: self.pub_key.clone(),
-            federation_id: self.federation_id.clone(),
-            session_id: self.session_id.clone(),
+            pub_key: self.pub_key,
+            federation_id: self.federation_id,
+            session_id: self.session_id,
             expiry: self.expiry,
-            serial: self.serial.clone(),
+            serial: self.serial,
             signature,
         }
     }
