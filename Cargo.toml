@@ -9,3 +9,4 @@ description = "A helper library for the polyproto protocol"
 
 [dependencies]
 signature = "2.2.0"
+thiserror = "1.0.56"
