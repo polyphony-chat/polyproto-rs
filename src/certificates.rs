@@ -87,7 +87,7 @@ pub struct IdCertTBS {
 }
 
 impl IdCertTBS {
-    fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = Vec::new();
         bytes.extend_from_slice(&self.pub_key.to_vec());
         bytes.extend_from_slice(&self.federation_id.actor_name.len().to_be_bytes());
@@ -106,7 +106,7 @@ impl IdCertTBS {
 
     pub fn try_sign<P: Signer<Signature<SignatureType>> + HasSignatureType>(
         self,
-        private_key: P,
+        private_key: &P,
     ) -> Result<IdCert, crate::error::Error> {
         if private_key.signature_type() != self.pub_key.signature_type {
             Err(crate::error::Error::SignatureTypeMismatch(
@@ -123,5 +123,132 @@ impl IdCertTBS {
             serial: self.serial,
             signature,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use signature::Signer;
+
+    use crate::keys::Key;
+    use crate::{HasSignatureType, SignatureType};
+
+    use super::{IdCsr, Signature};
+
+    struct MyKey {
+        _key: String,
+        _algorithm: SignatureType,
+    }
+
+    impl Signer<Signature<SignatureType>> for MyKey {
+        fn try_sign(&self, msg: &[u8]) -> Result<Signature<SignatureType>, signature::Error> {
+            let mut str = String::from_utf8_lossy(msg).to_string();
+            str += " signed";
+            Ok(Signature {
+                signature_type: SignatureType::Single(crate::SignatureAlgorithm::ED25519),
+                signature: str,
+            })
+        }
+    }
+
+    impl HasSignatureType for MyKey {
+        fn signature_type(&self) -> SignatureType {
+            self._algorithm
+        }
+    }
+
+    #[test]
+    fn naive_signing_test() {
+        let msg = "my message,".as_bytes();
+        let key = MyKey {
+            _key: "a key".to_string(),
+            _algorithm: SignatureType::Single(crate::SignatureAlgorithm::ED25519),
+        };
+        assert_eq!(
+            key.sign(msg),
+            Signature {
+                signature_type: SignatureType::Single(crate::SignatureAlgorithm::ED25519),
+                signature: "my message, signed".to_string()
+            }
+        )
+    }
+
+    #[test]
+    fn naive_cert_sign() {
+        let private_key = MyKey {
+            _key: "a key".to_string(),
+            _algorithm: SignatureType::Single(crate::SignatureAlgorithm::ED25519),
+        };
+        let csr = IdCsr {
+            pub_key: Key {
+                key: "mykey".to_string(),
+                signature_type: SignatureType::Single(crate::SignatureAlgorithm::ED25519),
+            },
+            federation_id: super::FederationId {
+                actor_name: "xenia".to_string(),
+                domain: "transperson".to_string(),
+                tld: "rocks".to_string(),
+            },
+            session_id: "34898945754789sdfa".to_string(),
+            expiry: None,
+        };
+
+        let cert_tbs = csr.to_id_cert_tbs(123890890, "0983hf45yncwe84");
+        assert!(cert_tbs.clone().try_sign(&private_key).is_ok());
+        let cert = cert_tbs.try_sign(&private_key).unwrap();
+        assert_eq!(
+            cert.signature.signature_type,
+            SignatureType::Single(crate::SignatureAlgorithm::ED25519)
+        );
+        assert!(cert.signature.signature.contains("signed"));
+    }
+
+    #[test]
+    fn mismatched_key_types() {
+        let private_key = MyKey {
+            _key: "a key".to_string(),
+            _algorithm: SignatureType::Single(
+                crate::SignatureAlgorithm::ECDSA_BRAINPOOLP256R1_SHA256,
+            ),
+        };
+        let csr = IdCsr {
+            pub_key: Key {
+                key: "mykey".to_string(),
+                signature_type: SignatureType::Single(crate::SignatureAlgorithm::ED25519),
+            },
+            federation_id: super::FederationId {
+                actor_name: "xenia".to_string(),
+                domain: "transperson".to_string(),
+                tld: "rocks".to_string(),
+            },
+            session_id: "34898945754789sdfa".to_string(),
+            expiry: None,
+        };
+
+        let cert_tbs = csr.to_id_cert_tbs(123890890, "0983hf45yncwe84");
+        assert!(cert_tbs.try_sign(&private_key).is_err());
+
+        let private_key = MyKey {
+            _key: "a key".to_string(),
+            _algorithm: SignatureType::Single(
+                crate::SignatureAlgorithm::ED25519,
+            ),
+        };
+        let csr = IdCsr {
+            pub_key: Key {
+                key: "mykey".to_string(),
+                signature_type: SignatureType::Single(crate::SignatureAlgorithm::ECDSA_BRAINPOOLP256R1_SHA256),
+            },
+            federation_id: super::FederationId {
+                actor_name: "xenia".to_string(),
+                domain: "transperson".to_string(),
+                tld: "rocks".to_string(),
+            },
+            session_id: "34898945754789sdfa".to_string(),
+            expiry: None,
+        };
+
+        let cert_tbs = csr.to_id_cert_tbs(123890890, "0983hf45yncwe84");
+        assert!(cert_tbs.try_sign(&private_key).is_err());
     }
 }
