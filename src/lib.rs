@@ -33,9 +33,6 @@ pub enum SignatureAlgorithm {
     RSASSA_PSS_SHA256,
     RSASSA_PSS_SHA384,
     RSASSA_PSS_SHA512,
-    ECDSA_BRAINPOOLP256R1_SHA256,
-    ECDSA_BRAINPOOLP384R1_SHA384,
-    ECDSA_BRAINPOOLP512R1_SHA512,
     CRYSTALS_DILITHIUM2,
     CRYSTALS_DILITHIUM3,
     CRYSTALS_DILITHIUM5,
@@ -58,15 +55,6 @@ impl std::fmt::Display for SignatureAlgorithm {
             SignatureAlgorithm::RSASSA_PSS_SHA256 => write!(f, "RSASSA_PSS_SHA256"),
             SignatureAlgorithm::RSASSA_PSS_SHA384 => write!(f, "RSASSA_PSS_SHA384"),
             SignatureAlgorithm::RSASSA_PSS_SHA512 => write!(f, "RSASSA_PSS_SHA512"),
-            SignatureAlgorithm::ECDSA_BRAINPOOLP256R1_SHA256 => {
-                write!(f, "ECDSA_BRAINPOOLP256R1_SHA256")
-            }
-            SignatureAlgorithm::ECDSA_BRAINPOOLP384R1_SHA384 => {
-                write!(f, "ECDSA_BRAINPOOLP384R1_SHA384")
-            }
-            SignatureAlgorithm::ECDSA_BRAINPOOLP512R1_SHA512 => {
-                write!(f, "ECDSA_BRAINPOOLP512R1_SHA512")
-            }
             SignatureAlgorithm::CRYSTALS_DILITHIUM2 => write!(f, "CRYSTALS_DILITHIUM2"),
             SignatureAlgorithm::CRYSTALS_DILITHIUM3 => write!(f, "CRYSTALS_DILITHIUM3"),
             SignatureAlgorithm::CRYSTALS_DILITHIUM5 => write!(f, "CRYSTALS_DILITHIUM5"),

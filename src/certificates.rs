@@ -210,9 +210,7 @@ mod tests {
     fn mismatched_key_types() {
         let private_key = MyKey {
             _key: "a key".to_string(),
-            _algorithm: SignatureType::Single(
-                crate::SignatureAlgorithm::ECDSA_BRAINPOOLP256R1_SHA256,
-            ),
+            _algorithm: SignatureType::Single(crate::SignatureAlgorithm::ECDSA_SECP256R1_SHA256),
         };
         let csr = IdCsr {
             pub_key: "mykey".to_string(),
