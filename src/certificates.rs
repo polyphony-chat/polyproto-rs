@@ -4,7 +4,6 @@
 
 use signature::Signer;
 
-use crate::keys::PublicKey;
 use crate::{HasSignatureType, SignatureType};
 
 /// A certificate signing request (CSR) for a polyproto identity certificate.
@@ -12,7 +11,7 @@ use crate::{HasSignatureType, SignatureType};
 /// The certificate authority can choose to ignore this field and issue a certificate with a different expiry.
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct IdCsr {
-    pub pub_key: PublicKey,
+    pub pub_key: Key,
     pub federation_id: FederationId,
     pub session_id: String,
     pub expiry: Option<u64>,
@@ -56,7 +55,7 @@ pub struct FederationId {
 /// The certificate authority is represented by the `domain` and `tld` fields of the [`federation_id`](FederationId).
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct IdCert {
-    pub pub_key: PublicKey,
+    pub pub_key: Key,
     pub federation_id: FederationId,
     pub session_id: String,
     pub expiry: u64,
@@ -79,17 +78,54 @@ pub struct Signature<T: Copy> {
 /// specification's standards.
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct IdCertTBS {
-    pub pub_key: PublicKey,
+    pub pub_key: Key,
     pub federation_id: FederationId,
     pub session_id: String,
     pub expiry: u64,
     pub serial: String,
 }
 
+/// A cryptographic key struct, containing a key string and metadata about the key's type.
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+pub struct Key {
+    pub key: String,
+    pub signature_type: SignatureType,
+}
+
+impl Key {
+    /// Converts the key to a byte vector. The byte vector is formatted as follows:
+    /// - The length of the key in bytes as a big-endian 32-bit integer
+    /// - The key itself, as a sequence of bytes. Valid UTF-8.
+    /// - A single byte representing the signature type:
+    ///     - `0x00` for a single signature type
+    ///     - `0x01` for a hybrid (dual) signature type
+    /// - If the signature type is single, a single byte representing the signature algorithm
+    /// - If the signature type is hybrid, two bytes representing the signature algorithms
+    pub fn to_vec(&self) -> Vec<u8> {
+        let mut bytes: Vec<u8> = Vec::new();
+        bytes.extend_from_slice(&self.key.len().to_be_bytes());
+        bytes.extend_from_slice(self.key.as_bytes());
+        match self.signature_type {
+            SignatureType::Single(alg) => {
+                // 00000000 xxxxxxxx
+                bytes.push(0);
+                bytes.push(alg as u8);
+            }
+            SignatureType::Hybrid(alg1, alg2) => {
+                // 00000001 xxxxxxxx xxxxxxxx
+                bytes.push(1);
+                bytes.push(alg1 as u8);
+                bytes.push(alg2 as u8);
+            }
+        }
+        bytes
+    }
+}
+
 impl IdCertTBS {
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = Vec::new();
-        bytes.extend_from_slice(self.pub_key.as_bytes());
+        bytes.extend_from_slice(&self.pub_key.to_vec());
         bytes.extend_from_slice(&self.federation_id.actor_name.len().to_be_bytes());
         bytes.extend_from_slice(self.federation_id.actor_name.as_bytes());
         bytes.extend_from_slice(&self.federation_id.domain.len().to_be_bytes());
@@ -101,17 +137,17 @@ impl IdCertTBS {
         bytes.extend_from_slice(&self.expiry.to_be_bytes());
         bytes.extend_from_slice(&self.serial.len().to_be_bytes());
         bytes.extend_from_slice(self.serial.as_bytes());
-        bytes.to_vec()
+        bytes
     }
 
     pub fn try_sign<P: Signer<Signature<SignatureType>> + HasSignatureType>(
         self,
         private_key: P,
     ) -> Result<IdCert, crate::error::Error> {
-        if private_key.signature_type() != self.pub_key.signature_type() {
+        if private_key.signature_type() != self.pub_key.signature_type {
             Err(crate::error::Error::SignatureTypeMismatch(
                 private_key.signature_type(),
-                self.pub_key.signature_type(),
+                self.pub_key.signature_type,
             ))?
         }
         let signature = private_key.sign(&self.to_bytes());
