@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 pub mod certificates;
+pub mod error;
 pub mod keys;
 
 #[allow(non_camel_case_types)]
@@ -11,6 +12,10 @@ pub mod keys;
 pub enum SignatureType {
     Single(SignatureAlgorithm),
     Hybrid(SignatureAlgorithm, SignatureAlgorithm),
+}
+
+pub trait HasSignatureType {
+    fn signature_type(&self) -> SignatureType;
 }
 
 #[allow(non_camel_case_types)]
