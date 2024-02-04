@@ -8,5 +8,3 @@ description = "A helper library for the polyproto protocol"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-signature = "2.2.0"
-thiserror = "1.0.56"
