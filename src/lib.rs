@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::fmt::Debug;
+
 use asn1_rs::{Any, Oid};
 
 /// Represents a signature algorithm usable in X.509-like environments.
@@ -32,10 +34,10 @@ pub trait PrivateKey<T: SignatureAlgorithm> {
     type Signature: Signature<T>;
     /// Returns a shared reference to [`Self::PrivateKey`]
     fn key(&self) -> &Self::PrivateKey;
-    /// Returns a shared reference to [`Self::PrivateKey`]
+    /// Returns an exclusive reference to [`Self::PrivateKey`]
     fn key_mut(&mut self) -> &mut Self::PrivateKey;
     /// The public key corresponding to this private key.
-    fn pubkey(&self) -> Self::PublicKey;
+    fn pubkey(&self) -> &Self::PublicKey;
     /// Creates a [`Signature`] for the given data.
     fn sign(&self, data: &[u8]) -> Self::Signature;
 }
@@ -46,8 +48,10 @@ pub trait PublicKey<T: SignatureAlgorithm> {
     type Signature: Signature<T>;
     /// Returns a shared reference to [`Self::PublicKey`]
     fn key(&self) -> &Self::PublicKey;
-    /// Returns a shared reference to [`Self::PublicKey`]
+    /// Returns an exclusive reference to [`Self::PublicKey`]
     fn key_mut(&mut self) -> &mut Self::PublicKey;
     /// Verify the correctness of a given [`Signature`] for a given piece of data.
-    fn verify_signature(&self, signature: Self::Signature, data: &[u8]) -> bool;
+    ///
+    /// Implementations of this associated method should mitigate against signature malleability
+    fn verify_signature(&self, signature: &Self::Signature, data: &[u8]) -> Result<(), impl Debug>;
 }
