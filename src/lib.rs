@@ -17,8 +17,9 @@ pub trait SignatureAlgorithm {
 
 /// A signature value, generated using a [`SignatureAlgorithm`]
 pub trait Signature<T: SignatureAlgorithm> {
-    /// The signature value in bytes
-    fn signature(&self) -> &[u8];
+    type Signature;
+    /// The signature value
+    fn signature(&self) -> &Self::Signature;
     /// The [`SignatureAlgorithm`] used to create this signature.
     fn algorithm(&self) -> T;
 }
