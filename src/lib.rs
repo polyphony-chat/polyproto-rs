@@ -5,8 +5,8 @@
 use std::fmt::Debug;
 use thiserror::Error;
 
-use asn1_rs::Any;
 use der::asn1::BitString;
+use der::Any;
 use num_bigint::BigUint;
 use spki::{AlgorithmIdentifier, ObjectIdentifier, SubjectPublicKeyInfoOwned};
 use x509_cert::certificate::{Profile, TbsCertificateInner};
@@ -15,7 +15,7 @@ use x509_cert::name::Name;
 use x509_cert::time::Validity;
 
 /// Represents a signature algorithm usable in X.509-like environments.
-pub trait SignatureAlgorithm: From<AlgorithmIdentifier<der::Any>> {
+pub trait SignatureAlgorithm: From<AlgorithmIdentifier<Any>> {
     /// Object ID notation of this signature algorithm
     fn oid(&self) -> ObjectIdentifier;
     /// Parameters for this signature algorithm. The contents of this parameters field will vary
