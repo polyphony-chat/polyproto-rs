@@ -3,10 +3,16 @@ name = "polyproto"
 version = "0.3.1"
 edition = "2021"
 license = "MPL-2.0"
-description = "A helper library for the polyproto protocol"
+description = "Generic rust types and traits to quickly get a polyproto implementation up and running"
+repository = "https://github.com/polyphony-chat/polyproto"
 
 [lib]
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [dependencies]
 asn1-rs = { version = "0.5.2", default-features = false }
+der = "0.7.8"
+num-bigint = { version = "0.4.4", default-features = false }
+spki = "0.7.3"
+thiserror = "1.0.57"
+x509-cert = { version = "0.2.5", default-features = false, features = ["pem"] }
