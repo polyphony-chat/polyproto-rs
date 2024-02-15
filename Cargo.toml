@@ -10,7 +10,6 @@ repository = "https://github.com/polyphony-chat/polyproto"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [dependencies]
-asn1-rs = { version = "0.5.2", default-features = false }
 der = "0.7.8"
 num-bigint = { version = "0.4.4", default-features = false }
 spki = "0.7.3"
