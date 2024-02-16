@@ -15,6 +15,8 @@ use std::fmt::Debug;
 
 use thiserror::Error;
 
+/// Error type covering possible failures when converting a [`x509_cert::TbsCertificate`]
+/// to a [`crate::cert::IdCertTbs`]
 #[derive(Error, Debug, PartialEq)]
 pub enum TbsCertToIdCert {
     #[error("field 'subject_unique_id' was None. Expected: Some(der::asn1::BitString)")]
@@ -25,16 +27,13 @@ pub enum TbsCertToIdCert {
     Signature(der::Error),
 }
 
+/// Error type covering possible failures when converting a [`crate::cert::IdCertTbs`]
+/// to a [`x509_cert::TbsCertificate`]
 #[derive(Error, Debug, PartialEq)]
 pub enum IdCertToTbsCert {
     #[error("Serial number could not be converted")]
     SerialNumber(der::Error),
 }
-
-// DOCUMENTME: Document above things
-// DOCUMENTME: When converting a X509Cert into an ID-Cert, it should at least be documented that this
-//             certificate is not necessarily trusted and that the claims presented in the certificate
-//             need to be verified first.
 
 #[cfg(test)]
 mod test {
