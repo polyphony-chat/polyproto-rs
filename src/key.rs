@@ -24,7 +24,7 @@ pub trait PrivateKey<T: SignatureAlgorithm> {
 pub trait PublicKey<T: SignatureAlgorithm> {
     type PublicKey;
     type Signature: Signature;
-    //TODO type Error?
+    type Error;
     /// Returns a shared reference to [`Self::PublicKey`]
     fn key(&self) -> &Self::PublicKey;
     /// Returns an exclusive reference to [`Self::PublicKey`]
@@ -32,9 +32,6 @@ pub trait PublicKey<T: SignatureAlgorithm> {
     /// Verify the correctness of a given [`Signature`] for a given piece of data.
     ///
     /// Implementations of this associated method should mitigate against signature malleability
-    fn verify_signature(
-        &self,
-        signature: &Self::Signature,
-        data: &[u8],
-    ) -> Result<(), impl std::fmt::Debug>;
+    fn verify_signature(&self, signature: &Self::Signature, data: &[u8])
+        -> Result<(), Self::Error>;
 }
