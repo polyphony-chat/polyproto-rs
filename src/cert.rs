@@ -13,7 +13,8 @@ use x509_cert::time::Validity;
 use crate::signature::{Signature, SignatureAlgorithm};
 use crate::{IdCertToTbsCert, TbsCertToIdCert};
 
-/// A signed polyproto ID-Cert.
+/// A signed polyproto ID-Cert, consisting of the actual certificate, the CA-generated signature and
+/// metadata about that signature.
 ///
 /// ID-Certs are valid subset of X.509 v3 certificates. The limitations are documented in the
 /// polyproto specification.
@@ -24,7 +25,21 @@ pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
     pub signature: S,
 }
 
-/// An unsigned polyproto ID-Cert
+/// An unsigned polyproto ID-Cert.
+///
+/// ID-Certs are generally more restrictive than general-use X.509-certificates, hence why a
+/// conversion between those two types can fail.
+///
+/// ## Compatibility
+///
+/// This crate aims to be compatible with [`x509_cert`], to take advantage of the already existing
+/// typedefs and functionality for creating and verifying X.509 certificates, provided by that
+/// crate.
+///
+/// `IdCertTbs` implements `TryFrom<[TbsCertificateInner]<P>>`, where `TbsCertificateInner` is
+/// [`x509_cert::certificate::TbsCertificateInner`]. This crate also provides an implementation for
+/// `TryFrom<IdCertTbs<T>> for TbsCertificateInner<P>`.
+///
 pub struct IdCertTbs<T: SignatureAlgorithm> {
     /// The certificates' serial number, as issued by the Certificate Authority.
     pub serial_number: Uint,
