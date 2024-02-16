@@ -2,8 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#[deny(missing_docs)]
+
+/// Generic polyproto certificate types and traits.
 pub mod cert;
+/// Generic polyproto public- and private key traits.
 pub mod key;
+/// Generic polyproto signature traits.
 pub mod signature;
 
 use std::fmt::Debug;

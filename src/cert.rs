@@ -13,24 +13,44 @@ use x509_cert::time::Validity;
 use crate::signature::{Signature, SignatureAlgorithm};
 use crate::{IdCertToTbsCert, TbsCertToIdCert};
 
+/// A signed polyproto ID-Cert.
+///
+/// ID-Certs are valid subset of X.509 v3 certificates. The limitations are documented in the
+/// polyproto specification.
 pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
+    /// Inner TBS (To be signed) certificate
     pub tbs_certificate: IdCertTbs<T>,
+    /// Signature for the TBS certificate
     pub signature: S,
 }
 
+/// An unsigned polyproto ID-Cert
 pub struct IdCertTbs<T: SignatureAlgorithm> {
+    /// The certificates' serial number, as issued by the Certificate Authority.
     pub serial_number: Uint,
+    /// The signature algorithm used by the Certificate Authority to sign this certificate.
+    /// Must be equal to `T` in `IdCert<S: Signature, T: SignatureAlgorithm>`.
     pub signature_algorithm: T,
+    /// X.501 name, identifying the issuer of the certificate.
     pub issuer: Name,
+    /// Validity period of this certificate
     pub validity: Validity,
+    /// X.501 name, identifying the subject (actor) of the certificate.
     pub subject: Name,
+    /// Information regarding the subjects' public key.
     pub subject_public_key_info: SubjectPublicKeyInfo<T>,
+    /// [`BitString`] representing the federation ID of the actor, as defined in the polyproto
+    /// specification document.
     pub subject_unique_id: BitString,
+    /// X.509 Extensions matching what is described in the polyproto specification document.
     pub extensions: Extensions,
 }
 
+/// Information regarding a subjects' public key.
 pub struct SubjectPublicKeyInfo<T: SignatureAlgorithm> {
+    /// Properties of the signature algorithm used to create the public key.
     pub algorithm: T,
+    /// The public key, represented as a [`BitString`].
     pub subject_public_key: BitString,
 }
 
