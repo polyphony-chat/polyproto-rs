@@ -18,6 +18,7 @@ use crate::{IdCertToTbsCert, TbsCertToIdCert};
 ///
 /// ID-Certs are valid subset of X.509 v3 certificates. The limitations are documented in the
 /// polyproto specification.
+#[derive(Debug)]
 pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
     /// Inner TBS (To be signed) certificate
     pub tbs_certificate: IdCertTbs<T>,
@@ -39,7 +40,7 @@ pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
 /// `IdCertTbs` implements `TryFrom<[TbsCertificateInner]<P>>`, where `TbsCertificateInner` is
 /// [`x509_cert::certificate::TbsCertificateInner`]. This crate also provides an implementation for
 /// `TryFrom<IdCertTbs<T>> for TbsCertificateInner<P>`.
-///
+#[derive(Debug)]
 pub struct IdCertTbs<T: SignatureAlgorithm> {
     /// The certificates' serial number, as issued by the Certificate Authority.
     pub serial_number: Uint,
@@ -62,6 +63,7 @@ pub struct IdCertTbs<T: SignatureAlgorithm> {
 }
 
 /// Information regarding a subjects' public key.
+#[derive(Debug)]
 pub struct SubjectPublicKeyInfo<T: SignatureAlgorithm> {
     /// Properties of the signature algorithm used to create the public key.
     pub algorithm: T,

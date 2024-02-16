@@ -23,7 +23,14 @@ well-defined yet adaptable Rust types.
 
 */
 
-#[deny(missing_docs)]
+#[warn(
+    missing_docs,
+    missing_debug_implementations,
+    missing_copy_implementations,
+    clippy::unnecessary_mut_passed
+)]
+#[deny(clippy::unwrap_used, clippy::todo, clippy::unimplemented)]
+#[forbid(unsafe_code)]
 
 /// Generic polyproto certificate types and traits.
 pub mod cert;
