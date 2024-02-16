@@ -3,12 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::fmt::Debug;
-use thiserror::Error;
 
-use der::asn1::BitString;
+use der::asn1::{BitString, Uint};
 use der::Any;
-use num_bigint::BigUint;
 use spki::{AlgorithmIdentifier, ObjectIdentifier, SubjectPublicKeyInfoOwned};
+use thiserror::Error;
 use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
 use x509_cert::name::Name;
@@ -71,7 +70,7 @@ pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
 }
 
 pub struct IdCertTbs<T: SignatureAlgorithm> {
-    pub serial_number: BigUint,
+    pub serial_number: Uint,
     pub signature_algorithm: T,
     pub issuer: Name,
     pub validity: Validity,
@@ -96,24 +95,29 @@ impl<T: SignatureAlgorithm> From<SubjectPublicKeyInfoOwned> for SubjectPublicKey
 }
 
 impl<T: SignatureAlgorithm, P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs<T> {
-    type Error = IdCertError;
+    type Error = TbsCertToIdCert;
 
     fn try_from(value: TbsCertificateInner<P>) -> Result<Self, Self::Error> {
         let subject_unique_id = match value.subject_unique_id {
             Some(suid) => suid,
-            None => return Err(IdCertError::SubjectUid),
+            None => return Err(TbsCertToIdCert::SubjectUid),
         };
 
         let extensions = match value.extensions {
             Some(ext) => ext,
-            None => return Err(IdCertError::Extensions),
+            None => return Err(TbsCertToIdCert::Extensions),
         };
 
         let subject_public_key_info =
             SubjectPublicKeyInfo::<T>::from(value.subject_public_key_info);
 
+        let serial_number = match Uint::new(value.serial_number.as_bytes()) {
+            Ok(snum) => snum,
+            Err(e) => return Err(TbsCertToIdCert::Signature(e.to_string())),
+        };
+
         Ok(IdCertTbs {
-            serial_number: BigUint::from_bytes_be(value.serial_number.as_bytes()),
+            serial_number,
             signature_algorithm: value.signature.into(),
             issuer: value.issuer,
             validity: value.validity,
@@ -125,10 +129,70 @@ impl<T: SignatureAlgorithm, P: Profile> TryFrom<TbsCertificateInner<P>> for IdCe
     }
 }
 
+// impl<T: SignatureAlgorithm, P: Profile> TryFrom<IdCertTbs<T>> for TbsCertificateInner<P> {
+//     type Error = IdCertToTbsCert;
+
+//     fn try_from(value: IdCertTbs<T>) -> Result<Self, Self::Error> {
+//         let serial_number = x509_cert::serial_number::SerialNumber::new(value.serial_number.to_b)
+//         Ok(TbsCertificateInner {
+//             version: x509_cert::Version::V3,
+//             serial_number,
+//             signature: todo!(),
+//             issuer: todo!(),
+//             validity: todo!(),
+//             subject: todo!(),
+//             subject_public_key_info: todo!(),
+//             issuer_unique_id: todo!(),
+//             subject_unique_id: todo!(),
+//             extensions: todo!(),
+//         })
+//     }
+// }
+
 #[derive(Error, Debug, PartialEq)]
-pub enum IdCertError {
+pub enum TbsCertToIdCert {
     #[error("field 'subject_unique_id' was None. Expected: Some(der::asn1::BitString)")]
     SubjectUid,
     #[error("field 'extensions' was None. Expected: Some(x509_cert::ext::Extensions)")]
     Extensions,
+    #[error("Supplied integer too long")]
+    Signature(String),
+}
+
+pub enum IdCertToTbsCert {}
+
+// DOCUMENTME: Document above things
+// TODO: Add TryFrom<IdCertTbs<T>> for TbsCertificateInner<P> implementation
+// DOCUMENTME: When converting a X509Cert into an ID-Cert, it should at least be documented that this
+//             certificate is not necessarily trusted and that the claims presented in the certificate
+//             need to be verified first.
+
+#[cfg(test)]
+mod test {
+    use der::asn1::Uint;
+    use x509_cert::certificate::Profile;
+    use x509_cert::serial_number::SerialNumber;
+
+    #[derive(Clone, PartialEq, Eq, Debug)]
+    enum TestProfile {}
+
+    impl Profile for TestProfile {}
+
+    #[test]
+    fn test_convert_serial_number() {
+        let biguint = Uint::new(&[10u8, 240u8]).unwrap();
+        assert_eq!(biguint.as_bytes(), &[10u8, 240u8]);
+        let serial_number: SerialNumber<TestProfile> =
+            SerialNumber::new(biguint.as_bytes()).unwrap();
+        assert_eq!(serial_number.as_bytes(), biguint.as_bytes());
+
+        let biguint = Uint::new(&[240u8, 10u8]).unwrap();
+        assert_eq!(biguint.as_bytes(), &[240u8, 10u8]);
+        let serial_number: SerialNumber<TestProfile> =
+            SerialNumber::new(biguint.as_bytes()).unwrap();
+        assert_eq!(
+            serial_number.as_bytes().strip_prefix(&[0]).unwrap(),
+            biguint.as_bytes()
+        );
+    }
 }
