@@ -26,6 +26,9 @@ pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
     pub signature: S,
 }
 
+// TODO: T, S: SignatureAlgorithm
+// Maybe trait with associated types?
+
 /// An unsigned polyproto ID-Cert.
 ///
 /// ID-Certs are generally more restrictive than general-use X.509-certificates, hence why a
@@ -95,6 +98,10 @@ impl<T: SignatureAlgorithm> From<SubjectPublicKeyInfo<T>> for SubjectPublicKeyIn
 }
 
 // TODO: Check for bounds required by polyproto.
+// - Add ::new() method to IdCertTbs
+// - Add ::sign() method to IdCertTbs, yielding an IdCert
+// - If CA, check for path length etc.
+
 impl<T: SignatureAlgorithm, P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs<T> {
     type Error = TbsCertToIdCert;
 
