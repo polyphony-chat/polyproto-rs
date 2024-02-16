@@ -68,6 +68,11 @@ pub struct IdCertTbs<T: SignatureAlgorithm, K: SignatureAlgorithm> {
     pub extensions: Extensions,
 }
 
+#[derive(Debug)]
+pub struct IdCsr<K: SignatureAlgorithm> {
+    pub valid_until: 890p34q8yup34wet 80y345wt 79045wt 790345t 789345790tpnoidb ; iopjdfiohl dfgbuih sdfbhsdfgeuip;osefgu8u.gyhΩº£€³4 imiok;m34sdiokm45rstdfl;c45ertuiosiohk;45rtdf45retiosdfhkæïüï
+}
+
 /// Information regarding a subjects' public key.
 #[derive(Debug)]
 pub struct SubjectPublicKeyInfo<T: SignatureAlgorithm> {
