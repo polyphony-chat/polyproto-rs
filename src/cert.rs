@@ -18,16 +18,19 @@ use crate::{IdCertToTbsCert, TbsCertToIdCert};
 ///
 /// ID-Certs are valid subset of X.509 v3 certificates. The limitations are documented in the
 /// polyproto specification.
+///
+/// ## Generic Parameters
+///
+/// - **S**: The [`Signature`] and - by extension - [`SignatureAlgorithm`] this certificate was
+///   signed with.
+/// - **T**: The [`SignatureAlgorithm`] of the subjects' public key within the [`IdCertTbs`]
 #[derive(Debug)]
 pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
     /// Inner TBS (To be signed) certificate
-    pub tbs_certificate: IdCertTbs<T>,
+    pub tbs_certificate: IdCertTbs<S::SignatureAlgorithm, T>,
     /// Signature for the TBS certificate
     pub signature: S,
 }
-
-// TODO: T, S: SignatureAlgorithm
-// Maybe trait with associated types?
 
 /// An unsigned polyproto ID-Cert.
 ///
@@ -44,7 +47,7 @@ pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
 /// [`x509_cert::certificate::TbsCertificateInner`]. This crate also provides an implementation for
 /// `TryFrom<IdCertTbs<T>> for TbsCertificateInner<P>`.
 #[derive(Debug)]
-pub struct IdCertTbs<T: SignatureAlgorithm> {
+pub struct IdCertTbs<T: SignatureAlgorithm, K: SignatureAlgorithm> {
     /// The certificates' serial number, as issued by the Certificate Authority.
     pub serial_number: Uint,
     /// The signature algorithm used by the Certificate Authority to sign this certificate.
@@ -57,7 +60,7 @@ pub struct IdCertTbs<T: SignatureAlgorithm> {
     /// X.501 name, identifying the subject (actor) of the certificate.
     pub subject: Name,
     /// Information regarding the subjects' public key.
-    pub subject_public_key_info: SubjectPublicKeyInfo<T>,
+    pub subject_public_key_info: SubjectPublicKeyInfo<K>,
     /// [`BitString`] representing the federation ID of the actor, as defined in the polyproto
     /// specification document.
     pub subject_unique_id: BitString,
@@ -102,7 +105,9 @@ impl<T: SignatureAlgorithm> From<SubjectPublicKeyInfo<T>> for SubjectPublicKeyIn
 // - Add ::sign() method to IdCertTbs, yielding an IdCert
 // - If CA, check for path length etc.
 
-impl<T: SignatureAlgorithm, P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs<T> {
+impl<T: SignatureAlgorithm, K: SignatureAlgorithm, P: Profile> TryFrom<TbsCertificateInner<P>>
+    for IdCertTbs<T, K>
+{
     type Error = TbsCertToIdCert;
 
     fn try_from(value: TbsCertificateInner<P>) -> Result<Self, Self::Error> {
@@ -117,7 +122,7 @@ impl<T: SignatureAlgorithm, P: Profile> TryFrom<TbsCertificateInner<P>> for IdCe
         };
 
         let subject_public_key_info =
-            SubjectPublicKeyInfo::<T>::from(value.subject_public_key_info);
+            SubjectPublicKeyInfo::<K>::from(value.subject_public_key_info);
 
         let serial_number = match Uint::new(value.serial_number.as_bytes()) {
             Ok(snum) => snum,
@@ -137,10 +142,12 @@ impl<T: SignatureAlgorithm, P: Profile> TryFrom<TbsCertificateInner<P>> for IdCe
     }
 }
 
-impl<T: SignatureAlgorithm, P: Profile> TryFrom<IdCertTbs<T>> for TbsCertificateInner<P> {
+impl<T: SignatureAlgorithm, K: SignatureAlgorithm, P: Profile> TryFrom<IdCertTbs<T, K>>
+    for TbsCertificateInner<P>
+{
     type Error = IdCertToTbsCert;
 
-    fn try_from(value: IdCertTbs<T>) -> Result<Self, Self::Error> {
+    fn try_from(value: IdCertTbs<T, K>) -> Result<Self, Self::Error> {
         let serial_number = match SerialNumber::<P>::new(value.serial_number.as_bytes()) {
             Ok(sernum) => sernum,
             Err(e) => return Err(IdCertToTbsCert::SerialNumber(e)),
