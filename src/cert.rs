@@ -94,6 +94,7 @@ impl<T: SignatureAlgorithm> From<SubjectPublicKeyInfo<T>> for SubjectPublicKeyIn
     }
 }
 
+// TODO: Check for bounds required by polyproto.
 impl<T: SignatureAlgorithm, P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs<T> {
     type Error = TbsCertToIdCert;
 
