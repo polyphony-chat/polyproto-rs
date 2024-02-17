@@ -45,7 +45,7 @@ use thiserror::Error;
 
 /// Error type covering possible failures when converting a [x509_cert::TbsCertificate]
 /// to a [crate::cert::IdCertTbs]
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Clone, Copy)]
 pub enum TbsCertToIdCert {
     #[error("field 'subject_unique_id' was None. Expected: Some(der::asn1::BitString)")]
     SubjectUid,
@@ -57,10 +57,23 @@ pub enum TbsCertToIdCert {
 
 /// Error type covering possible failures when converting a [crate::cert::IdCertTbs]
 /// to a [x509_cert::TbsCertificate]
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Clone, Copy)]
 pub enum IdCertToTbsCert {
     #[error("Serial number could not be converted")]
     SerialNumber(der::Error),
+}
+
+/// Represents errors for invalid input in IdCsr or IdCert generation.
+#[derive(Error, Debug, PartialEq, Clone, Copy)]
+pub enum InvalidInput {
+    #[error("The der library has reported the following error with the input")]
+    DerError(der::Error),
+}
+
+impl From<der::Error> for InvalidInput {
+    fn from(value: der::Error) -> Self {
+        Self::DerError(value)
+    }
 }
 
 #[cfg(test)]
