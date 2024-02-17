@@ -1,0 +1,1 @@
+{"rule":"EN_A_VS_AN","sentence":"^\\QCan be exchanged for an \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q by requesting\none from a certificate authority in exchange for this \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q.\\E$"}

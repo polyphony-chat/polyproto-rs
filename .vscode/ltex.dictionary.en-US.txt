@@ -1,2 +1,3 @@
 polyproto
 typedefs
+enum

@@ -90,13 +90,13 @@ pub struct IdCsr<S: Signature> {
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[repr(u8)]
-/// PKCS#10 version. From the PKCS specification document (RFC 2986):
+/// `PKCS#10` version. From the PKCS specification document (RFC 2986):
 /// > version is the version number, for compatibility with future
 /// revisions of this document.  It shall be 0 for this version of
 /// the standard.
 ///
 /// The specification also says:
-/// > version       INTEGER { v1(0) } (v1,...),
+/// > `version       INTEGER { v1(0) } (v1,...),`
 ///
 /// Version "v1" corresponds to enum variant `V1`, which is represented as the `u8`
 /// integer zero (0).
