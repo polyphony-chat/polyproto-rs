@@ -4,7 +4,7 @@
 
 /*!
 
-Generic rust types and traits to quickly get a
+(Generic) Rust types and traits to quickly get a
 [polyproto](https://docs.polyphony.chat/Protocol%20Specifications/core/) implementation up and
 running.
 

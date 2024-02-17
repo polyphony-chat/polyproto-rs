@@ -3,7 +3,7 @@ name = "polyproto"
 version = "0.3.1"
 edition = "2021"
 license = "MPL-2.0"
-description = "Generic rust types and traits to quickly get a polyproto implementation up and running"
+description = "(Generic) Rust types and traits to quickly get a polyproto implementation up and running"
 repository = "https://github.com/polyphony-chat/polyproto"
 
 [lib]
