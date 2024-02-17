@@ -22,6 +22,10 @@ pub trait PrivateKey<T: SignatureAlgorithm>: PartialEq + Eq {
     /// Returns the private key encoded as `ASN.1 DER`, according to the
     /// [`PKCS#8`](https://mbed-tls.readthedocs.io/en/latest/kb/cryptography/asn1-key-structures-in-der-and-pem/#public-key-file-pkcs-8)
     /// standard.
+    ///
+    /// ## Note for implementers:
+    ///
+    /// Verify, that this method returns proper `PKCS#8`-formatted data in all scenarios.
     fn to_der(&self) -> Result<Vec<u8>, Self::Error>;
 }
 
@@ -42,5 +46,9 @@ pub trait PublicKey<T: SignatureAlgorithm>: PartialEq + Eq {
     /// Returns the public key encoded as `ASN.1 DER`, according to the
     /// [`PKCS#8`](https://mbed-tls.readthedocs.io/en/latest/kb/cryptography/asn1-key-structures-in-der-and-pem/#public-key-file-pkcs-8)
     /// standard.
+    ///
+    /// ## Note for implementers:
+    ///
+    /// Verify, that this method returns proper `PKCS#8`-formatted data in all scenarios.
     fn to_der(&self) -> Result<Vec<u8>, Self::Error>;
 }
