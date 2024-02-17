@@ -1,2 +1,6 @@
 /target
 /Cargo.lock
+.vscode
+.idea
+.DS_Store
+.VSCodeCounter
