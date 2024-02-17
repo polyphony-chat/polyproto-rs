@@ -8,7 +8,7 @@ use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
 use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
-use x509_cert::time::Validity;
+use x509_cert::time::{Time, Validity};
 
 use crate::signature::{Signature, SignatureAlgorithm};
 use crate::{IdCertToTbsCert, TbsCertToIdCert};
@@ -24,7 +24,7 @@ use crate::{IdCertToTbsCert, TbsCertToIdCert};
 /// - **S**: The [`Signature`] and - by extension - [`SignatureAlgorithm`] this certificate was
 ///   signed with.
 /// - **T**: The [`SignatureAlgorithm`] of the subjects' public key within the [`IdCertTbs`]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
     /// Inner TBS (To be signed) certificate
     pub tbs_certificate: IdCertTbs<S::SignatureAlgorithm, T>,
@@ -39,14 +39,14 @@ pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
 ///
 /// ## Compatibility
 ///
-/// This crate aims to be compatible with [`x509_cert`], to take advantage of the already existing
-/// typedefs and functionality for creating and verifying X.509 certificates, provided by that
+/// This crate aims to be compatible with [`x509_cert`] in order to utilize the existing
+/// typedefs and functionality for creating and verifying X.509 certificates provided by that
 /// crate.
 ///
 /// `IdCertTbs` implements `TryFrom<[TbsCertificateInner]<P>>`, where `TbsCertificateInner` is
 /// [`x509_cert::certificate::TbsCertificateInner`]. This crate also provides an implementation for
 /// `TryFrom<IdCertTbs<T>> for TbsCertificateInner<P>`.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct IdCertTbs<T: SignatureAlgorithm, K: SignatureAlgorithm> {
     /// The certificates' serial number, as issued by the Certificate Authority.
     pub serial_number: Uint,
@@ -61,20 +61,53 @@ pub struct IdCertTbs<T: SignatureAlgorithm, K: SignatureAlgorithm> {
     pub subject: Name,
     /// Information regarding the subjects' public key.
     pub subject_public_key_info: SubjectPublicKeyInfo<K>,
-    /// [`BitString`] representing the federation ID of the actor, as defined in the polyproto
-    /// specification document.
+    /// The session ID of the client. No two valid certificates may exist for one session ID.
     pub subject_unique_id: BitString,
     /// X.509 Extensions matching what is described in the polyproto specification document.
     pub extensions: Extensions,
 }
 
-#[derive(Debug)]
-pub struct IdCsr<K: SignatureAlgorithm> {
-    pub valid_until: 890p34q8yup34wet 80y345wt 79045wt 790345t 789345790tpnoidb ; iopjdfiohl dfgbuih sdfbhsdfgeuip;osefgu8u.gyhΩº£€³4 imiok;m34sdiokm45rstdfl;c45ertuiosiohk;45rtdf45retiosdfhkæïüï
+/// End-User generated certificate signing request. Can be exchanged for an [`IdCert`] by requesting
+/// one from a certificate authority in exchange for this [`IdCsr`].
+///
+/// A `PKCS#10` Certificate Signing Request
+#[derive(Debug, PartialEq, Eq)]
+pub struct IdCsr<S: Signature> {
+    /// `PKCS#10` version. Default: 0 for `PKCS#10` v1
+    version: PkcsVersion,
+    /// Lets a client restrict the certificates' expiry date further, should they wish to do so.
+    /// This field does not have to be respected by the CA.
+    pub valid_until: Option<Time>,
+    /// Information about the subject (actor).
+    pub subject: Name,
+    /// The subjects' public key and related metadata.
+    pub subject_public_key_info: SubjectPublicKeyInfo<S::SignatureAlgorithm>,
+    /// Signature over the information supplied in this CSR.
+    pub signature: S,
+    /// The session ID of the client. No two valid certificates may exist for one session ID.
+    pub subject_unique_id: BitString,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[repr(u8)]
+/// PKCS#10 version. From the PKCS specification document (RFC 2986):
+/// > version is the version number, for compatibility with future
+/// revisions of this document.  It shall be 0 for this version of
+/// the standard.
+///
+/// The specification also says:
+/// > version       INTEGER { v1(0) } (v1,...),
+///
+/// Version "v1" corresponds to enum variant `V1`, which is represented as the `u8`
+/// integer zero (0).
+pub enum PkcsVersion {
+    #[default]
+    /// Version 1 (0) of the PKCS#10 specification implementation
+    V1 = 0,
 }
 
 /// Information regarding a subjects' public key.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct SubjectPublicKeyInfo<T: SignatureAlgorithm> {
     /// Properties of the signature algorithm used to create the public key.
     pub algorithm: T,
