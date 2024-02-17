@@ -97,7 +97,23 @@ pub struct IdCsr<S: Signature> {
 }
 
 impl<S: Signature> IdCsr<S> {
-    // TODO: Write documentation
+    /// Creates a new polyproto ID-Cert CSR, according to PKCS#10. The CSR is being signed using the
+    /// subjects' supplied signing key ([PrivateKey])
+    ///
+    /// ## Arguments
+    ///
+    /// - **valid_until**: Client-made choice on when this certificate should expire. May be ignored
+    ///                    by the CA.
+    /// - **subject**: A [Name], comprised of:
+    ///   - Common Name: The federation ID of the subject (actor)
+    ///   - Domain Component: Actor home server subdomain, if applicable. May be repeated, depending
+    ///                       on how many subdomain levels there are.
+    ///   - Domain Component: Actor home server domain.
+    ///   - Domain Component: Actor home server tld, if applicable.
+    ///   - Organizational Unit: Optional. May be repeated.
+    /// - **signing_key**: Subject signing key. Will NOT be included in the certificate. Is used to
+    ///                    sign the CSR.
+    /// - **subject_unique_id**: [BitString], subject (actor) session ID.
     pub fn new(
         valid_until: Option<Time>,
         subject: Name,
@@ -132,7 +148,7 @@ impl<S: Signature> IdCsr<S> {
     }
 
     pub fn to_der(&self) {
-        // TODO: Implement this
+        // TODO: Implement this. Requires implementing der::Encode for all types involved.
     }
 }
 
