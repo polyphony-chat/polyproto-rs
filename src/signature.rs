@@ -9,7 +9,7 @@ use spki::{AlgorithmIdentifier, ObjectIdentifier};
 pub trait SignatureAlgorithm: From<AlgorithmIdentifier<Any>> + PartialEq + Eq {
     /// Object ID notation of this signature algorithm
     fn oid(&self) -> ObjectIdentifier;
-    /// Parameters for this signature algorithm. The contents of this parameters field will vary
+    /// Parameters for this signature algorithm. The contents of this parameters' field will vary
     /// according to the algorithm identified.
     fn parameters(&self) -> Option<Any>;
     /// The signature algorithms' common name
