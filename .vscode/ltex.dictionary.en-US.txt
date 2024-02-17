@@ -8,3 +8,6 @@ IdCsr
 TbsCertificateInner
 BitString
 TODO
+TbsCertificate
+PublicKey
+PrivateKey
