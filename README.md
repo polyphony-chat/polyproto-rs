@@ -6,8 +6,8 @@ running.
 
 ## Implementing polyproto
 
-Start by implementing the traits in [`crate::signature`] and [`crate::key`]. You can then
-use the [`crate::cert`] types to build certificates using your implementations of the
+Start by implementing the traits in [crate::signature] and [crate::key]. You can then
+use the [crate::cert] types to build certificates using your implementations of the
 aformentioned traits.
 
 ## Cryptography

@@ -10,8 +10,8 @@ running.
 
 ## Implementing polyproto
 
-Start by implementing the traits in [`crate::signature`] and [`crate::key`]. You can then
-use the [`crate::cert`] types to build certificates using your implementations of the
+Start by implementing the traits in [crate::signature] and [crate::key]. You can then
+use the [crate::cert] types to build certificates using your implementations of the
 aformentioned traits.
 
 ## Cryptography
@@ -43,8 +43,8 @@ use std::fmt::Debug;
 
 use thiserror::Error;
 
-/// Error type covering possible failures when converting a [`x509_cert::TbsCertificate`]
-/// to a [`crate::cert::IdCertTbs`]
+/// Error type covering possible failures when converting a [x509_cert::TbsCertificate]
+/// to a [crate::cert::IdCertTbs]
 #[derive(Error, Debug, PartialEq)]
 pub enum TbsCertToIdCert {
     #[error("field 'subject_unique_id' was None. Expected: Some(der::asn1::BitString)")]
@@ -55,8 +55,8 @@ pub enum TbsCertToIdCert {
     Signature(der::Error),
 }
 
-/// Error type covering possible failures when converting a [`crate::cert::IdCertTbs`]
-/// to a [`x509_cert::TbsCertificate`]
+/// Error type covering possible failures when converting a [crate::cert::IdCertTbs]
+/// to a [x509_cert::TbsCertificate]
 #[derive(Error, Debug, PartialEq)]
 pub enum IdCertToTbsCert {
     #[error("Serial number could not be converted")]

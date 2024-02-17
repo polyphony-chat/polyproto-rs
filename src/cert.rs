@@ -21,9 +21,9 @@ use crate::{IdCertToTbsCert, TbsCertToIdCert};
 ///
 /// ## Generic Parameters
 ///
-/// - **S**: The [`Signature`] and - by extension - [`SignatureAlgorithm`] this certificate was
+/// - **S**: The [Signature] and - by extension - [SignatureAlgorithm] this certificate was
 ///   signed with.
-/// - **T**: The [`SignatureAlgorithm`] of the subjects' public key within the [`IdCertTbs`]
+/// - **T**: The [SignatureAlgorithm] of the subjects' public key within the [IdCertTbs]
 #[derive(Debug, PartialEq, Eq)]
 pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
     /// Inner TBS (To be signed) certificate
@@ -37,14 +37,19 @@ pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
 /// ID-Certs are generally more restrictive than general-use X.509-certificates, hence why a
 /// conversion between those two types can fail.
 ///
+/// There are generally two ways to obtain an [IdCertTbs]:
+/// 1. Creating a self-signed certificate, when the certificate holder is supposed to be a
+///    certificate authority.
+/// 2. Exchanging an [IdCsr] for an [IdCertTbs] as part of an [IdCert]
+///
 /// ## Compatibility
 ///
-/// This crate aims to be compatible with [`x509_cert`] in order to utilize the existing
+/// This crate aims to be compatible with [x509_cert] in order to utilize the existing
 /// typedefs and functionality for creating and verifying X.509 certificates provided by that
 /// crate.
 ///
 /// `IdCertTbs` implements `TryFrom<[TbsCertificateInner]<P>>`, where `TbsCertificateInner` is
-/// [`x509_cert::certificate::TbsCertificateInner`]. This crate also provides an implementation for
+/// [x509_cert::certificate::TbsCertificateInner]. This crate also provides an implementation for
 /// `TryFrom<IdCertTbs<T>> for TbsCertificateInner<P>`.
 #[derive(Debug, PartialEq, Eq)]
 pub struct IdCertTbs<T: SignatureAlgorithm, K: SignatureAlgorithm> {
@@ -67,8 +72,8 @@ pub struct IdCertTbs<T: SignatureAlgorithm, K: SignatureAlgorithm> {
     pub extensions: Extensions,
 }
 
-/// End-User generated certificate signing request. Can be exchanged for an [`IdCert`] by requesting
-/// one from a certificate authority in exchange for this [`IdCsr`].
+/// End-User generated certificate signing request. Can be exchanged for an [IdCert] by requesting
+/// one from a certificate authority in exchange for this [IdCsr].
 ///
 /// A `PKCS#10` Certificate Signing Request
 #[derive(Debug, PartialEq, Eq)]
@@ -111,7 +116,7 @@ pub enum PkcsVersion {
 pub struct SubjectPublicKeyInfo<T: SignatureAlgorithm> {
     /// Properties of the signature algorithm used to create the public key.
     pub algorithm: T,
-    /// The public key, represented as a [`BitString`].
+    /// The public key, represented as a [BitString].
     pub subject_public_key: BitString,
 }
 

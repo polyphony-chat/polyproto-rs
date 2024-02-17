@@ -1,3 +1,10 @@
 polyproto
 typedefs
 enum
+SignatureAlgorithm
+IdCertTbs
+IdCert
+IdCsr
+TbsCertificateInner
+BitString
+TODO

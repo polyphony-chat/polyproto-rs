@@ -16,12 +16,12 @@ pub trait SignatureAlgorithm: From<AlgorithmIdentifier<Any>> + PartialEq + Eq {
     fn name(&self) -> &str;
 }
 
-/// A signature value, generated using a [`SignatureAlgorithm`]
+/// A signature value, generated using a [SignatureAlgorithm]
 pub trait Signature: PartialEq + Eq {
     type SignatureAlgorithm: SignatureAlgorithm;
     type Signature;
     /// The signature value
     fn signature(&self) -> &Self::Signature;
-    /// The [`SignatureAlgorithm`] used to create this signature.
+    /// The [SignatureAlgorithm] used to create this signature.
     fn algorithm(&self) -> &Self::SignatureAlgorithm;
 }
