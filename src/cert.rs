@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use der::asn1::{BitString, Uint};
+use der::{Decode, Encode};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
@@ -10,8 +11,9 @@ use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::{Time, Validity};
 
+use crate::key::{PrivateKey, PublicKey};
 use crate::signature::{Signature, SignatureAlgorithm};
-use crate::{IdCertToTbsCert, TbsCertToIdCert};
+use crate::{IdCertToTbsCert, InvalidInput, TbsCertToIdCert};
 
 /// A signed polyproto ID-Cert, consisting of the actual certificate, the CA-generated signature and
 /// metadata about that signature.
@@ -40,7 +42,8 @@ pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
 /// There are generally two ways to obtain an [IdCertTbs]:
 /// 1. Creating a self-signed certificate, when the certificate holder is supposed to be a
 ///    certificate authority.
-/// 2. Exchanging an [IdCsr] for an [IdCertTbs] as part of an [IdCert]
+/// 2. Exchanging an [IdCsr] for an [IdCertTbs] as part of an [IdCert], when the certificate holder
+///    is supposed to be an actor.
 ///
 /// ## Compatibility
 ///
@@ -91,6 +94,50 @@ pub struct IdCsr<S: Signature> {
     pub signature: S,
     /// The session ID of the client. No two valid certificates may exist for one session ID.
     pub subject_unique_id: BitString,
+}
+
+impl<S: Signature> IdCsr<S> {
+    // TODO: Write documentation
+    pub fn new(
+        valid_until: Option<Time>,
+        subject: Name,
+        signing_key: impl PrivateKey<S>,
+        subject_unique_id: BitString,
+    ) -> Result<IdCsr<S>, InvalidInput> {
+        let version_bytes = Uint::new(&[PkcsVersion::V1 as u8])?.to_der()?;
+        let name_bytes = subject.to_der()?;
+        let pubkey_bytes = signing_key.pubkey().to_der()?;
+        let subj_uid_bytes = subject_unique_id.to_der()?;
+
+        let mut csr_bytes = Vec::new();
+        csr_bytes.extend(version_bytes);
+        csr_bytes.extend(name_bytes);
+        csr_bytes.extend(pubkey_bytes);
+        csr_bytes.extend(subj_uid_bytes);
+
+        let signature = signing_key.sign(&csr_bytes);
+        let subject_public_key_info = SubjectPublicKeyInfo {
+            algorithm: signing_key.algorithm(),
+            subject_public_key: BitString::from_der(&signing_key.pubkey().to_der()?)?,
+        };
+
+        Ok(IdCsr {
+            version: PkcsVersion::V1,
+            valid_until,
+            subject,
+            subject_public_key_info,
+            signature,
+            subject_unique_id,
+        })
+    }
+
+    pub fn to_der(&self) {
+        // TODO: Implement this
+    }
+}
+
+pub fn validate_subject_name(name: &Name) {
+    // TODO: Implement this
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -144,9 +191,9 @@ impl<T: SignatureAlgorithm> From<SubjectPublicKeyInfo<T>> for SubjectPublicKeyIn
 }
 
 // TODO: Check for bounds required by polyproto.
-// - Add ::new() method to IdCertTbs
-// - Add ::sign() method to IdCertTbs, yielding an IdCert
 // - If CA, check for path length etc.
+// TODO: Add ::new() method to IdCertTbs
+// TODO: Add ::sign() method to IdCertTbs, yielding an IdCert
 
 impl<T: SignatureAlgorithm, K: SignatureAlgorithm, P: Profile> TryFrom<TbsCertificateInner<P>>
     for IdCertTbs<T, K>
