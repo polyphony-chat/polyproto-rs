@@ -34,16 +34,6 @@ pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
     pub signature: S,
 }
 
-impl<S: Signature, T: SignatureAlgorithm> Encode for IdCert<S, T> {
-    fn encoded_len(&self) -> der::Result<der::Length> {
-        todo!()
-    }
-
-    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
-        todo!()
-    }
-}
-
 /// An unsigned polyproto ID-Cert.
 ///
 /// ID-Certs are generally more restrictive than general-use X.509-certificates, hence why a
@@ -85,16 +75,6 @@ pub struct IdCertTbs<T: SignatureAlgorithm, K: SignatureAlgorithm> {
     pub extensions: Extensions,
 }
 
-impl<T: SignatureAlgorithm, K: SignatureAlgorithm> Encode for IdCertTbs<T, K> {
-    fn encoded_len(&self) -> der::Result<der::Length> {
-        todo!()
-    }
-
-    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
-        todo!()
-    }
-}
-
 /// End-User generated certificate signing request. Can be exchanged for an [IdCert] by requesting
 /// one from a certificate authority in exchange for this [IdCsr].
 ///
@@ -115,6 +95,8 @@ pub struct IdCsr<S: Signature> {
     /// The session ID of the client. No two valid certificates may exist for one session ID.
     pub subject_unique_id: BitString,
 }
+
+// TODO: IdCsr::to_der()
 
 impl<S: Signature> IdCsr<S> {
     /// Creates a new polyproto ID-Cert CSR, according to PKCS#10. The CSR is being signed using the
@@ -140,14 +122,16 @@ impl<S: Signature> IdCsr<S> {
         signing_key: impl PrivateKey<S>,
         subject_unique_id: BitString,
     ) -> Result<IdCsr<S>, InvalidInput> {
-        let version_bytes = Uint::new(&[PkcsVersion::V1 as u8])?.to_der()?;
-        let name_bytes = subject.to_der()?;
-        let pubkey_bytes = signing_key.pubkey().to_der()?;
-        let subj_uid_bytes = subject_unique_id.to_der()?;
+        let version_bytes = Uint::new(&[PkcsVersion::V1 as u8])?.to_der()?; // 1.1
+        let name_bytes = subject.to_der()?; // 1.2
+        let pubkey_bytes = signing_key.pubkey().to_der()?; // 1.3.1
+        let pubkey_algo_bytes = signing_key.algorithm().oid().to_der()?; // 1.3.2
+        let subj_uid_bytes = subject_unique_id.to_der()?; // 1.4 // TODO: This needs to be an ASN.1 Attribute.
 
         let mut csr_bytes = Vec::new();
         csr_bytes.extend(version_bytes);
         csr_bytes.extend(name_bytes);
+        csr_bytes.extend(pubkey_algo_bytes);
         csr_bytes.extend(pubkey_bytes);
         csr_bytes.extend(subj_uid_bytes);
 
@@ -165,16 +149,6 @@ impl<S: Signature> IdCsr<S> {
             signature,
             subject_unique_id,
         })
-    }
-}
-
-impl<S: Signature> Encode for IdCsr<S> {
-    fn encoded_len(&self) -> der::Result<der::Length> {
-        todo!()
-    }
-
-    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
-        todo!()
     }
 }
 
@@ -200,16 +174,6 @@ pub enum PkcsVersion {
     V1 = 0,
 }
 
-impl Encode for PkcsVersion {
-    fn encoded_len(&self) -> der::Result<der::Length> {
-        todo!()
-    }
-
-    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
-        todo!()
-    }
-}
-
 /// Information regarding a subjects' public key.
 #[derive(Debug, PartialEq, Eq)]
 pub struct SubjectPublicKeyInfo<T: SignatureAlgorithm> {
@@ -217,16 +181,6 @@ pub struct SubjectPublicKeyInfo<T: SignatureAlgorithm> {
     pub algorithm: T,
     /// The public key, represented as a [BitString].
     pub subject_public_key: BitString,
-}
-
-impl<T: SignatureAlgorithm> Encode for SubjectPublicKeyInfo<T> {
-    fn encoded_len(&self) -> der::Result<der::Length> {
-        todo!()
-    }
-
-    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
-        todo!()
-    }
 }
 
 impl<T: SignatureAlgorithm> From<SubjectPublicKeyInfoOwned> for SubjectPublicKeyInfo<T> {
