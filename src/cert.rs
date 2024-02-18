@@ -11,7 +11,7 @@ use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::{Time, Validity};
 
-use crate::key::{PrivateKey, PublicKey};
+use crate::key::PrivateKey;
 use crate::signature::{Signature, SignatureAlgorithm};
 use crate::{IdCertToTbsCert, InvalidInput, TbsCertToIdCert};
 
@@ -32,6 +32,16 @@ pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
     pub tbs_certificate: IdCertTbs<S::SignatureAlgorithm, T>,
     /// Signature for the TBS certificate
     pub signature: S,
+}
+
+impl<S: Signature, T: SignatureAlgorithm> Encode for IdCert<S, T> {
+    fn encoded_len(&self) -> der::Result<der::Length> {
+        todo!()
+    }
+
+    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
+        todo!()
+    }
 }
 
 /// An unsigned polyproto ID-Cert.
@@ -73,6 +83,16 @@ pub struct IdCertTbs<T: SignatureAlgorithm, K: SignatureAlgorithm> {
     pub subject_unique_id: BitString,
     /// X.509 Extensions matching what is described in the polyproto specification document.
     pub extensions: Extensions,
+}
+
+impl<T: SignatureAlgorithm, K: SignatureAlgorithm> Encode for IdCertTbs<T, K> {
+    fn encoded_len(&self) -> der::Result<der::Length> {
+        todo!()
+    }
+
+    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
+        todo!()
+    }
 }
 
 /// End-User generated certificate signing request. Can be exchanged for an [IdCert] by requesting
@@ -146,9 +166,15 @@ impl<S: Signature> IdCsr<S> {
             subject_unique_id,
         })
     }
+}
 
-    pub fn to_der(&self) {
-        // TODO: Implement this. Requires implementing der::Encode for all types involved.
+impl<S: Signature> Encode for IdCsr<S> {
+    fn encoded_len(&self) -> der::Result<der::Length> {
+        todo!()
+    }
+
+    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
+        todo!()
     }
 }
 
@@ -174,6 +200,16 @@ pub enum PkcsVersion {
     V1 = 0,
 }
 
+impl Encode for PkcsVersion {
+    fn encoded_len(&self) -> der::Result<der::Length> {
+        todo!()
+    }
+
+    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
+        todo!()
+    }
+}
+
 /// Information regarding a subjects' public key.
 #[derive(Debug, PartialEq, Eq)]
 pub struct SubjectPublicKeyInfo<T: SignatureAlgorithm> {
@@ -181,6 +217,16 @@ pub struct SubjectPublicKeyInfo<T: SignatureAlgorithm> {
     pub algorithm: T,
     /// The public key, represented as a [BitString].
     pub subject_public_key: BitString,
+}
+
+impl<T: SignatureAlgorithm> Encode for SubjectPublicKeyInfo<T> {
+    fn encoded_len(&self) -> der::Result<der::Length> {
+        todo!()
+    }
+
+    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
+        todo!()
+    }
 }
 
 impl<T: SignatureAlgorithm> From<SubjectPublicKeyInfoOwned> for SubjectPublicKeyInfo<T> {
