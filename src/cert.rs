@@ -76,6 +76,20 @@ pub struct IdCertTbs<T: SignatureAlgorithm, K: SignatureAlgorithm> {
     pub extensions: Extensions,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// A polyproto Certificate Signing Request, compatible with [IETF RFC 2986 "PKCS #10"](https://datatracker.ietf.org/doc/html/rfc2986).
+/// Can be exchanged for an [IdCert] by requesting one from a certificate authority in exchange
+/// for this [IdCsr].
+///
+/// In the context of PKCS #10, this is a `CertificationRequest`:
+///
+/// ```md
+/// CertificationRequest ::= SEQUENCE {
+///     certificationRequestInfo CertificationRequestInfo,
+///     signatureAlgorithm AlgorithmIdentifier{{ SignatureAlgorithms }},
+///     signature          BIT STRING
+/// }
+/// ```
 pub struct IdCsr<S: Signature> {
     inner_csr: IdCsrInner<S>,
     signature_algorithm: S::SignatureAlgorithm,
@@ -88,8 +102,6 @@ impl<S: Signature> IdCsr<S> {
     ///
     /// ## Arguments
     ///
-    /// - **valid_until**: Client-made choice on when this certificate should expire. May be ignored
-    ///                    by the CA.
     /// - **subject**: A [Name], comprised of:
     ///   - Common Name: The federation ID of the subject (actor)
     ///   - Domain Component: Actor home server subdomain, if applicable. May be repeated, depending
@@ -138,11 +150,17 @@ impl<S: Signature> IdCsr<S> {
     }
 }
 
-/// End-User generated certificate signing request. Can be exchanged for an [IdCert] by requesting
-/// one from a certificate authority in exchange for this [IdCsr].
+/// In the context of PKCS #10, this is a `CertificationRequestInfo`:
 ///
-/// A `PKCS#10` Certificate Signing Request
-#[derive(Debug, PartialEq, Eq)]
+/// ```md
+/// CertificationRequestInfo ::= SEQUENCE {
+///     version       INTEGER { v1(0) } (v1,...),
+///     subject       Name,
+///     subjectPKInfo SubjectPublicKeyInfo{{ PKInfoAlgorithms }},
+///     attributes    [0] Attributes{{ CRIAttributes }}
+/// }
+/// ```
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdCsrInner<S: Signature> {
     /// `PKCS#10` version. Default: 0 for `PKCS#10` v1
     version: PkcsVersion,
@@ -155,6 +173,9 @@ pub struct IdCsrInner<S: Signature> {
 }
 
 impl<S: Signature> IdCsrInner<S> {
+    /// Creates a new [IdCsrInner].
+    ///
+    /// The length of `subject_session_id` MUST NOT exceed 32.
     pub fn new(
         subject: Name,
         public_key: &impl PublicKey<S>,
