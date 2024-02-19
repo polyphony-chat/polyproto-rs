@@ -68,6 +68,8 @@ pub enum IdCertToTbsCert {
 pub enum InvalidInput {
     #[error("The der library has reported the following error with the input")]
     DerError(der::Error),
+    #[error("subject_session_id MUST NOT exceed length limit of 32 characters")]
+    SessionIdTooLong,
 }
 
 impl From<der::Error> for InvalidInput {

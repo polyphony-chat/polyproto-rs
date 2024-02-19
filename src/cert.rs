@@ -2,16 +2,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use der::asn1::{BitString, Uint};
-use der::{Decode, Encode};
-use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
+use der::asn1::{Any, BitString, SetOfVec, Uint};
+use der::{Decode, Encode, Length};
+use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SubjectPublicKeyInfoOwned};
+use x509_cert::attr::Attribute;
 use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
 use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::{Time, Validity};
 
-use crate::key::PrivateKey;
+use crate::key::{PrivateKey, PublicKey};
 use crate::signature::{Signature, SignatureAlgorithm};
 use crate::{IdCertToTbsCert, InvalidInput, TbsCertToIdCert};
 
@@ -75,28 +76,11 @@ pub struct IdCertTbs<T: SignatureAlgorithm, K: SignatureAlgorithm> {
     pub extensions: Extensions,
 }
 
-/// End-User generated certificate signing request. Can be exchanged for an [IdCert] by requesting
-/// one from a certificate authority in exchange for this [IdCsr].
-///
-/// A `PKCS#10` Certificate Signing Request
-#[derive(Debug, PartialEq, Eq)]
 pub struct IdCsr<S: Signature> {
-    /// `PKCS#10` version. Default: 0 for `PKCS#10` v1
-    version: PkcsVersion,
-    /// Lets a client restrict the certificates' expiry date further, should they wish to do so.
-    /// This field does not have to be respected by the CA.
-    pub valid_until: Option<Time>,
-    /// Information about the subject (actor).
-    pub subject: Name,
-    /// The subjects' public key and related metadata.
-    pub subject_public_key_info: SubjectPublicKeyInfo<S::SignatureAlgorithm>,
-    /// Signature over the information supplied in this CSR.
-    pub signature: S,
-    /// The session ID of the client. No two valid certificates may exist for one session ID.
-    pub subject_unique_id: BitString,
+    inner_csr: IdCsrInner<S>,
+    signature_algorithm: S::SignatureAlgorithm,
+    signature: S,
 }
-
-// TODO: IdCsr::to_der()
 
 impl<S: Signature> IdCsr<S> {
     /// Creates a new polyproto ID-Cert CSR, according to PKCS#10. The CSR is being signed using the
@@ -115,25 +99,30 @@ impl<S: Signature> IdCsr<S> {
     ///   - Organizational Unit: Optional. May be repeated.
     /// - **signing_key**: Subject signing key. Will NOT be included in the certificate. Is used to
     ///                    sign the CSR.
-    /// - **subject_unique_id**: [BitString], subject (actor) session ID.
+    /// - **subject_unique_id**: [Uint], subject (actor) session ID. MUST NOT exceed 32 characters
+    ///                          in length.
     pub fn new(
-        valid_until: Option<Time>,
         subject: Name,
         signing_key: impl PrivateKey<S>,
-        subject_unique_id: BitString,
+        subject_session_id: Uint,
     ) -> Result<IdCsr<S>, InvalidInput> {
+        let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey(), subject_session_id)?;
+
+        let thing = der::asn1::SequenceOf { inner: todo!() };
+
+        // Turn input into DER Vecs
         let version_bytes = Uint::new(&[PkcsVersion::V1 as u8])?.to_der()?; // 1.1
         let name_bytes = subject.to_der()?; // 1.2
         let pubkey_bytes = signing_key.pubkey().to_der()?; // 1.3.1
         let pubkey_algo_bytes = signing_key.algorithm().oid().to_der()?; // 1.3.2
-        let subj_uid_bytes = subject_unique_id.to_der()?; // 1.4 // TODO: This needs to be an ASN.1 Attribute.
 
+        // Move DER Vecs into one big vector for signing
         let mut csr_bytes = Vec::new();
         csr_bytes.extend(version_bytes);
         csr_bytes.extend(name_bytes);
         csr_bytes.extend(pubkey_algo_bytes);
         csr_bytes.extend(pubkey_bytes);
-        csr_bytes.extend(subj_uid_bytes);
+        csr_bytes.extend(session_id_attribute.to_der()?);
 
         let signature = signing_key.sign(&csr_bytes);
         let subject_public_key_info = SubjectPublicKeyInfo {
@@ -141,13 +130,57 @@ impl<S: Signature> IdCsr<S> {
             subject_public_key: BitString::from_der(&signing_key.pubkey().to_der()?)?,
         };
 
-        Ok(IdCsr {
+        todo!()
+    }
+}
+
+/// End-User generated certificate signing request. Can be exchanged for an [IdCert] by requesting
+/// one from a certificate authority in exchange for this [IdCsr].
+///
+/// A `PKCS#10` Certificate Signing Request
+#[derive(Debug, PartialEq, Eq)]
+pub struct IdCsrInner<S: Signature> {
+    /// `PKCS#10` version. Default: 0 for `PKCS#10` v1
+    version: PkcsVersion,
+    /// Information about the subject (actor).
+    pub subject: Name,
+    /// The subjects' public key and related metadata.
+    pub subject_public_key_info: SubjectPublicKeyInfo<S::SignatureAlgorithm>,
+    /// The session ID of the client. No two valid certificates may exist for one session ID.
+    pub subject_unique_id: Uint,
+}
+
+// TODO: IdCsr::to_der()
+
+impl<S: Signature> IdCsrInner<S> {
+    pub fn new(
+        subject: Name,
+        public_key: &impl PublicKey<S>,
+        subject_session_id: Uint,
+    ) -> Result<IdCsrInner<S>, InvalidInput> {
+        // Validate session_id constraints and create session ID [Attribute] from input
+        // TODO: Make SessionID own struct?
+        if subject_session_id.len() > Length::new(32) {
+            return Err(InvalidInput::SessionIdTooLong);
+        }
+        let mut set_of_vec = SetOfVec::new();
+        let any = Any::from_der(&subject_session_id.to_der()?)?; // 1.4
+        set_of_vec.insert(any)?;
+        let session_id_attribute = Attribute {
+            oid: ObjectIdentifier::new("1.3.6.1.4.1.987654321.1.1").expect("The object identifier specified is not in correct OID notation. Please file a bug report under https://github.com/polyphony-chat/polyproto"),
+            values: set_of_vec
+        };
+
+        let subject_public_key_info = SubjectPublicKeyInfo {
+            algorithm: public_key.algorithm(),
+            subject_public_key: BitString::from_der(&public_key.to_der()?)?,
+        };
+
+        Ok(IdCsrInner {
             version: PkcsVersion::V1,
-            valid_until,
             subject,
             subject_public_key_info,
-            signature,
-            subject_unique_id,
+            subject_unique_id: subject_session_id,
         })
     }
 }
@@ -277,4 +310,9 @@ impl<T: SignatureAlgorithm, K: SignatureAlgorithm, P: Profile> TryFrom<IdCertTbs
             extensions: Some(value.extensions),
         })
     }
+}
+
+#[cfg(test)]
+mod test {
+    fn session_id_longer_than_32() {}
 }
