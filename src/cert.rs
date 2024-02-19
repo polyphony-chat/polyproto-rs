@@ -71,7 +71,7 @@ pub struct IdCertTbs<T: SignatureAlgorithm, K: SignatureAlgorithm> {
     /// Information regarding the subjects' public key.
     pub subject_public_key_info: SubjectPublicKeyInfo<K>,
     /// The session ID of the client. No two valid certificates may exist for one session ID.
-    pub subject_unique_id: BitString,
+    pub subject_session_id: BitString,
     /// X.509 Extensions matching what is described in the polyproto specification document.
     pub extensions: Extensions,
 }
@@ -125,7 +125,7 @@ impl<S: Signature> IdCsr<S> {
         let spki_bytes =
             SubjectPublicKeyInfoOwned::from(inner_csr.subject_public_key_info.clone()).to_der()?;
         let mut set_of_vec = SetOfVec::new();
-        let any = Any::from_der(&inner_csr.subject_unique_id.to_der()?)?; // 1.4
+        let any = Any::from_der(&inner_csr.subject_session_id.to_der()?)?; // 1.4
         set_of_vec.insert(any)?;
         let session_id_attribute = Attribute {
                 oid: ObjectIdentifier::new("1.3.6.1.4.1.987654321.1.1").expect("The object identifier specified is not in correct OID notation. Please file a bug report under https://github.com/polyphony-chat/polyproto"),
@@ -169,7 +169,7 @@ pub struct IdCsrInner<S: Signature> {
     /// The subjects' public key and related metadata.
     pub subject_public_key_info: SubjectPublicKeyInfo<S::SignatureAlgorithm>,
     /// The session ID of the client. No two valid certificates may exist for one session ID.
-    pub subject_unique_id: Uint,
+    pub subject_session_id: Uint,
 }
 
 impl<S: Signature> IdCsrInner<S> {
@@ -196,7 +196,7 @@ impl<S: Signature> IdCsrInner<S> {
             version: PkcsVersion::V1,
             subject,
             subject_public_key_info,
-            subject_unique_id: subject_session_id,
+            subject_session_id,
         })
     }
 }
@@ -291,7 +291,7 @@ impl<T: SignatureAlgorithm, K: SignatureAlgorithm, P: Profile> TryFrom<TbsCertif
             validity: value.validity,
             subject: value.subject,
             subject_public_key_info,
-            subject_unique_id,
+            subject_session_id: subject_unique_id,
             extensions,
         })
     }
@@ -322,7 +322,7 @@ impl<T: SignatureAlgorithm, K: SignatureAlgorithm, P: Profile> TryFrom<IdCertTbs
             subject: value.subject,
             subject_public_key_info: value.subject_public_key_info.into(),
             issuer_unique_id: None,
-            subject_unique_id: Some(value.subject_unique_id),
+            subject_unique_id: Some(value.subject_session_id),
             extensions: Some(value.extensions),
         })
     }
