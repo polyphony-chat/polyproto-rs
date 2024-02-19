@@ -97,9 +97,9 @@ pub enum ConstraintError {
     #[error("The value did not meet the set validation criteria and is considered malformed")]
     Malformed,
     #[error("The value was expected to be between {lower:?} and {upper:?} but was {actual:?}")]
-    OutOfbOunds {
-        lower: String,
-        upper: String,
+    OutOfBounds {
+        lower: i32,
+        upper: i32,
         actual: String,
     },
 }
