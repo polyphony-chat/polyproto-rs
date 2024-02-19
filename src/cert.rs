@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use der::asn1::{Any, BitString, SetOfVec, Uint};
+use der::asn1::{Any, BitString, SequenceOf, SetOfVec, Uint};
 use der::{Decode, Encode, Length};
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SubjectPublicKeyInfoOwned};
 use x509_cert::attr::Attribute;
@@ -10,7 +10,7 @@ use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
 use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
-use x509_cert::time::{Time, Validity};
+use x509_cert::time::Validity;
 
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::{Signature, SignatureAlgorithm};
@@ -108,29 +108,33 @@ impl<S: Signature> IdCsr<S> {
     ) -> Result<IdCsr<S>, InvalidInput> {
         let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey(), subject_session_id)?;
 
-        let thing = der::asn1::SequenceOf { inner: todo!() };
+        let version_bytes = Uint::new(&[inner_csr.version as u8])?.to_der()?;
+        let subject_bytes = inner_csr.subject.to_der()?;
+        let spki_bytes =
+            SubjectPublicKeyInfoOwned::from(inner_csr.subject_public_key_info.clone()).to_der()?;
+        let mut set_of_vec = SetOfVec::new();
+        let any = Any::from_der(&inner_csr.subject_unique_id.to_der()?)?; // 1.4
+        set_of_vec.insert(any)?;
+        let session_id_attribute = Attribute {
+                oid: ObjectIdentifier::new("1.3.6.1.4.1.987654321.1.1").expect("The object identifier specified is not in correct OID notation. Please file a bug report under https://github.com/polyphony-chat/polyproto"),
+                values: set_of_vec
+            };
+        let attribute_bytes = session_id_attribute.to_der()?;
 
-        // Turn input into DER Vecs
-        let version_bytes = Uint::new(&[PkcsVersion::V1 as u8])?.to_der()?; // 1.1
-        let name_bytes = subject.to_der()?; // 1.2
-        let pubkey_bytes = signing_key.pubkey().to_der()?; // 1.3.1
-        let pubkey_algo_bytes = signing_key.algorithm().oid().to_der()?; // 1.3.2
+        let mut to_sign = Vec::new();
+        to_sign.extend(version_bytes);
+        to_sign.extend(subject_bytes);
+        to_sign.extend(spki_bytes);
+        to_sign.extend(attribute_bytes);
 
-        // Move DER Vecs into one big vector for signing
-        let mut csr_bytes = Vec::new();
-        csr_bytes.extend(version_bytes);
-        csr_bytes.extend(name_bytes);
-        csr_bytes.extend(pubkey_algo_bytes);
-        csr_bytes.extend(pubkey_bytes);
-        csr_bytes.extend(session_id_attribute.to_der()?);
+        let signature = signing_key.sign(&to_sign);
+        let signature_algorithm = signature.algorithm().clone();
 
-        let signature = signing_key.sign(&csr_bytes);
-        let subject_public_key_info = SubjectPublicKeyInfo {
-            algorithm: signing_key.algorithm(),
-            subject_public_key: BitString::from_der(&signing_key.pubkey().to_der()?)?,
-        };
-
-        todo!()
+        Ok(IdCsr {
+            inner_csr,
+            signature_algorithm,
+            signature,
+        })
     }
 }
 
@@ -150,8 +154,6 @@ pub struct IdCsrInner<S: Signature> {
     pub subject_unique_id: Uint,
 }
 
-// TODO: IdCsr::to_der()
-
 impl<S: Signature> IdCsrInner<S> {
     pub fn new(
         subject: Name,
@@ -163,13 +165,6 @@ impl<S: Signature> IdCsrInner<S> {
         if subject_session_id.len() > Length::new(32) {
             return Err(InvalidInput::SessionIdTooLong);
         }
-        let mut set_of_vec = SetOfVec::new();
-        let any = Any::from_der(&subject_session_id.to_der()?)?; // 1.4
-        set_of_vec.insert(any)?;
-        let session_id_attribute = Attribute {
-            oid: ObjectIdentifier::new("1.3.6.1.4.1.987654321.1.1").expect("The object identifier specified is not in correct OID notation. Please file a bug report under https://github.com/polyphony-chat/polyproto"),
-            values: set_of_vec
-        };
 
         let subject_public_key_info = SubjectPublicKeyInfo {
             algorithm: public_key.algorithm(),
@@ -208,7 +203,7 @@ pub enum PkcsVersion {
 }
 
 /// Information regarding a subjects' public key.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SubjectPublicKeyInfo<T: SignatureAlgorithm> {
     /// Properties of the signature algorithm used to create the public key.
     pub algorithm: T,
