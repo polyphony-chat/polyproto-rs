@@ -18,6 +18,7 @@ impl Constrained for Name {
     /// - MAY have "organizational unit" attributes
     /// - MAY have other attributes, which might be ignored by other home servers and other clients.
     fn validate(&self) -> Result<(), crate::ConstraintError> {
+        // this code sucks. i couldn't think of a way to make it better though. sorry!
         let mut num_cn: u8 = 0;
         let mut num_dc: u8 = 0;
         let oid_common_name = ObjectIdentifier::from_str("2.5.4.3")
@@ -49,5 +50,34 @@ impl Constrained for Name {
             });
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod name_constraints {
+    use std::str::FromStr;
+
+    use x509_cert::name::Name;
+
+    use crate::Constrained;
+
+    #[test]
+    fn correct() {
+        let name = Name::from_str("CN=flori,DC=localhost").unwrap();
+        name.validate().unwrap();
+        let name = Name::from_str("CN=flori,DC=www,DC=polyphony,DC=chat").unwrap();
+        name.validate().unwrap();
+    }
+
+    #[test]
+    fn no_domain_component() {
+        let name = Name::from_str("CN=flori").unwrap();
+        assert!(name.validate().is_err());
+    }
+
+    #[test]
+    fn two_cns() {
+        let name = Name::from_str("CN=flori,CN=xenia,DC=localhost").unwrap();
+        assert!(name.validate().is_err())
     }
 }
