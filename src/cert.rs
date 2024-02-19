@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use der::asn1::{Any, BitString, SequenceOf, SetOfVec, Uint};
+use der::asn1::{Any, BitString, SetOfVec, Uint};
 use der::{Decode, Encode, Length};
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SubjectPublicKeyInfoOwned};
 use x509_cert::attr::Attribute;
