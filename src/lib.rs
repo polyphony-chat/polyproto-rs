@@ -43,6 +43,18 @@ use std::fmt::Debug;
 
 use thiserror::Error;
 
+#[derive(Error, Debug, PartialEq, Clone)]
+pub enum Error {
+    #[error("Conversion from TbsCertificate to IdCertTbs failed")]
+    TbsCertToIdCert(#[from] TbsCertToIdCert),
+    #[error("Conversion from IdCertTbs to TbsCertificate failed")]
+    IdCertToTbsCert(#[from] IdCertToTbsCert),
+    #[error("Invalid input cannot be handled")]
+    InvalidInput(#[from] InvalidInput),
+    #[error("Value failed to meet constraints")]
+    ConstraintError(#[from] ConstraintError),
+}
+
 /// Error type covering possible failures when converting a [x509_cert::TbsCertificate]
 /// to a [crate::cert::IdCertTbs]
 #[derive(Error, Debug, PartialEq, Clone, Copy)]
@@ -76,6 +88,22 @@ impl From<der::Error> for InvalidInput {
     fn from(value: der::Error) -> Self {
         Self::DerError(value)
     }
+}
+
+#[derive(Error, Debug, PartialEq, Clone)]
+pub enum ConstraintError {
+    #[error("The value did not meet the set validation criteria and is considered malformed")]
+    Malformed,
+    #[error("The value was expected to be between {lower:?} and {upper:?} but was {actual:?}")]
+    OutOfbOunds {
+        lower: String,
+        upper: String,
+        actual: String,
+    },
+}
+
+pub trait Constrained {
+    fn validate(&self) -> Result<(), ConstraintError>;
 }
 
 #[cfg(test)]
