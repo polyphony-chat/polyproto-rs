@@ -30,9 +30,9 @@ impl Constrained for Name {
                 if item.oid == oid_common_name {
                     num_cn += 1;
                     if num_cn > 1 {
-                        return Err(crate::ConstraintError::OutOfbOunds {
-                            lower: "1".to_string(),
-                            upper: "1".to_string(),
+                        return Err(crate::ConstraintError::OutOfBounds {
+                            lower: 1,
+                            upper: 1,
                             actual: num_cn.to_string(),
                         });
                     }
@@ -42,9 +42,9 @@ impl Constrained for Name {
             }
         }
         if num_dc == 0 {
-            return Err(crate::ConstraintError::OutOfbOunds {
-                lower: "1".to_string(),
-                upper: "u8::MAX".to_string(),
+            return Err(crate::ConstraintError::OutOfBounds {
+                lower: 1,
+                upper: u8::MAX as i32,
                 actual: "0".to_string(),
             });
         }
