@@ -39,6 +39,8 @@ pub mod key;
 /// Generic polyproto signature traits.
 pub mod signature;
 
+pub(crate) mod value_constraints;
+
 use std::fmt::Debug;
 
 use thiserror::Error;
