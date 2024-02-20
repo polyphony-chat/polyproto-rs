@@ -117,10 +117,12 @@ impl SessionId {
                 oid: ObjectIdentifier::new("1.3.6.1.4.1.987654321.1.1").expect("The object identifier specified is not in correct OID notation. Please file a bug report under https://github.com/polyphony-chat/polyproto"),
                 values: set_of_vec
             };
-        Ok(Self {
+        let session_id = Self {
             attribute: session_id_attribute,
             session_id: id,
-        })
+        };
+        session_id.validate()?;
+        Ok(session_id)
     }
 }
 
