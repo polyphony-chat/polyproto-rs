@@ -80,7 +80,7 @@ mod name_constraints {
 
     #[test]
     fn correct() {
-        let name = Name::from_str("CN=flori,DC=localhost").unwrap();
+        let name = Name::from_str("CN=flori,DC=localhost,UID=h3g2jt4dhfgj8hjs").unwrap();
         name.validate().unwrap();
         let name = Name::from_str("CN=flori,DC=www,DC=polyphony,DC=chat").unwrap();
         name.validate().unwrap();
