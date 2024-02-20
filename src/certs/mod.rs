@@ -101,8 +101,8 @@ impl<T: SignatureAlgorithm> From<SubjectPublicKeyInfoOwned> for SubjectPublicKey
 impl<T: SignatureAlgorithm> From<SubjectPublicKeyInfo<T>> for SubjectPublicKeyInfoOwned {
     fn from(value: SubjectPublicKeyInfo<T>) -> Self {
         let algorithm = AlgorithmIdentifierOwned {
-            oid: value.algorithm.oid(),
-            parameters: value.algorithm.parameters(),
+            oid: value.algorithm.as_oid(),
+            parameters: value.algorithm.as_parameters(),
         };
 
         SubjectPublicKeyInfoOwned {
