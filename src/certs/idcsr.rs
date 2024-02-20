@@ -2,14 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use der::asn1::{BitString, Ia5String, Uint};
+use der::asn1::{BitString, Uint};
 use der::{Decode, Encode, Length};
-use spki::SubjectPublicKeyInfoOwned;
+use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 use x509_cert::name::Name;
 
 use crate::key::{PrivateKey, PublicKey};
-use crate::signature::Signature;
-use crate::{Constrained, Error, InvalidInput};
+use crate::signature::{Signature, SignatureAlgorithm};
+use crate::{Constrained, Error};
 
 use super::{PkcsVersion, SessionId, SubjectPublicKeyInfo};
 
@@ -53,7 +53,7 @@ impl<S: Signature> IdCsr<S> {
     pub fn new(
         subject: Name,
         signing_key: impl PrivateKey<S>,
-        subject_session_id: Ia5String,
+        subject_session_id: SessionId,
     ) -> Result<IdCsr<S>, Error> {
         subject.validate()?;
         let inner_csr =
@@ -63,8 +63,7 @@ impl<S: Signature> IdCsr<S> {
         let subject_bytes = inner_csr.subject.to_der()?;
         let spki_bytes =
             SubjectPublicKeyInfoOwned::from(inner_csr.subject_public_key_info.clone()).to_der()?;
-        let session_id = SessionId::new(subject_session_id)?;
-        let session_id_bytes = session_id.as_attribute().to_der()?;
+        let session_id_bytes = subject_session_id.as_attribute().to_der()?;
 
         let mut to_sign = Vec::new();
         to_sign.extend(version_bytes);
@@ -73,7 +72,7 @@ impl<S: Signature> IdCsr<S> {
         to_sign.extend(session_id_bytes);
 
         let signature = signing_key.sign(&to_sign);
-        let signature_algorithm = signature.algorithm().clone();
+        let signature_algorithm = signature.as_algorithm().clone();
 
         Ok(IdCsr {
             inner_csr,
@@ -102,7 +101,7 @@ pub struct IdCsrInner<S: Signature> {
     /// The subjects' public key and related metadata.
     pub subject_public_key_info: SubjectPublicKeyInfo<S::SignatureAlgorithm>,
     /// The session ID of the client. No two valid certificates may exist for one session ID.
-    pub subject_session_id: Ia5String,
+    pub subject_session_id: SessionId,
 }
 
 impl<S: Signature> IdCsrInner<S> {
@@ -112,13 +111,9 @@ impl<S: Signature> IdCsrInner<S> {
     pub fn new(
         subject: Name,
         public_key: &impl PublicKey<S>,
-        subject_session_id: Ia5String,
+        subject_session_id: SessionId,
     ) -> Result<IdCsrInner<S>, Error> {
         subject.validate()?;
-        // Validate session_id constraints and create session ID [Attribute] from input
-        if subject_session_id.len() > Length::new(32) {
-            return Err(InvalidInput::SessionIdTooLong.into());
-        }
 
         let subject_public_key_info = SubjectPublicKeyInfo {
             algorithm: public_key.algorithm(),
@@ -133,3 +128,48 @@ impl<S: Signature> IdCsrInner<S> {
         })
     }
 }
+
+impl<S: Signature> Encode for IdCsrInner<S> {
+    // TODO: Test this
+    fn encoded_len(&self) -> der::Result<Length> {
+        let len_version = Uint::new(&[self.version as u8])?.encoded_len()?;
+        let len_subject = self.subject.encoded_len()?;
+        let spki_converted: SubjectPublicKeyInfoOwned = self.subject_public_key_info.clone().into();
+        let len_spki = spki_converted.encoded_len()?;
+        let len_ssid = self.subject_session_id.as_attribute().encoded_len()?;
+        len_spki + len_subject + len_ssid + len_version
+    }
+
+    // TODO: Test this
+    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
+        let uint_version = Uint::new(&[self.version as u8])?;
+        let spki_converted: SubjectPublicKeyInfoOwned = self.subject_public_key_info.clone().into();
+        uint_version.encode(encoder)?;
+        self.subject.encode(encoder)?;
+        spki_converted.encode(encoder)?;
+        self.subject_session_id.as_attribute().encode(encoder)?;
+        Ok(())
+    }
+}
+
+impl<S: Signature> Encode for IdCsr<S> {
+    // TODO: Test this
+    fn encoded_len(&self) -> der::Result<Length> {
+        let len_inner = self.inner_csr.encoded_len()?;
+        let len_signature_algorithm = AlgorithmIdentifierOwned {
+            oid: self.signature_algorithm.as_oid(),
+            parameters: self.signature_algorithm.as_parameters(),
+        }
+        .encoded_len()?;
+        let len_signature = self.signature.to_bitstring()?.encoded_len()?;
+        len_inner + len_signature_algorithm + len_signature
+    }
+
+    // TODO: Test this
+    // TODO: Implement this
+    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
+        todo!()
+    }
+}
+
+//TODO: Implement decode trait
