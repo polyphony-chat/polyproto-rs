@@ -113,8 +113,8 @@ impl<T: SignatureAlgorithm, K: SignatureAlgorithm, P: Profile> TryFrom<IdCertTbs
         };
 
         let signature = AlgorithmIdentifierOwned {
-            oid: value.signature_algorithm.oid(),
-            parameters: value.signature_algorithm.parameters(),
+            oid: value.signature_algorithm.as_oid(),
+            parameters: value.signature_algorithm.as_parameters(),
         };
 
         Ok(TbsCertificateInner {
