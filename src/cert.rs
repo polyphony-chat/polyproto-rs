@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use der::asn1::{Any, BitString, SetOfVec, Uint};
+use der::asn1::{Any, BitString, Ia5String, SetOfVec, Uint};
 use der::{Decode, Encode, Length};
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SubjectPublicKeyInfoOwned};
 use x509_cert::attr::Attribute;
@@ -96,6 +96,52 @@ pub struct IdCsr<S: Signature> {
     signature: S,
 }
 
+/// Custom "SessionId" [Attribute] for use in polyproto.
+/// DOCUMENTME: Add notes about what session_ids are in polyproto.
+/// DOCUMENTME: Add ASN.1 notation for this Attribute
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionId {
+    attribute: Attribute,
+    session_id: Ia5String,
+}
+
+impl SessionId {
+    #[allow(clippy::new_ret_no_self)]
+    /// Creates a new [SessionId] which can be converted into an [Attribute] using `.as_attribute()`,
+    /// if needed.
+    pub fn new(id: Ia5String) -> Result<Self, Error> {
+        let mut set_of_vec = SetOfVec::new();
+        let any = Any::from_der(&id.to_der()?)?;
+        set_of_vec.insert(any)?;
+        let session_id_attribute = Attribute {
+                oid: ObjectIdentifier::new("1.3.6.1.4.1.987654321.1.1").expect("The object identifier specified is not in correct OID notation. Please file a bug report under https://github.com/polyphony-chat/polyproto"),
+                values: set_of_vec
+            };
+        Ok(Self {
+            attribute: session_id_attribute,
+            session_id: id,
+        })
+    }
+}
+
+impl SessionId {
+    /// Returns the inner [Attribute] field
+    pub fn as_attribute(&self) -> &Attribute {
+        &self.attribute
+    }
+
+    /// Returns the inner `session_id` field
+    pub fn as_ia5string(&self) -> &Ia5String {
+        &self.session_id
+    }
+}
+
+impl From<SessionId> for Attribute {
+    fn from(value: SessionId) -> Self {
+        value.attribute
+    }
+}
+
 impl<S: Signature> IdCsr<S> {
     /// Creates a new polyproto ID-Cert CSR, according to PKCS#10. The CSR is being signed using the
     /// subjects' supplied signing key ([PrivateKey])
@@ -116,29 +162,24 @@ impl<S: Signature> IdCsr<S> {
     pub fn new(
         subject: Name,
         signing_key: impl PrivateKey<S>,
-        subject_session_id: Uint,
+        subject_session_id: Ia5String,
     ) -> Result<IdCsr<S>, Error> {
         subject.validate()?;
-        let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey(), subject_session_id)?;
+        let inner_csr =
+            IdCsrInner::<S>::new(subject, signing_key.pubkey(), subject_session_id.clone())?;
 
         let version_bytes = Uint::new(&[inner_csr.version as u8])?.to_der()?;
         let subject_bytes = inner_csr.subject.to_der()?;
         let spki_bytes =
             SubjectPublicKeyInfoOwned::from(inner_csr.subject_public_key_info.clone()).to_der()?;
-        let mut set_of_vec = SetOfVec::new();
-        let any = Any::from_der(&inner_csr.subject_session_id.to_der()?)?; // 1.4
-        set_of_vec.insert(any)?;
-        let session_id_attribute = Attribute {
-                oid: ObjectIdentifier::new("1.3.6.1.4.1.987654321.1.1").expect("The object identifier specified is not in correct OID notation. Please file a bug report under https://github.com/polyphony-chat/polyproto"),
-                values: set_of_vec
-            };
-        let attribute_bytes = session_id_attribute.to_der()?;
+        let session_id = SessionId::new(subject_session_id)?;
+        let session_id_bytes = session_id.as_attribute().to_der()?;
 
         let mut to_sign = Vec::new();
         to_sign.extend(version_bytes);
         to_sign.extend(subject_bytes);
         to_sign.extend(spki_bytes);
-        to_sign.extend(attribute_bytes);
+        to_sign.extend(session_id_bytes);
 
         let signature = signing_key.sign(&to_sign);
         let signature_algorithm = signature.algorithm().clone();
@@ -170,7 +211,7 @@ pub struct IdCsrInner<S: Signature> {
     /// The subjects' public key and related metadata.
     pub subject_public_key_info: SubjectPublicKeyInfo<S::SignatureAlgorithm>,
     /// The session ID of the client. No two valid certificates may exist for one session ID.
-    pub subject_session_id: Uint,
+    pub subject_session_id: Ia5String,
 }
 
 impl<S: Signature> IdCsrInner<S> {
@@ -180,7 +221,7 @@ impl<S: Signature> IdCsrInner<S> {
     pub fn new(
         subject: Name,
         public_key: &impl PublicKey<S>,
-        subject_session_id: Uint,
+        subject_session_id: Ia5String,
     ) -> Result<IdCsrInner<S>, Error> {
         subject.validate()?;
         // Validate session_id constraints and create session ID [Attribute] from input
