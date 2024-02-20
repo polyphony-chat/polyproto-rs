@@ -92,6 +92,12 @@ impl From<der::Error> for InvalidInput {
     }
 }
 
+impl From<der::Error> for Error {
+    fn from(value: der::Error) -> Self {
+        Self::InvalidInput(value.into())
+    }
+}
+
 #[derive(Error, Debug, PartialEq, Clone)]
 pub enum ConstraintError {
     #[error("The value did not meet the set validation criteria and is considered malformed")]

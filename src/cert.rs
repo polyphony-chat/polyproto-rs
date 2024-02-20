@@ -14,7 +14,7 @@ use x509_cert::time::Validity;
 
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::{Signature, SignatureAlgorithm};
-use crate::{IdCertToTbsCert, InvalidInput, TbsCertToIdCert};
+use crate::{Constrained, Error, IdCertToTbsCert, InvalidInput, TbsCertToIdCert};
 
 /// A signed polyproto ID-Cert, consisting of the actual certificate, the CA-generated signature and
 /// metadata about that signature.
@@ -117,7 +117,8 @@ impl<S: Signature> IdCsr<S> {
         subject: Name,
         signing_key: impl PrivateKey<S>,
         subject_session_id: Uint,
-    ) -> Result<IdCsr<S>, InvalidInput> {
+    ) -> Result<IdCsr<S>, Error> {
+        subject.validate()?;
         let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey(), subject_session_id)?;
 
         let version_bytes = Uint::new(&[inner_csr.version as u8])?.to_der()?;
@@ -180,11 +181,12 @@ impl<S: Signature> IdCsrInner<S> {
         subject: Name,
         public_key: &impl PublicKey<S>,
         subject_session_id: Uint,
-    ) -> Result<IdCsrInner<S>, InvalidInput> {
+    ) -> Result<IdCsrInner<S>, Error> {
+        subject.validate()?;
         // Validate session_id constraints and create session ID [Attribute] from input
         // TODO: Make SessionID own struct?
         if subject_session_id.len() > Length::new(32) {
-            return Err(InvalidInput::SessionIdTooLong);
+            return Err(InvalidInput::SessionIdTooLong.into());
         }
 
         let subject_public_key_info = SubjectPublicKeyInfo {
@@ -199,10 +201,6 @@ impl<S: Signature> IdCsrInner<S> {
             subject_session_id,
         })
     }
-}
-
-pub fn validate_subject_name(name: &Name) {
-    // TODO: Implement this
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -263,17 +261,18 @@ impl<T: SignatureAlgorithm> From<SubjectPublicKeyInfo<T>> for SubjectPublicKeyIn
 impl<T: SignatureAlgorithm, K: SignatureAlgorithm, P: Profile> TryFrom<TbsCertificateInner<P>>
     for IdCertTbs<T, K>
 {
-    type Error = TbsCertToIdCert;
+    type Error = Error;
 
     fn try_from(value: TbsCertificateInner<P>) -> Result<Self, Self::Error> {
+        value.subject.validate()?;
         let subject_unique_id = match value.subject_unique_id {
             Some(suid) => suid,
-            None => return Err(TbsCertToIdCert::SubjectUid),
+            None => return Err(TbsCertToIdCert::SubjectUid.into()),
         };
 
         let extensions = match value.extensions {
             Some(ext) => ext,
-            None => return Err(TbsCertToIdCert::Extensions),
+            None => return Err(TbsCertToIdCert::Extensions.into()),
         };
 
         let subject_public_key_info =
@@ -281,7 +280,7 @@ impl<T: SignatureAlgorithm, K: SignatureAlgorithm, P: Profile> TryFrom<TbsCertif
 
         let serial_number = match Uint::new(value.serial_number.as_bytes()) {
             Ok(snum) => snum,
-            Err(e) => return Err(TbsCertToIdCert::Signature(e)),
+            Err(e) => return Err(TbsCertToIdCert::Signature(e).into()),
         };
 
         Ok(IdCertTbs {
@@ -326,9 +325,4 @@ impl<T: SignatureAlgorithm, K: SignatureAlgorithm, P: Profile> TryFrom<IdCertTbs
             extensions: Some(value.extensions),
         })
     }
-}
-
-#[cfg(test)]
-mod test {
-    fn session_id_longer_than_32() {}
 }
