@@ -33,7 +33,7 @@ well-defined yet adaptable Rust types.
 #[forbid(unsafe_code)]
 
 /// Generic polyproto certificate types and traits.
-pub mod cert;
+pub mod certs;
 /// Generic polyproto public- and private key traits.
 pub mod key;
 /// Generic polyproto signature traits.

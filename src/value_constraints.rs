@@ -8,7 +8,7 @@ use der::Length;
 use spki::ObjectIdentifier;
 use x509_cert::name::Name;
 
-use crate::cert::SessionId;
+use crate::certs::SessionId;
 use crate::Constrained;
 
 impl Constrained for Name {
@@ -103,7 +103,7 @@ mod name_constraints {
 mod session_id_constraints {
     use der::asn1::Ia5String;
 
-    use crate::cert::SessionId;
+    use crate::certs::SessionId;
 
     #[test]
     fn zero_long_session_id_fails() {
