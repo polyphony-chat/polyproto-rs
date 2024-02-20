@@ -5,7 +5,6 @@
 use der::asn1::{BitString, Ia5String, Uint};
 use der::{Decode, Encode, Length};
 use spki::SubjectPublicKeyInfoOwned;
-
 use x509_cert::name::Name;
 
 use crate::key::{PrivateKey, PublicKey};
