@@ -4,9 +4,11 @@
 
 use std::str::FromStr;
 
+use der::Length;
 use spki::ObjectIdentifier;
 use x509_cert::name::Name;
 
+use crate::cert::SessionId;
 use crate::Constrained;
 
 impl Constrained for Name {
@@ -53,6 +55,21 @@ impl Constrained for Name {
     }
 }
 
+impl Constrained for SessionId {
+    /// [SessionId] must be longer than 0 and not longer than 32 characters to be deemed valid.
+    fn validate(&self) -> Result<(), crate::ConstraintError> {
+        if self.as_ia5string().len() > Length::new(32) || self.as_ia5string().len() == Length::ZERO
+        {
+            return Err(crate::ConstraintError::OutOfBounds {
+                lower: 1,
+                upper: 32,
+                actual: self.as_ia5string().len().to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod name_constraints {
     use std::str::FromStr;
@@ -79,5 +96,29 @@ mod name_constraints {
     fn two_cns() {
         let name = Name::from_str("CN=flori,CN=xenia,DC=localhost").unwrap();
         assert!(name.validate().is_err())
+    }
+}
+
+#[cfg(test)]
+mod session_id_constraints {
+    use der::asn1::Ia5String;
+
+    use crate::cert::SessionId;
+
+    #[test]
+    fn zero_long_session_id_fails() {
+        assert!(SessionId::new(Ia5String::new("").unwrap()).is_err())
+    }
+
+    #[test]
+    fn thirtytwo_length_session_id_is_ok() {
+        assert!(SessionId::new(Ia5String::new("11111111111111111111111111222222").unwrap()).is_ok())
+    }
+
+    #[test]
+    fn thirtythree_length_session_id_fails() {
+        assert!(
+            SessionId::new(Ia5String::new("111111111111111111111111112222223").unwrap()).is_err()
+        )
     }
 }
