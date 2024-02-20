@@ -4,16 +4,15 @@
 
 use der::asn1::{BitString, Uint};
 
-use spki::{AlgorithmIdentifierOwned};
-
+use spki::AlgorithmIdentifierOwned;
 use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
 use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 
+use crate::signature::SignatureAlgorithm;
 
-use crate::signature::{Signature, SignatureAlgorithm};
 use crate::{Constrained, Error, IdCertToTbsCert, TbsCertToIdCert};
 
 use super::SubjectPublicKeyInfo;

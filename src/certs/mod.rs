@@ -7,13 +7,7 @@ use der::{Decode, Encode};
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SubjectPublicKeyInfoOwned};
 use x509_cert::attr::Attribute;
 
-
-
-
-
-
-use crate::key::{PrivateKey, PublicKey};
-use crate::signature::{Signature, SignatureAlgorithm};
+use crate::signature::SignatureAlgorithm;
 use crate::{Constrained, Error};
 
 pub mod idcert;

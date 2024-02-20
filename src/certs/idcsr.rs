@@ -4,16 +4,11 @@
 
 use der::asn1::{BitString, Ia5String, Uint};
 use der::{Decode, Encode, Length};
-use spki::{SubjectPublicKeyInfoOwned};
-
-
-
+use spki::SubjectPublicKeyInfoOwned;
 use x509_cert::name::Name;
 
-
-
 use crate::key::{PrivateKey, PublicKey};
-use crate::signature::{Signature};
+use crate::signature::Signature;
 use crate::{Constrained, Error, InvalidInput};
 
 use super::{PkcsVersion, SessionId, SubjectPublicKeyInfo};
