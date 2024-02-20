@@ -116,7 +116,6 @@ impl<S: Signature> IdCsrInner<S> {
     ) -> Result<IdCsrInner<S>, Error> {
         subject.validate()?;
         // Validate session_id constraints and create session ID [Attribute] from input
-        // TODO: Make SessionID own struct?
         if subject_session_id.len() > Length::new(32) {
             return Err(InvalidInput::SessionIdTooLong.into());
         }
