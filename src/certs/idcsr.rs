@@ -166,9 +166,12 @@ impl<S: Signature> Encode for IdCsr<S> {
     }
 
     // TODO: Test this
-    // TODO: Implement this
     fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
-        todo!()
+        self.inner_csr.encode(encoder)?;
+        let _signature_algorithm_encoded: AlgorithmIdentifierOwned =
+            self.signature_algorithm.clone().into();
+        self.signature.to_bitstring()?.encode(encoder)?;
+        Ok(())
     }
 }
 
