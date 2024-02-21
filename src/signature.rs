@@ -6,7 +6,9 @@ use der::Any;
 use spki::{AlgorithmIdentifier, ObjectIdentifier, SignatureBitStringEncoding};
 
 /// Represents a signature algorithm usable in X.509-like environments.
-pub trait SignatureAlgorithm: From<AlgorithmIdentifier<Any>> + PartialEq + Eq + Clone {
+pub trait SignatureAlgorithm:
+    From<AlgorithmIdentifier<Any>> + Into<AlgorithmIdentifier<Any>> + PartialEq + Eq + Clone
+{
     /// Object ID notation of this signature algorithm
     fn as_oid(&self) -> ObjectIdentifier;
     /// Parameters for this signature algorithm. The contents of this parameters' field will vary
