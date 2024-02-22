@@ -7,11 +7,13 @@ use der::{Decode, Encode};
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SubjectPublicKeyInfoOwned};
 use x509_cert::attr::Attribute;
 
-use crate::signature::SignatureAlgorithm;
 use crate::{Constrained, Error};
 
+/// Complete, signed [IdCert]
 pub mod idcert;
+/// [IdCertTbs] is an [IdCert] which has not yet been signed by
 pub mod idcerttbs;
+/// Certificate Signing Request for an [IdCert]/[IdCertTbs]
 pub mod idcsr;
 
 /// Custom "SessionId" [Attribute] for use in polyproto.
@@ -82,31 +84,26 @@ pub enum PkcsVersion {
 
 /// Information regarding a subjects' public key.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct SubjectPublicKeyInfo<T: SignatureAlgorithm> {
+pub struct SubjectPublicKeyInfo {
     /// Properties of the signature algorithm used to create the public key.
-    pub algorithm: T,
+    pub algorithm: AlgorithmIdentifierOwned,
     /// The public key, represented as a [BitString].
     pub subject_public_key: BitString,
 }
 
-impl<T: SignatureAlgorithm> From<SubjectPublicKeyInfoOwned> for SubjectPublicKeyInfo<T> {
+impl From<SubjectPublicKeyInfoOwned> for SubjectPublicKeyInfo {
     fn from(value: SubjectPublicKeyInfoOwned) -> Self {
         SubjectPublicKeyInfo {
-            algorithm: value.algorithm.into(),
+            algorithm: value.algorithm,
             subject_public_key: value.subject_public_key,
         }
     }
 }
 
-impl<T: SignatureAlgorithm> From<SubjectPublicKeyInfo<T>> for SubjectPublicKeyInfoOwned {
-    fn from(value: SubjectPublicKeyInfo<T>) -> Self {
-        let algorithm = AlgorithmIdentifierOwned {
-            oid: value.algorithm.as_oid(),
-            parameters: value.algorithm.as_parameters(),
-        };
-
+impl From<SubjectPublicKeyInfo> for SubjectPublicKeyInfoOwned {
+    fn from(value: SubjectPublicKeyInfo) -> Self {
         SubjectPublicKeyInfoOwned {
-            algorithm,
+            algorithm: value.algorithm,
             subject_public_key: value.subject_public_key,
         }
     }

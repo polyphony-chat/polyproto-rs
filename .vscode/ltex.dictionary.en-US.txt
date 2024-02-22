@@ -13,3 +13,9 @@ PublicKey
 PrivateKey
 der
 spki
+AlgorithmIdentifierOwned
+Uint
+endian
+impl
+impls
+OID

@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::signature::{Signature, SignatureAlgorithm};
+use crate::signature::Signature;
 
 use super::idcerttbs::IdCertTbs;
 
@@ -18,9 +18,9 @@ use super::idcerttbs::IdCertTbs;
 ///   signed with.
 /// - **T**: The [SignatureAlgorithm] of the subjects' public key within the [IdCertTbs]
 #[derive(Debug, PartialEq, Eq)]
-pub struct IdCert<S: Signature, T: SignatureAlgorithm> {
+pub struct IdCert<S: Signature> {
     /// Inner TBS (To be signed) certificate
-    pub tbs_certificate: IdCertTbs<S::SignatureAlgorithm, T>,
+    pub tbs_certificate: IdCertTbs,
     /// Signature for the TBS certificate
     pub signature: S,
 }

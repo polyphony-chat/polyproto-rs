@@ -2,13 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::marker::PhantomData;
+
 use der::asn1::{BitString, Uint};
 use der::{Decode, Encode, Length};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 use x509_cert::name::Name;
 
 use crate::key::{PrivateKey, PublicKey};
-use crate::signature::{Signature, SignatureAlgorithm};
+use crate::signature::Signature;
 use crate::{Constrained, Error};
 
 use super::{PkcsVersion, SessionId, SubjectPublicKeyInfo};
@@ -29,7 +31,7 @@ use super::{PkcsVersion, SessionId, SubjectPublicKeyInfo};
 /// ```
 pub struct IdCsr<S: Signature> {
     inner_csr: IdCsrInner<S>,
-    signature_algorithm: S::SignatureAlgorithm,
+    signature_algorithm: AlgorithmIdentifierOwned,
     signature: S,
 }
 
@@ -44,7 +46,7 @@ impl<S: Signature> IdCsr<S> {
     ///   - Domain Component: Actor home server subdomain, if applicable. May be repeated, depending
     ///                       on how many subdomain levels there are.
     ///   - Domain Component: Actor home server domain.
-    ///   - Domain Component: Actor home server tld, if applicable.
+    ///   - Domain Component: Actor home server TLD, if applicable.
     ///   - Organizational Unit: Optional. May be repeated.
     /// - **signing_key**: Subject signing key. Will NOT be included in the certificate. Is used to
     ///                    sign the CSR.
@@ -99,9 +101,10 @@ pub struct IdCsrInner<S: Signature> {
     /// Information about the subject (actor).
     pub subject: Name,
     /// The subjects' public key and related metadata.
-    pub subject_public_key_info: SubjectPublicKeyInfo<S::SignatureAlgorithm>,
+    pub subject_public_key_info: SubjectPublicKeyInfo,
     /// The session ID of the client. No two valid certificates may exist for one session ID.
     pub subject_session_id: SessionId,
+    phantom_data: PhantomData<S>,
 }
 
 impl<S: Signature> IdCsrInner<S> {
@@ -125,6 +128,7 @@ impl<S: Signature> IdCsrInner<S> {
             subject,
             subject_public_key_info,
             subject_session_id,
+            phantom_data: PhantomData,
         })
     }
 }
@@ -157,8 +161,8 @@ impl<S: Signature> Encode for IdCsr<S> {
     fn encoded_len(&self) -> der::Result<Length> {
         let len_inner = self.inner_csr.encoded_len()?;
         let len_signature_algorithm = AlgorithmIdentifierOwned {
-            oid: self.signature_algorithm.as_oid(),
-            parameters: self.signature_algorithm.as_parameters(),
+            oid: self.signature_algorithm.oid,
+            parameters: self.signature_algorithm.parameters.clone(),
         }
         .encoded_len()?;
         let len_signature = self.signature.to_bitstring()?.encoded_len()?;
@@ -169,7 +173,7 @@ impl<S: Signature> Encode for IdCsr<S> {
     fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
         self.inner_csr.encode(encoder)?;
         let _signature_algorithm_encoded: AlgorithmIdentifierOwned =
-            self.signature_algorithm.clone().into();
+            self.signature_algorithm.clone();
         self.signature.to_bitstring()?.encode(encoder)?;
         Ok(())
     }
