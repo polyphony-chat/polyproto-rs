@@ -120,7 +120,7 @@ impl<S: Signature> IdCsrInner<S> {
 
         let subject_public_key_info = SubjectPublicKeyInfo {
             algorithm: public_key.algorithm(),
-            subject_public_key: BitString::from_der(&public_key.to_der()?)?,
+            subject_public_key: BitString::from_der(&public_key.algorithm().to_der()?)?,
         };
 
         Ok(IdCsrInner {
