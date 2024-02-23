@@ -34,7 +34,8 @@ impl SessionId {
         let any = Any::from_der(&id.to_der()?)?;
         set_of_vec.insert(any)?;
         let session_id_attribute = Attribute {
-                oid: ObjectIdentifier::new("1.3.6.1.4.1.987654321.1.1").expect("The object identifier specified is not in correct OID notation. Please file a bug report under https://github.com/polyphony-chat/polyproto"),
+                // TODO: this OID still has to be defined at oid-info.com
+                oid: ObjectIdentifier::new("1.3.6.1.4.1.61536.1.1").expect("The object identifier specified is not in correct OID notation. Please file a bug report under https://github.com/polyphony-chat/polyproto"),
                 values: set_of_vec
             };
         let session_id = Self {
