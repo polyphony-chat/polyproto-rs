@@ -17,6 +17,7 @@ impl Constrained for Name {
     ///   home server name of the subject in question. Only one "common name" is allowed.
     /// - MUST have AT LEAST one domain component, specifying the home server subdomain for this
     ///   entity.
+    /// - If actor name, MUST include OID.
     /// - MAY have "organizational unit" attributes
     /// - MAY have other attributes, which might be ignored by other home servers and other clients.
     fn validate(&self) -> Result<(), crate::ConstraintError> {
