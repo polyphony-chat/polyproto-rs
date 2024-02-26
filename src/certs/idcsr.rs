@@ -30,14 +30,14 @@ use super::{PkcsVersion, SessionId, SubjectPublicKeyInfo};
 /// }
 /// ```
 pub struct IdCsr<S: Signature> {
-    inner_csr: IdCsrInner<S>,
-    signature_algorithm: AlgorithmIdentifierOwned,
-    signature: S,
+    pub inner_csr: IdCsrInner<S>,
+    pub signature_algorithm: AlgorithmIdentifierOwned,
+    pub signature: S,
 }
 
 impl<S: Signature> IdCsr<S> {
-    /// Creates a new polyproto ID-Cert CSR, according to PKCS#10. The CSR is being signed using the
-    /// subjects' supplied signing key ([PrivateKey])
+    /// Performs basic input validation and creates a new polyproto ID-Cert CSR, according to
+    /// PKCS#10. The CSR is being signed using the subjects' supplied signing key ([PrivateKey])
     ///
     /// ## Arguments
     ///
@@ -58,6 +58,7 @@ impl<S: Signature> IdCsr<S> {
         subject_session_id: SessionId,
     ) -> Result<IdCsr<S>, Error> {
         subject.validate()?;
+        subject_session_id.validate()?;
         let inner_csr =
             IdCsrInner::<S>::new(subject, signing_key.pubkey(), subject_session_id.clone())?;
 
@@ -82,6 +83,16 @@ impl<S: Signature> IdCsr<S> {
             signature,
         })
     }
+
+    pub fn valid_actor_csr(&self) -> Result<(), Error> {
+        self.inner_csr.subject.validate()?;
+        self.inner_csr.subject_session_id.validate()?;
+        todo!()
+    }
+
+    pub fn valid_home_server_csr(&self) -> Result<(), Error> {
+        todo!()
+    }
 }
 
 /// In the context of PKCS #10, this is a `CertificationRequestInfo`:
@@ -97,7 +108,7 @@ impl<S: Signature> IdCsr<S> {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdCsrInner<S: Signature> {
     /// `PKCS#10` version. Default: 0 for `PKCS#10` v1
-    version: PkcsVersion,
+    pub version: PkcsVersion,
     /// Information about the subject (actor).
     pub subject: Name,
     /// The subjects' public key and related metadata.
