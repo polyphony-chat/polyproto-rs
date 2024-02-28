@@ -28,7 +28,7 @@ pub trait PublicKey<S: Signature>: PartialEq + Eq {
     type Error;
     /// Verifies the correctness of a given [Signature] for a given piece of data.
     ///
-    /// Implementations of this associated method should mitigate against signature malleability.
+    /// Implementations of this associated method should mitigate weak key forgery.
     fn verify_signature(&self, signature: &S, data: &[u8]) -> Result<(), Self::Error>;
     /// Returns the [AlgorithmIdentifierOwned] used for this key.
     fn algorithm(&self) -> AlgorithmIdentifierOwned {
