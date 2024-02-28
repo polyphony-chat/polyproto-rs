@@ -89,14 +89,14 @@ pub struct SubjectPublicKeyInfo {
     /// Properties of the signature algorithm used to create the public key.
     pub algorithm: AlgorithmIdentifierOwned,
     /// The public key, represented as a [BitString].
-    pub subject_public_key: BitString,
+    pub public_key_bitstring: BitString,
 }
 
 impl From<SubjectPublicKeyInfoOwned> for SubjectPublicKeyInfo {
     fn from(value: SubjectPublicKeyInfoOwned) -> Self {
         SubjectPublicKeyInfo {
             algorithm: value.algorithm,
-            subject_public_key: value.subject_public_key,
+            public_key_bitstring: value.subject_public_key,
         }
     }
 }
@@ -105,7 +105,7 @@ impl From<SubjectPublicKeyInfo> for SubjectPublicKeyInfoOwned {
     fn from(value: SubjectPublicKeyInfo) -> Self {
         SubjectPublicKeyInfoOwned {
             algorithm: value.algorithm,
-            subject_public_key: value.subject_public_key,
+            subject_public_key: value.public_key_bitstring,
         }
     }
 }
