@@ -91,6 +91,8 @@ impl<S: Signature> IdCsr<S> {
     }
 
     pub fn valid_home_server_csr(&self) -> Result<(), Error> {
+        self.inner_csr.subject.validate()?;
+        self.inner_csr.subject_session_id.validate()?;
         todo!()
     }
 }
@@ -118,6 +120,10 @@ pub struct IdCsrInner<S: Signature> {
     phantom_data: PhantomData<S>,
 }
 
+// TODO: Problem: SubjectPublicKeyInfo only stores the BitString of a PublicKey. This is not good,
+// because we cannot use the PublicKey trait and its verify() method to verify that the signature
+// in a given IdCsr matches the PublicKey presented in the IdCsrInner.
+
 impl<S: Signature> IdCsrInner<S> {
     /// Creates a new [IdCsrInner].
     ///
@@ -131,7 +137,7 @@ impl<S: Signature> IdCsrInner<S> {
 
         let subject_public_key_info = SubjectPublicKeyInfo {
             algorithm: public_key.algorithm(),
-            subject_public_key: BitString::from_der(&public_key.algorithm().to_der()?)?,
+            public_key_bitstring: BitString::from_der(&public_key.algorithm().to_der()?)?,
         };
 
         Ok(IdCsrInner {
