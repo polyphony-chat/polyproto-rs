@@ -13,7 +13,7 @@ use x509_cert::time::Validity;
 
 use crate::{Constrained, Error, IdCertToTbsCert, TbsCertToIdCert};
 
-use super::SubjectPublicKeyInfo;
+use super::PublicKeyInfo;
 
 /// An unsigned polyproto ID-Cert.
 ///
@@ -49,7 +49,7 @@ pub struct IdCertTbs {
     /// X.501 name, identifying the subject (actor) of the certificate.
     pub subject: Name,
     /// Information regarding the subjects' public key.
-    pub subject_public_key_info: SubjectPublicKeyInfo,
+    pub subject_public_key_info: PublicKeyInfo,
     /// The session ID of the client. No two valid certificates may exist for one session ID.
     pub subject_session_id: BitString,
     /// X.509 Extensions matching what is described in the polyproto specification document.
@@ -76,7 +76,7 @@ impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
             None => return Err(TbsCertToIdCert::Extensions.into()),
         };
 
-        let subject_public_key_info = SubjectPublicKeyInfo::from(value.subject_public_key_info);
+        let subject_public_key_info = PublicKeyInfo::from(value.subject_public_key_info);
 
         let serial_number = match Uint::new(value.serial_number.as_bytes()) {
             Ok(snum) => snum,

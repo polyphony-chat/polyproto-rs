@@ -13,7 +13,7 @@ use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 use crate::{Constrained, Error};
 
-use super::{PkcsVersion, SessionId, SubjectPublicKeyInfo};
+use super::{PkcsVersion, PublicKeyInfo, SessionId};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A polyproto Certificate Signing Request, compatible with [IETF RFC 2986 "PKCS #10"](https://datatracker.ietf.org/doc/html/rfc2986).
@@ -114,7 +114,7 @@ pub struct IdCsrInner<S: Signature> {
     /// Information about the subject (actor).
     pub subject: Name,
     /// The subjects' public key and related metadata.
-    pub subject_public_key_info: SubjectPublicKeyInfo,
+    pub subject_public_key_info: PublicKeyInfo,
     /// The session ID of the client. No two valid certificates may exist for one session ID.
     pub subject_session_id: SessionId,
     phantom_data: PhantomData<S>,
@@ -135,7 +135,7 @@ impl<S: Signature> IdCsrInner<S> {
     ) -> Result<IdCsrInner<S>, Error> {
         subject.validate()?;
 
-        let subject_public_key_info = SubjectPublicKeyInfo {
+        let subject_public_key_info = PublicKeyInfo {
             algorithm: public_key.algorithm(),
             public_key_bitstring: BitString::from_der(&public_key.algorithm().to_der()?)?,
         };

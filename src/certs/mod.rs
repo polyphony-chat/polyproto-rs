@@ -85,24 +85,24 @@ pub enum PkcsVersion {
 
 /// Information regarding a subjects' public key.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct SubjectPublicKeyInfo {
+pub struct PublicKeyInfo {
     /// Properties of the signature algorithm used to create the public key.
     pub algorithm: AlgorithmIdentifierOwned,
     /// The public key, represented as a [BitString].
     pub public_key_bitstring: BitString,
 }
 
-impl From<SubjectPublicKeyInfoOwned> for SubjectPublicKeyInfo {
+impl From<SubjectPublicKeyInfoOwned> for PublicKeyInfo {
     fn from(value: SubjectPublicKeyInfoOwned) -> Self {
-        SubjectPublicKeyInfo {
+        PublicKeyInfo {
             algorithm: value.algorithm,
             public_key_bitstring: value.subject_public_key,
         }
     }
 }
 
-impl From<SubjectPublicKeyInfo> for SubjectPublicKeyInfoOwned {
-    fn from(value: SubjectPublicKeyInfo) -> Self {
+impl From<PublicKeyInfo> for SubjectPublicKeyInfoOwned {
+    fn from(value: PublicKeyInfo) -> Self {
         SubjectPublicKeyInfoOwned {
             algorithm: value.algorithm,
             subject_public_key: value.public_key_bitstring,
