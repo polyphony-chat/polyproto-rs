@@ -75,7 +75,7 @@ impl<S: Signature> IdCsr<S> {
         to_sign.extend(session_id_bytes);
 
         let signature = signing_key.sign(&to_sign);
-        let signature_algorithm = S::as_algorithm_identifier();
+        let signature_algorithm = S::public_key_info().algorithm;
 
         Ok(IdCsr {
             inner_csr,
@@ -136,8 +136,10 @@ impl<S: Signature> IdCsrInner<S> {
         subject.validate()?;
 
         let subject_public_key_info = PublicKeyInfo {
-            algorithm: public_key.algorithm(),
-            public_key_bitstring: BitString::from_der(&public_key.algorithm().to_der()?)?,
+            algorithm: public_key.public_key_info().algorithm,
+            public_key_bitstring: BitString::from_der(
+                &public_key.public_key_info().public_key_bitstring.to_der()?,
+            )?,
         };
 
         Ok(IdCsrInner {
