@@ -12,6 +12,9 @@ running.
 
 ## Implementing polyproto
 
+**The crate is currently in very early (alpha) development. A lot of functionality is missing, and
+things may break or change at any point in time.**
+
 This crate extends upon types offered by [der](https://crates.io/crates/der) and
 [spki](https://crates.io/crates/spki). As such, these crates are required dependencies for
 projects looking to implement polyproto.
@@ -30,6 +33,7 @@ This crate provides no cryptographic functionality whatsoever; its sole purpose 
 implementing polyproto by transforming the
 [polyproto specification](https://docs.polyphony.chat/Protocol%20Specifications/core/) into
 well-defined yet adaptable Rust types.
+
 
 */
 
