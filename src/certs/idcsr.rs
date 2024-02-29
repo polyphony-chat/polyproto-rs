@@ -75,7 +75,7 @@ impl<S: Signature> IdCsr<S> {
         to_sign.extend(session_id_bytes);
 
         let signature = signing_key.sign(&to_sign);
-        let signature_algorithm = S::public_key_info().algorithm;
+        let signature_algorithm = S::algorithm_identifier();
 
         Ok(IdCsr {
             inner_csr,
