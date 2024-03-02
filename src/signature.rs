@@ -11,4 +11,6 @@ pub trait Signature: PartialEq + Eq + SignatureBitStringEncoding {
     fn as_signature(&self) -> &Self::Signature;
     /// The [AlgorithmIdentifierOwned] associated with this signature
     fn algorithm_identifier() -> AlgorithmIdentifierOwned;
+    /// From a bit string signature value, create a new [Self]
+    fn from_bitstring(signature: &[u8]) -> Self;
 }
