@@ -57,7 +57,6 @@ pub(crate) mod value_constraints;
 
 use std::fmt::Debug;
 
-use openssl::error::ErrorStack;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone)]
@@ -70,8 +69,6 @@ pub enum Error {
     InvalidInput(#[from] InvalidInput),
     #[error("Value failed to meet constraints")]
     ConstraintError(#[from] ConstraintError),
-    #[error("OpenSSL error")]
-    OpenSSL(#[from] ErrorStack),
 }
 
 /// Error type covering possible failures when converting a [x509_cert::TbsCertificate]
