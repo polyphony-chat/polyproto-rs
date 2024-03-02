@@ -19,3 +19,4 @@ x509-cert = { version = "0.2.5", default-features = false, features = ["pem"] }
 ed25519-dalek = { version = "2.1.1", features = ["rand_core", "signature"] }
 rand = "0.8.5"
 polyproto = { path = "./" }
+openssl = "0.10.64"
