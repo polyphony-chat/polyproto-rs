@@ -5,9 +5,10 @@
 use std::marker::PhantomData;
 
 use der::asn1::{BitString, Uint};
-use der::{Decode, Encode, Length};
+use der::{Decode, Encode};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 use x509_cert::name::Name;
+use x509_cert::request::{CertReq, CertReqInfo};
 
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
@@ -152,4 +153,33 @@ impl<S: Signature> IdCsrInner<S> {
     }
 }
 
-//TODO: Implement decode trait
+impl<S: Signature> From<CertReq> for IdCsr<S> {
+    fn from(value: CertReq) -> Self {
+        IdCsr {
+            inner_csr: IdCsrInner::from(value.info),
+            signature_algorithm: value.algorithm,
+            // TODO: raw_bytes() or as_bytes()?
+            signature: S::from_bitstring(value.signature.raw_bytes()),
+        }
+    }
+}
+
+// TODO Perhaps we should implement TryFrom instead of From, because the conversion can fail.
+impl<S: Signature> From<CertReqInfo> for IdCsrInner<S> {
+    fn from(value: CertReqInfo) -> Self {
+        todo!()
+    }
+}
+
+impl<S: Signature> From<IdCsr<S>> for CertReq {
+    fn from(value: IdCsr<S>) -> Self {
+        todo!()
+    }
+}
+
+// TODO Perhaps we should implement TryFrom instead of From, because the conversion can fail.
+impl<S: Signature> From<IdCsrInner<S>> for CertReqInfo {
+    fn from(value: IdCsrInner<S>) -> Self {
+        todo!()
+    }
+}
