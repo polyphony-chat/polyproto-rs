@@ -153,20 +153,23 @@ impl<S: Signature> IdCsrInner<S> {
     }
 }
 
-impl<S: Signature> From<CertReq> for IdCsr<S> {
-    fn from(value: CertReq) -> Self {
-        IdCsr {
-            inner_csr: IdCsrInner::from(value.info),
+impl<S: Signature> TryFrom<CertReq> for IdCsr<S> {
+    type Error = Error;
+
+    fn try_from(value: CertReq) -> Result<Self, Error> {
+        Ok(IdCsr {
+            inner_csr: IdCsrInner::try_from(value.info)?,
             signature_algorithm: value.algorithm,
             // TODO: raw_bytes() or as_bytes()?
             signature: S::from_bitstring(value.signature.raw_bytes()),
-        }
+        })
     }
 }
 
-// TODO Perhaps we should implement TryFrom instead of From, because the conversion can fail.
-impl<S: Signature> From<CertReqInfo> for IdCsrInner<S> {
-    fn from(value: CertReqInfo) -> Self {
+impl<S: Signature> TryFrom<CertReqInfo> for IdCsrInner<S> {
+    type Error = Error;
+
+    fn try_from(value: CertReqInfo) -> Result<Self, Self::Error> {
         todo!()
     }
 }
@@ -177,9 +180,10 @@ impl<S: Signature> From<IdCsr<S>> for CertReq {
     }
 }
 
-// TODO Perhaps we should implement TryFrom instead of From, because the conversion can fail.
-impl<S: Signature> From<IdCsrInner<S>> for CertReqInfo {
-    fn from(value: IdCsrInner<S>) -> Self {
+impl<S: Signature> TryFrom<IdCsrInner<S>> for CertReqInfo {
+    type Error = Error;
+
+    fn try_from(value: IdCsrInner<S>) -> Result<Self, Error> {
         todo!()
     }
 }
