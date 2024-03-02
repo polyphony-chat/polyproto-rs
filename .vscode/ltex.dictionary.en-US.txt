@@ -21,3 +21,13 @@ impls
 OID
 IANA
 PublicKeyInfo
+CertificationRequestInfo
+subjectPKInfo
+SubjectPublicKeyInfo
+PKInfoAlgorithms
+CRIAttributes
+CertificationRequest
+AlgorithmIdentifier
+signatureAlgorithm
+SignatureAlgorithms
+PKCS

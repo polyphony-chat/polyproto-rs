@@ -1,2 +1,5 @@
 {"rule":"EN_A_VS_AN","sentence":"^\\QCan be exchanged for an \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q by requesting\none from a certificate authority in exchange for this \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q.\\E$"}
 {"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QGeneric polyproto signature traits.\\E$"}
+{"rule":"COMMA_PARENTHESIS_WHITESPACE","sentence":"^\\QCertificationRequestInfo ::= SEQUENCE {\nversion       INTEGER { v1(0) } (v1,...),\nsubject       Name,\nsubjectPKInfo SubjectPublicKeyInfo{{ PKInfoAlgorithms }},\nattributes    0 Attributes{{ CRIAttributes }}\n}\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_RULE","sentence":"^\\QCertificationRequest ::= SEQUENCE {\ncertificationRequestInfo CertificationRequestInfo,\nsignatureAlgorithm AlgorithmIdentifier{{ SignatureAlgorithms }},\nsignature          BIT STRING\n}\\E$"}
+{"rule":"COMMA_PARENTHESIS_WHITESPACE","sentence":"^\\QCertificationRequest ::= SEQUENCE {\ncertificationRequestInfo CertificationRequestInfo,\nsignatureAlgorithm AlgorithmIdentifier{{ SignatureAlgorithms }},\nsignature          BIT STRING\n}\\E$"}
