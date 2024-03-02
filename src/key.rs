@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use spki::AlgorithmIdentifierOwned;
+
 use crate::certs::PublicKeyInfo;
 use crate::signature::Signature;
 
@@ -13,9 +15,9 @@ pub trait PrivateKey<S: Signature>: PartialEq + Eq {
     fn pubkey(&self) -> &Self::PublicKey;
     /// Creates a [Signature] for the given data.
     fn sign(&self, data: &[u8]) -> S;
-    /// Returns the [PublicKeyInfo] associated with this key's signature algorithm.
-    fn public_key_info(&self) -> PublicKeyInfo {
-        self.pubkey().public_key_info()
+    /// Returns the [AlgorithmIdentifierOwned] associated with this key's signature algorithm.
+    fn algorithm_identifier(&self) -> AlgorithmIdentifierOwned {
+        S::algorithm_identifier()
     }
 }
 
@@ -28,4 +30,8 @@ pub trait PublicKey<S: Signature>: PartialEq + Eq {
     fn verify_signature(&self, signature: &S, data: &[u8]) -> Result<(), Self::Error>;
     /// Returns the [PublicKeyInfo] associated with this key's signature algorithm.
     fn public_key_info(&self) -> PublicKeyInfo;
+    /// Returns the [AlgorithmIdentifierOwned] associated with this key's signature algorithm.
+    fn algorithm_identifier(&self) -> AlgorithmIdentifierOwned {
+        S::algorithm_identifier()
+    }
 }
