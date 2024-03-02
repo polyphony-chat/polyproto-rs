@@ -152,49 +152,4 @@ impl<S: Signature> IdCsrInner<S> {
     }
 }
 
-impl<S: Signature> Encode for IdCsrInner<S> {
-    // TODO: Test this
-    fn encoded_len(&self) -> der::Result<Length> {
-        let len_version = Uint::new(&[self.version as u8])?.encoded_len()?;
-        let len_subject = self.subject.encoded_len()?;
-        let spki_converted: SubjectPublicKeyInfoOwned = self.subject_public_key_info.clone().into();
-        let len_spki = spki_converted.encoded_len()?;
-        let len_ssid = self.subject_session_id.as_attribute().encoded_len()?;
-        len_spki + len_subject + len_ssid + len_version
-    }
-
-    // TODO: Test this
-    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
-        let uint_version = Uint::new(&[self.version as u8])?;
-        let spki_converted: SubjectPublicKeyInfoOwned = self.subject_public_key_info.clone().into();
-        uint_version.encode(encoder)?;
-        self.subject.encode(encoder)?;
-        spki_converted.encode(encoder)?;
-        self.subject_session_id.as_attribute().encode(encoder)?;
-        Ok(())
-    }
-}
-
-impl<S: Signature> Encode for IdCsr<S> {
-    // TODO: Test this
-    fn encoded_len(&self) -> der::Result<Length> {
-        let len_inner = self.inner_csr.encoded_len()?;
-        let len_signature_algorithm = AlgorithmIdentifierOwned {
-            oid: self.signature_algorithm.oid,
-            parameters: self.signature_algorithm.parameters.clone(),
-        }
-        .encoded_len()?;
-        let len_signature = self.signature.to_bitstring()?.encoded_len()?;
-        len_inner + len_signature_algorithm + len_signature
-    }
-
-    // TODO: Test this
-    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
-        self.inner_csr.encode(encoder)?;
-        self.signature_algorithm.clone().encode(encoder)?;
-        self.signature.to_bitstring()?.encode(encoder)?;
-        Ok(())
-    }
-}
-
 //TODO: Implement decode trait
