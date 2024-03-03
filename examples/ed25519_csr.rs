@@ -35,6 +35,8 @@ fn main() {
     let data = certrequest.to_der().unwrap();
     let file_name_with_extension = "cert.csr";
     std::fs::write(file_name_with_extension, &data);
+
+    // TODO: The signature value of the generated csr is not correct.
 }
 
 // As mentioned in the README, we start by implementing the signature trait.
