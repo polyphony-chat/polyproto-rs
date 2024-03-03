@@ -4,10 +4,8 @@
 
 use std::ops::{Deref, DerefMut};
 
-use der::asn1::{Any, BitString, Ia5String, SetOfVec};
-use der::{Decode, Encode};
-use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SubjectPublicKeyInfoOwned};
-use x509_cert::attr::Attribute;
+use der::asn1::{BitString, Ia5String};
+use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 
 use crate::{Constrained, Error};
 
