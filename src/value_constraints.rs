@@ -12,7 +12,7 @@ impl Constrained for Name {
     /// [Name] must meet the following criteria to be valid in the context of polyproto:
     /// - Distinguished name MUST have "common name" attribute, which is equal to the actor or
     ///   home server name of the subject in question. Only one "common name" is allowed.
-    /// - MUST have AT LEAST one domain component, specifying the home server subdomain for this
+    /// - MUST have AT LEAST one domain component, specifying the home server domain for this
     ///   entity.
     /// - If actor name, MUST include UID (OID 0.9.2342.19200300.100.1.1) and uniqueIdentifier
     ///   (OID 0.9.2342.19200300.100.1.44).
