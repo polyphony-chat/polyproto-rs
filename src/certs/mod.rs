@@ -51,6 +51,14 @@ impl SessionId {
         session_id.validate()?;
         Ok(session_id)
     }
+
+    /// Creates a new [SessionId] without validating it. This is useful when you are certain that
+    /// the [SessionId] is valid and you want to avoid the overhead of validation, or if you are
+    /// creating an extension for polyproto where the [SessionId] is allowed to be longer than 32
+    /// characters.
+    pub fn new_unchecked(id: Ia5String) -> Self {
+        Self { session_id: id }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
