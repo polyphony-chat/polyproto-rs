@@ -14,6 +14,7 @@ use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 use thiserror::Error;
 use x509_cert::name::RdnSequence;
+use x509_cert::request::CertReq;
 
 fn main() {
     let mut csprng = rand::rngs::OsRng;
@@ -27,9 +28,13 @@ fn main() {
         priv_key,
         SessionId::new(Ia5String::try_from(String::from("value")).unwrap()).unwrap(),
     )
-    .unwrap()
-    .to_der()
     .unwrap();
+
+    let certrequest = CertReq::from(_csr.try_into().unwrap());
+    println!("Certrequest der bytes: {:?}", certrequest.to_der().unwrap());
+    let data = certrequest.to_der().unwrap();
+    let file_name_with_extension = "cert.csr";
+    std::fs::write(file_name_with_extension, &data);
 }
 
 // As mentioned in the README, we start by implementing the signature trait.
@@ -60,6 +65,13 @@ impl Signature for Ed25519Signature {
             oid: ObjectIdentifier::from_str("1.3.101.112").unwrap(),
             // For this example, we don't need or want any parameters.
             parameters: None,
+        }
+    }
+
+    fn from_bitstring(signature: &[u8]) -> Self {
+        Self {
+            signature: Ed25519DalekSignature::from_slice(signature).unwrap(),
+            algorithm: Self::algorithm_identifier(),
         }
     }
 }
