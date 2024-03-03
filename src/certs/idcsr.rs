@@ -159,7 +159,7 @@ impl<S: Signature> Encode for IdCsrInner<S> {
         let len_subject = self.subject.encoded_len()?;
         let spki_converted: SubjectPublicKeyInfoOwned = self.subject_public_key_info.clone().into();
         let len_spki = spki_converted.encoded_len()?;
-        let len_ssid = self.subject_session_id.as_attribute().encoded_len()?;
+        let len_ssid = self.subject_session_id.encoded_len()?;
         len_spki + len_subject + len_ssid + len_version
     }
 
@@ -170,7 +170,7 @@ impl<S: Signature> Encode for IdCsrInner<S> {
         uint_version.encode(encoder)?;
         self.subject.encode(encoder)?;
         spki_converted.encode(encoder)?;
-        self.subject_session_id.as_attribute().encode(encoder)?;
+        self.subject_session_id.encode(encoder)?;
         Ok(())
     }
 }
