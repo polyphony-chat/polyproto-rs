@@ -22,7 +22,7 @@ fn main() {
     println!("Public Key is: {:?}", priv_key.public_key.key.to_bytes());
     println!();
 
-    let csr = polyproto::certs::idcsr::IdCsr::new(
+    let _csr = polyproto::certs::idcsr::IdCsr::new(
         RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat").unwrap(),
         priv_key,
         SessionId::new(Ia5String::try_from(String::from("value")).unwrap()).unwrap(),

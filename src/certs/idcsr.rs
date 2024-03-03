@@ -67,7 +67,7 @@ impl<S: Signature> IdCsr<S> {
         let subject_bytes = inner_csr.subject.to_der()?;
         let spki_bytes =
             SubjectPublicKeyInfoOwned::from(inner_csr.subject_public_key_info.clone()).to_der()?;
-        let session_id_bytes = subject_session_id.as_attribute().to_der()?;
+        let session_id_bytes = subject_session_id.to_der()?;
 
         let mut to_sign = Vec::new();
         to_sign.extend(version_bytes);

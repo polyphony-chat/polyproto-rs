@@ -2,10 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use der::asn1::{Any, BitString, Ia5String, SetOfVec};
-use der::{Decode, Encode};
-use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SubjectPublicKeyInfoOwned};
-use x509_cert::attr::Attribute;
+use std::ops::{Deref, DerefMut};
+
+use der::asn1::{BitString, Ia5String};
+use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 
 use crate::{Constrained, Error};
 
@@ -16,13 +16,30 @@ pub mod idcerttbs;
 /// Certificate Signing Request for an [IdCert]/[IdCertTbs]
 pub mod idcsr;
 
-/// Custom "SessionId" [Attribute] for use in polyproto.
-/// DOCUMENTME: Add notes about what session_ids are in polyproto.
-/// DOCUMENTME: Add ASN.1 notation for this Attribute
+/// polyproto client Session ID. Must be unique for each client. Must be between 1 and =32
+/// characters in length. The session ID is used to uniquely identify a client in the context of
+/// polyproto. Client certificates will change over time, but the session ID of a particular client
+/// will remain the same.
+///
+/// [Constrained] is implemented for this type, meaning it can be validated using `.validate()`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionId {
-    attribute: Attribute,
+    /// The session ID, represented as an [Ia5String].
     session_id: Ia5String,
+}
+
+impl Deref for SessionId {
+    type Target = Ia5String;
+
+    fn deref(&self) -> &Self::Target {
+        &self.session_id
+    }
+}
+
+impl DerefMut for SessionId {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.session_id
+    }
 }
 
 impl SessionId {
@@ -30,38 +47,17 @@ impl SessionId {
     /// Creates a new [SessionId] which can be converted into an [Attribute] using `.as_attribute()`,
     /// if needed.
     pub fn new(id: Ia5String) -> Result<Self, Error> {
-        let mut set_of_vec = SetOfVec::new();
-        let any = Any::from_der(&id.to_der()?)?;
-        set_of_vec.insert(any)?;
-        let session_id_attribute = Attribute {
-                // TODO: this OID still has to be defined at oid-info.com
-                oid: ObjectIdentifier::new("1.3.6.1.4.1.61536.1.1").expect("The object identifier specified is not in correct OID notation. Please file a bug report under https://github.com/polyphony-chat/polyproto"),
-                values: set_of_vec
-            };
-        let session_id = Self {
-            attribute: session_id_attribute,
-            session_id: id,
-        };
+        let session_id = Self { session_id: id };
         session_id.validate()?;
         Ok(session_id)
     }
-}
 
-impl SessionId {
-    /// Returns the inner [Attribute] field
-    pub fn as_attribute(&self) -> &Attribute {
-        &self.attribute
-    }
-
-    /// Returns the inner `session_id` field
-    pub fn as_ia5string(&self) -> &Ia5String {
-        &self.session_id
-    }
-}
-
-impl From<SessionId> for Attribute {
-    fn from(value: SessionId) -> Self {
-        value.attribute
+    /// Creates a new [SessionId] without validating it. This is useful when you are certain that
+    /// the [SessionId] is valid and you want to avoid the overhead of validation, or if you are
+    /// creating an extension for polyproto where the [SessionId] is allowed to be longer than 32
+    /// characters.
+    pub fn new_unchecked(id: Ia5String) -> Self {
+        Self { session_id: id }
     }
 }
 

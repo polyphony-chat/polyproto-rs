@@ -2,10 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::str::FromStr;
-
 use der::Length;
-use spki::ObjectIdentifier;
 use x509_cert::name::Name;
 
 use crate::certs::SessionId;
@@ -15,33 +12,39 @@ impl Constrained for Name {
     /// [Name] must meet the following criteria to be valid in the context of polyproto:
     /// - Distinguished name MUST have "common name" attribute, which is equal to the actor or
     ///   home server name of the subject in question. Only one "common name" is allowed.
-    /// - MUST have AT LEAST one domain component, specifying the home server subdomain for this
+    /// - MUST have AT LEAST one domain component, specifying the home server domain for this
     ///   entity.
-    /// - If actor name, MUST include OID.
+    /// - If actor name, MUST include UID (OID 0.9.2342.19200300.100.1.1) and uniqueIdentifier
+    ///   (OID 0.9.2342.19200300.100.1.44).
+    ///     - UID is the federation ID of the actor.
+    ///     - uniqueIdentifier is the [SessionId] of the actor.
     /// - MAY have "organizational unit" attributes
     /// - MAY have other attributes, which might be ignored by other home servers and other clients.
     fn validate(&self) -> Result<(), crate::ConstraintError> {
         // this code sucks. i couldn't think of a way to make it better though. sorry!
         let mut num_cn: u8 = 0;
         let mut num_dc: u8 = 0;
-        let oid_common_name = ObjectIdentifier::from_str("2.5.4.3")
-            .expect("Please report this bug to https://github.com/polyphony-chat/polyproto");
-        let oid_domain_component = ObjectIdentifier::from_str("0.9.2342.19200300.100.1.25")
-            .expect("Please report this bug to https://github.com/polyphony-chat/polyproto");
+        let mut num_uid: u8 = 0;
+        let mut num_unique_identifier: u8 = 0;
+
         let rdns = &self.0;
         for rdn in rdns.iter() {
             for item in rdn.0.iter() {
-                if item.oid == oid_common_name {
-                    num_cn += 1;
-                    if num_cn > 1 {
-                        return Err(crate::ConstraintError::OutOfBounds {
-                            lower: 1,
-                            upper: 1,
-                            actual: num_cn.to_string(),
-                        });
+                match item.oid.to_string().as_str() {
+                    "0.9.2342.19200300.100.1.1" => num_uid += 1,
+                    "0.9.2342.19200300.100.1.44" => num_unique_identifier += 1,
+                    "2.5.4.3" => {
+                        num_cn += 1;
+                        if num_cn > 1 {
+                            return Err(crate::ConstraintError::OutOfBounds {
+                                lower: 1,
+                                upper: 1,
+                                actual: num_cn.to_string(),
+                            });
+                        }
                     }
-                } else if item.oid == oid_domain_component {
-                    num_dc += 1;
+                    "0.9.2342.19200300.100.1.25" => num_dc += 1,
+                    _ => {}
                 }
             }
         }
@@ -52,6 +55,34 @@ impl Constrained for Name {
                 actual: "0".to_string(),
             });
         }
+        if num_uid > 1 {
+            return Err(crate::ConstraintError::OutOfBounds {
+                lower: 0,
+                upper: 1,
+                actual: num_uid.to_string(),
+            });
+        }
+        if num_unique_identifier > 1 {
+            return Err(crate::ConstraintError::OutOfBounds {
+                lower: 0,
+                upper: 1,
+                actual: num_unique_identifier.to_string(),
+            });
+        }
+        if num_unique_identifier > 0 && num_uid == 0 {
+            return Err(crate::ConstraintError::OutOfBounds {
+                lower: 1,
+                upper: 1,
+                actual: num_uid.to_string(),
+            });
+        }
+        if num_uid > 0 && num_unique_identifier == 0 {
+            return Err(crate::ConstraintError::OutOfBounds {
+                lower: 1,
+                upper: 1,
+                actual: num_unique_identifier.to_string(),
+            });
+        }
         Ok(())
     }
 }
@@ -59,12 +90,11 @@ impl Constrained for Name {
 impl Constrained for SessionId {
     /// [SessionId] must be longer than 0 and not longer than 32 characters to be deemed valid.
     fn validate(&self) -> Result<(), crate::ConstraintError> {
-        if self.as_ia5string().len() > Length::new(32) || self.as_ia5string().len() == Length::ZERO
-        {
+        if self.len() > Length::new(32) || self.len() == Length::ZERO {
             return Err(crate::ConstraintError::OutOfBounds {
                 lower: 1,
                 upper: 32,
-                actual: self.as_ia5string().len().to_string(),
+                actual: self.len().to_string(),
             });
         }
         Ok(())
@@ -81,7 +111,10 @@ mod name_constraints {
 
     #[test]
     fn correct() {
-        let name = Name::from_str("CN=flori,DC=localhost,UID=h3g2jt4dhfgj8hjs").unwrap();
+        let name = Name::from_str(
+            "cn=flori,dc=localhost,uid=h3g2jt4dhfgj8hjs,uniqueIdentifier=flori@localhost",
+        )
+        .unwrap();
         name.validate().unwrap();
         let name = Name::from_str("CN=flori,DC=www,DC=polyphony,DC=chat").unwrap();
         name.validate().unwrap();
@@ -96,6 +129,24 @@ mod name_constraints {
     #[test]
     fn two_cns() {
         let name = Name::from_str("CN=flori,CN=xenia,DC=localhost").unwrap();
+        assert!(name.validate().is_err())
+    }
+
+    #[test]
+    fn two_uid_or_uniqueid() {
+        let name = Name::from_str("CN=flori,CN=xenia,uid=numbaone,uid=numbatwo").unwrap();
+        assert!(name.validate().is_err());
+        let name =
+            Name::from_str("CN=flori,CN=xenia,uniqueIdentifier=numbaone,uniqueIdentifier=numbatwo")
+                .unwrap();
+        assert!(name.validate().is_err())
+    }
+
+    #[test]
+    fn uid_and_no_uniqueid_or_uniqueid_and_no_uid() {
+        let name = Name::from_str("CN=flori,CN=xenia,uid=numbaone").unwrap();
+        assert!(name.validate().is_err());
+        let name = Name::from_str("CN=flori,CN=xenia,uniqueIdentifier=numbaone").unwrap();
         assert!(name.validate().is_err())
     }
 }
