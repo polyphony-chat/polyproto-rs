@@ -24,7 +24,8 @@ pub mod idcsr;
 /// [Constrained] is implemented for this type, meaning it can be validated using `.validate()`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionId {
-    pub session_id: Ia5String,
+    /// The session ID, represented as an [Ia5String].
+    session_id: Ia5String,
 }
 
 impl Deref for SessionId {
