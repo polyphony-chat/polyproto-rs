@@ -59,12 +59,11 @@ impl Constrained for Name {
 impl Constrained for SessionId {
     /// [SessionId] must be longer than 0 and not longer than 32 characters to be deemed valid.
     fn validate(&self) -> Result<(), crate::ConstraintError> {
-        if self.as_ia5string().len() > Length::new(32) || self.as_ia5string().len() == Length::ZERO
-        {
+        if self.len() > Length::new(32) || self.len() == Length::ZERO {
             return Err(crate::ConstraintError::OutOfBounds {
                 lower: 1,
                 upper: 32,
-                actual: self.as_ia5string().len().to_string(),
+                actual: self.len().to_string(),
             });
         }
         Ok(())
