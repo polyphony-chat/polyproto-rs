@@ -17,17 +17,27 @@ impl Constrained for Name {
     ///   home server name of the subject in question. Only one "common name" is allowed.
     /// - MUST have AT LEAST one domain component, specifying the home server subdomain for this
     ///   entity.
-    /// - If actor name, MUST include OID.
+    /// - If actor name, MUST include UID (OID 0.9.2342.19200300.100.1.1) and uniqueIdentifier
+    ///   (OID 0.9.2342.19200300.100.1.44).
+    ///     - UID is the federation ID of the actor.
+    ///     - uniqueIdentifier is the [SessionId] of the actor.
     /// - MAY have "organizational unit" attributes
     /// - MAY have other attributes, which might be ignored by other home servers and other clients.
     fn validate(&self) -> Result<(), crate::ConstraintError> {
         // this code sucks. i couldn't think of a way to make it better though. sorry!
         let mut num_cn: u8 = 0;
         let mut num_dc: u8 = 0;
+        let mut num_uid: u8 = 0;
+        let mut num_unique_identifier: u8 = 0;
         let oid_common_name = ObjectIdentifier::from_str("2.5.4.3")
-            .expect("Please report this bug to https://github.com/polyphony-chat/polyproto");
+            .expect("The OID for \"Common Name\" is invalid. Please report this bug to https://github.com/polyphony-chat/polyproto");
         let oid_domain_component = ObjectIdentifier::from_str("0.9.2342.19200300.100.1.25")
-            .expect("Please report this bug to https://github.com/polyphony-chat/polyproto");
+            .expect("The OID for \"Domain Component\" is invalid. Please report this bug to https://github.com/polyphony-chat/polyproto");
+        let oid_uid = ObjectIdentifier::from_str("0.9.2342.19200300.100.1.1")
+            .expect("The OID for \"UID\" is invalid. Please report this bug to https://github.com/polyphony-chat/polyproto");
+        let oid_unique_identifier = ObjectIdentifier::from_str("0.9.2342.19200300.100.1.44")
+            .expect("The OID for \"Unique Identifier\" is invalid. Please report this bug to https://github.com/polyphony-chat/polyproto");
+
         let rdns = &self.0;
         for rdn in rdns.iter() {
             for item in rdn.0.iter() {
