@@ -4,7 +4,7 @@
 
 use std::marker::PhantomData;
 
-use der::asn1::{BitString, Uint};
+use der::asn1::{BitString, SetOfVec, Uint};
 use der::{Decode, Encode};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 use x509_cert::name::Name;
@@ -60,8 +60,7 @@ impl<S: Signature> IdCsr<S> {
     ) -> Result<IdCsr<S>, Error> {
         subject.validate()?;
         subject_session_id.validate()?;
-        let inner_csr =
-            IdCsrInner::<S>::new(subject, signing_key.pubkey(), subject_session_id.clone())?;
+        let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey())?;
 
         let version_bytes = Uint::new(&[inner_csr.version as u8])?.to_der()?;
         let subject_bytes = inner_csr.subject.to_der()?;
@@ -87,13 +86,11 @@ impl<S: Signature> IdCsr<S> {
 
     pub fn valid_actor_csr(&self) -> Result<(), Error> {
         self.inner_csr.subject.validate()?;
-        self.inner_csr.subject_session_id.validate()?;
         todo!()
     }
 
     pub fn valid_home_server_csr(&self) -> Result<(), Error> {
         self.inner_csr.subject.validate()?;
-        self.inner_csr.subject_session_id.validate()?;
         todo!()
     }
 }
@@ -116,8 +113,6 @@ pub struct IdCsrInner<S: Signature> {
     pub subject: Name,
     /// The subjects' public key and related metadata.
     pub subject_public_key_info: PublicKeyInfo,
-    /// The session ID of the client. No two valid certificates may exist for one session ID.
-    pub subject_session_id: SessionId,
     phantom_data: PhantomData<S>,
 }
 
@@ -129,11 +124,7 @@ impl<S: Signature> IdCsrInner<S> {
     /// Creates a new [IdCsrInner].
     ///
     /// The length of `subject_session_id` MUST NOT exceed 32.
-    pub fn new(
-        subject: Name,
-        public_key: &impl PublicKey<S>,
-        subject_session_id: SessionId,
-    ) -> Result<IdCsrInner<S>, Error> {
+    pub fn new(subject: Name, public_key: &impl PublicKey<S>) -> Result<IdCsrInner<S>, Error> {
         subject.validate()?;
 
         let subject_public_key_info = PublicKeyInfo {
@@ -147,7 +138,6 @@ impl<S: Signature> IdCsrInner<S> {
             version: PkcsVersion::V1,
             subject,
             subject_public_key_info,
-            subject_session_id,
             phantom_data: PhantomData,
         })
     }
@@ -170,20 +160,41 @@ impl<S: Signature> TryFrom<CertReqInfo> for IdCsrInner<S> {
     type Error = Error;
 
     fn try_from(value: CertReqInfo) -> Result<Self, Self::Error> {
-        todo!()
+        let rdn_sequence = value.subject;
+        rdn_sequence.validate()?;
+        let public_key = PublicKeyInfo {
+            algorithm: value.public_key.algorithm,
+            public_key_bitstring: value.public_key.subject_public_key,
+        };
+
+        Ok(IdCsrInner {
+            version: PkcsVersion::V1,
+            subject: rdn_sequence,
+            subject_public_key_info: public_key,
+            phantom_data: PhantomData,
+        })
     }
 }
 
-impl<S: Signature> From<IdCsr<S>> for CertReq {
-    fn from(value: IdCsr<S>) -> Self {
-        todo!()
-    }
-}
-
-impl<S: Signature> TryFrom<IdCsrInner<S>> for CertReqInfo {
+impl<S: Signature> TryFrom<IdCsr<S>> for CertReq {
     type Error = Error;
 
-    fn try_from(value: IdCsrInner<S>) -> Result<Self, Error> {
-        todo!()
+    fn try_from(value: IdCsr<S>) -> Result<Self, Self::Error> {
+        Ok(CertReq {
+            info: value.inner_csr.into(),
+            algorithm: value.signature_algorithm,
+            signature: value.signature.to_bitstring()?,
+        })
+    }
+}
+
+impl<S: Signature> From<IdCsrInner<S>> for CertReqInfo {
+    fn from(value: IdCsrInner<S>) -> Self {
+        CertReqInfo {
+            version: x509_cert::request::Version::V1,
+            subject: value.subject,
+            public_key: value.subject_public_key_info.into(),
+            attributes: SetOfVec::new(),
+        }
     }
 }
