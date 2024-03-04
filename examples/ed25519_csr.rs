@@ -27,6 +27,7 @@ use x509_cert::request::CertReq;
 /// openssl req -in cert.csr -verify
 /// ```
 
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 fn main() {
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
@@ -45,6 +46,7 @@ fn main() {
     println!("Certrequest der bytes: {:?}", certrequest.to_der().unwrap());
     let data = certrequest.to_der().unwrap();
     let file_name_with_extension = "cert.csr";
+    #[cfg(not(target_arch = "wasm32"))]
     std::fs::write(file_name_with_extension, &data).unwrap();
 
     // TODO: The attributes are still missing. CA Certificates and Actor Certificates should have
