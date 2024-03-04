@@ -35,9 +35,8 @@ fn main() {
     println!("Certrequest der bytes: {:?}", certrequest.to_der().unwrap());
     let data = certrequest.to_der().unwrap();
     let file_name_with_extension = "cert.csr";
-    std::fs::write(file_name_with_extension, &data);
+    std::fs::write(file_name_with_extension, &data).unwrap();
 
-    // TODO: The signature value of the generated csr is not correct.
     // TODO: The attributes are still missing. CA Certificates and Actor Certificates should have
     //       their respective set of capabilities
 }
