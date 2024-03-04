@@ -7,6 +7,7 @@ use std::marker::PhantomData;
 use der::asn1::{BitString, SetOfVec, Uint};
 use der::{Decode, Encode};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
+use x509_cert::attr::Attributes;
 use x509_cert::name::Name;
 use x509_cert::request::{CertReq, CertReqInfo};
 
@@ -54,13 +55,14 @@ impl<S: Signature> IdCsr<S> {
     /// - **subject_unique_id**: [Uint], subject (actor) session ID. MUST NOT exceed 32 characters
     ///                          in length.
     pub fn new(
-        subject: Name,
-        signing_key: impl PrivateKey<S>,
-        subject_session_id: SessionId,
+        subject: &Name,
+        signing_key: &impl PrivateKey<S>,
+        subject_session_id: &SessionId,
+        attributes: &Attributes,
     ) -> Result<IdCsr<S>, Error> {
         subject.validate()?;
         subject_session_id.validate()?;
-        let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey())?;
+        let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey(), attributes)?;
 
         let version_bytes = Uint::new(&[inner_csr.version as u8])?.to_der()?;
         let subject_bytes = inner_csr.subject.to_der()?;
@@ -113,6 +115,9 @@ pub struct IdCsrInner<S: Signature> {
     pub subject: Name,
     /// The subjects' public key and related metadata.
     pub subject_public_key_info: PublicKeyInfo,
+    /// attributes is a collection of attributes providing additional
+    /// information about the subject of the certificate.
+    pub attributes: Attributes,
     phantom_data: PhantomData<S>,
 }
 
@@ -124,7 +129,11 @@ impl<S: Signature> IdCsrInner<S> {
     /// Creates a new [IdCsrInner].
     ///
     /// The length of `subject_session_id` MUST NOT exceed 32.
-    pub fn new(subject: Name, public_key: &impl PublicKey<S>) -> Result<IdCsrInner<S>, Error> {
+    pub fn new(
+        subject: &Name,
+        public_key: &impl PublicKey<S>,
+        attributes: &Attributes,
+    ) -> Result<IdCsrInner<S>, Error> {
         subject.validate()?;
 
         let subject_public_key_info = PublicKeyInfo {
@@ -134,10 +143,14 @@ impl<S: Signature> IdCsrInner<S> {
             )?,
         };
 
+        let subject = subject.clone();
+        let attributes = attributes.clone();
+
         Ok(IdCsrInner {
             version: PkcsVersion::V1,
             subject,
             subject_public_key_info,
+            attributes,
             phantom_data: PhantomData,
         })
     }
@@ -171,6 +184,7 @@ impl<S: Signature> TryFrom<CertReqInfo> for IdCsrInner<S> {
             version: PkcsVersion::V1,
             subject: rdn_sequence,
             subject_public_key_info: public_key,
+            attributes: value.attributes,
             phantom_data: PhantomData,
         })
     }
