@@ -1,0 +1,88 @@
+name: Build, Test, Publish Coverage
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main", "dev"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          prefix-key: "linux"
+      - name: Build, Test and Publish Coverage
+        run: |
+          if [ -n "${{ secrets.COVERALLS_REPO_TOKEN }}" ]; then
+            curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+            cargo binstall --no-confirm cargo-tarpaulin --force
+            cargo tarpaulin --all-features --avoid-cfg-tarpaulin --tests --examples --verbose --skip-clean --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }} --timeout 120
+          else
+            echo "Code Coverage step is skipped on forks!"
+            cargo build --verbose --all-features
+            cargo test --verbose --all-features
+          fi
+  # wasm-safari:
+  #   runs-on: macos-latest
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #   - name: Clone spacebar server
+  #     run: |
+  #       git clone https://github.com/bitfl0wer/server.git
+  #   - uses: actions/setup-node@v3
+  #     with:
+  #         node-version: 18
+  #         cache: 'npm'
+  #         cache-dependency-path: server/package-lock.json
+  #   - name: Prepare and start Spacebar server
+  #     run: |
+  #       npm install
+  #       npm run setup
+  #       npm run start &
+  #     working-directory: ./server
+  #   - uses: Swatinem/rust-cache@v2
+  #     with:
+  #       cache-all-crates: "true"
+  #       prefix-key: "macos-safari"
+  #   - name: Run WASM tests with Safari, Firefox, Chrome
+  #     run: |
+  #       rustup target add wasm32-unknown-unknown
+  #       curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+  #       cargo binstall --no-confirm wasm-bindgen-cli --version "0.2.88" --force
+  #       SAFARIDRIVER=$(which safaridriver) cargo test --target wasm32-unknown-unknown --no-default-features --features="client, rt" --no-fail-fast
+  wasm-gecko:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          prefix-key: "macos"
+      - name: Run WASM tests with Safari, Firefox, Chrome
+        run: |
+          rustup target add wasm32-unknown-unknown
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          cargo binstall --no-confirm wasm-bindgen-cli --version "0.2.88" --force
+          GECKODRIVER=$(which geckodriver) cargo test --target wasm32-unknown-unknown --no-default-features --features="client, rt"
+  wasm-chrome:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          prefix-key: "macos"
+      - name: Run WASM tests with Safari, Firefox, Chrome
+        run: |
+          rustup target add wasm32-unknown-unknown
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          cargo binstall --no-confirm wasm-bindgen-cli --version "0.2.88" --force
+          CHROMEDRIVER=$(which chromedriver) cargo test --target wasm32-unknown-unknown --no-default-features --features="client, rt"
