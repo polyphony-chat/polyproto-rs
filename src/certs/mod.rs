@@ -7,7 +7,7 @@ use std::ops::{Deref, DerefMut};
 use der::asn1::{BitString, Ia5String};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 
-use crate::{Constrained, Error};
+use crate::{Constrained, ConstraintError};
 
 /// Complete, signed [IdCert]
 pub mod idcert;
@@ -23,7 +23,7 @@ pub mod idcsr;
 ///
 /// [Constrained] is implemented for this type, meaning it can be validated using `.validate()`.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SessionId {
+pub(crate) struct SessionId {
     /// The session ID, represented as an [Ia5String].
     session_id: Ia5String,
 }
@@ -45,19 +45,19 @@ impl DerefMut for SessionId {
 impl SessionId {
     #[allow(clippy::new_ret_no_self)]
     /// Creates a new [SessionId] which can be converted into an [Attribute] using `.as_attribute()`,
-    /// if needed.
-    pub fn new(id: Ia5String) -> Result<Self, Error> {
-        let session_id = Self { session_id: id };
-        session_id.validate()?;
-        Ok(session_id)
-    }
-
-    /// Creates a new [SessionId] without validating it. This is useful when you are certain that
-    /// the [SessionId] is valid and you want to avoid the overhead of validation, or if you are
-    /// creating an extension for polyproto where the [SessionId] is allowed to be longer than 32
-    /// characters.
-    pub fn new_unchecked(id: Ia5String) -> Self {
-        Self { session_id: id }
+    /// if needed. Checks if the input is a valid Ia5String and if the [SessionId] constraints have
+    /// been violated.
+    pub(crate) fn new_validated(id: String) -> Result<Self, ConstraintError> {
+        let ia5string = Ia5String::new(&id);
+        if let Ok(converted) = ia5string {
+            let session_id = Self {
+                session_id: converted,
+            };
+            session_id.validate()?;
+            Ok(session_id)
+        } else {
+            Err(ConstraintError::Malformed)
+        }
     }
 }
 
