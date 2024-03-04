@@ -13,7 +13,19 @@ use polyproto::signature::Signature;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 use thiserror::Error;
+use x509_cert::attr::Attributes;
 use x509_cert::name::RdnSequence;
+use x509_cert::request::CertReq;
+
+/// The following example uses the same setup as in ed25519_basic.rs, but in its main method, it
+/// creates a certificate signing request (CSR) and writes it to a file. The CSR is created from a
+/// polyproto ID CSR, which is a wrapper around a PKCS #10 CSR.
+///
+/// If you have openssl installed, you can inspect the CSR by running:
+///
+/// ```sh
+/// openssl req -in cert.csr -verify
+/// ```
 
 fn main() {
     let mut csprng = rand::rngs::OsRng;
@@ -23,13 +35,20 @@ fn main() {
     println!();
 
     let _csr = polyproto::certs::idcsr::IdCsr::new(
-        RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat").unwrap(),
-        priv_key,
-        SessionId::new(Ia5String::try_from(String::from("value")).unwrap()).unwrap(),
+        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
+        &priv_key,
+        &Attributes::new(),
     )
-    .unwrap()
-    .to_der()
     .unwrap();
+
+    let certrequest = CertReq::from(_csr.try_into().unwrap());
+    println!("Certrequest der bytes: {:?}", certrequest.to_der().unwrap());
+    let data = certrequest.to_der().unwrap();
+    let file_name_with_extension = "cert.csr";
+    std::fs::write(file_name_with_extension, &data).unwrap();
+
+    // TODO: The attributes are still missing. CA Certificates and Actor Certificates should have
+    //       their respective set of capabilities
 }
 
 // As mentioned in the README, we start by implementing the signature trait.
@@ -60,6 +79,20 @@ impl Signature for Ed25519Signature {
             oid: ObjectIdentifier::from_str("1.3.101.112").unwrap(),
             // For this example, we don't need or want any parameters.
             parameters: None,
+        }
+    }
+
+    fn from_bitstring(signature: &[u8]) -> Self {
+        let mut signature_vec = signature.to_vec();
+        signature_vec.resize(64, 0);
+        let signature_array: [u8; 64] = {
+            let mut array = [0; 64];
+            array.copy_from_slice(&signature_vec[..]);
+            array
+        };
+        Self {
+            signature: Ed25519DalekSignature::from_bytes(&signature_array),
+            algorithm: Self::algorithm_identifier(),
         }
     }
 }

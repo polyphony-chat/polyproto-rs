@@ -4,10 +4,12 @@
 
 use std::marker::PhantomData;
 
-use der::asn1::{BitString, Uint};
-use der::{Decode, Encode, Length};
+use der::asn1::{BitString, SetOfVec, Uint};
+use der::{Decode, Encode};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
+use x509_cert::attr::Attributes;
 use x509_cert::name::Name;
+use x509_cert::request::{CertReq, CertReqInfo};
 
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
@@ -53,28 +55,16 @@ impl<S: Signature> IdCsr<S> {
     /// - **subject_unique_id**: [Uint], subject (actor) session ID. MUST NOT exceed 32 characters
     ///                          in length.
     pub fn new(
-        subject: Name,
-        signing_key: impl PrivateKey<S>,
-        subject_session_id: SessionId,
+        subject: &Name,
+        signing_key: &impl PrivateKey<S>,
+        attributes: &Attributes,
     ) -> Result<IdCsr<S>, Error> {
         subject.validate()?;
-        subject_session_id.validate()?;
-        let inner_csr =
-            IdCsrInner::<S>::new(subject, signing_key.pubkey(), subject_session_id.clone())?;
+        let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey(), attributes)?;
+        let cert_req_info = CertReqInfo::from(inner_csr);
+        let signature = signing_key.sign(&cert_req_info.to_der()?);
+        let inner_csr = IdCsrInner::<S>::try_from(cert_req_info)?;
 
-        let version_bytes = Uint::new(&[inner_csr.version as u8])?.to_der()?;
-        let subject_bytes = inner_csr.subject.to_der()?;
-        let spki_bytes =
-            SubjectPublicKeyInfoOwned::from(inner_csr.subject_public_key_info.clone()).to_der()?;
-        let session_id_bytes = subject_session_id.to_der()?;
-
-        let mut to_sign = Vec::new();
-        to_sign.extend(version_bytes);
-        to_sign.extend(subject_bytes);
-        to_sign.extend(spki_bytes);
-        to_sign.extend(session_id_bytes);
-
-        let signature = signing_key.sign(&to_sign);
         let signature_algorithm = S::algorithm_identifier();
 
         Ok(IdCsr {
@@ -86,13 +76,11 @@ impl<S: Signature> IdCsr<S> {
 
     pub fn valid_actor_csr(&self) -> Result<(), Error> {
         self.inner_csr.subject.validate()?;
-        self.inner_csr.subject_session_id.validate()?;
         todo!()
     }
 
     pub fn valid_home_server_csr(&self) -> Result<(), Error> {
         self.inner_csr.subject.validate()?;
-        self.inner_csr.subject_session_id.validate()?;
         todo!()
     }
 }
@@ -115,8 +103,9 @@ pub struct IdCsrInner<S: Signature> {
     pub subject: Name,
     /// The subjects' public key and related metadata.
     pub subject_public_key_info: PublicKeyInfo,
-    /// The session ID of the client. No two valid certificates may exist for one session ID.
-    pub subject_session_id: SessionId,
+    /// attributes is a collection of attributes providing additional
+    /// information about the subject of the certificate.
+    pub attributes: Attributes,
     phantom_data: PhantomData<S>,
 }
 
@@ -129,9 +118,9 @@ impl<S: Signature> IdCsrInner<S> {
     ///
     /// The length of `subject_session_id` MUST NOT exceed 32.
     pub fn new(
-        subject: Name,
+        subject: &Name,
         public_key: &impl PublicKey<S>,
-        subject_session_id: SessionId,
+        attributes: &Attributes,
     ) -> Result<IdCsrInner<S>, Error> {
         subject.validate()?;
 
@@ -142,59 +131,72 @@ impl<S: Signature> IdCsrInner<S> {
             )?,
         };
 
+        let subject = subject.clone();
+        let attributes = attributes.clone();
+
         Ok(IdCsrInner {
             version: PkcsVersion::V1,
             subject,
             subject_public_key_info,
-            subject_session_id,
+            attributes,
             phantom_data: PhantomData,
         })
     }
 }
 
-impl<S: Signature> Encode for IdCsrInner<S> {
-    // TODO: Test this
-    fn encoded_len(&self) -> der::Result<Length> {
-        let len_version = Uint::new(&[self.version as u8])?.encoded_len()?;
-        let len_subject = self.subject.encoded_len()?;
-        let spki_converted: SubjectPublicKeyInfoOwned = self.subject_public_key_info.clone().into();
-        let len_spki = spki_converted.encoded_len()?;
-        let len_ssid = self.subject_session_id.encoded_len()?;
-        len_spki + len_subject + len_ssid + len_version
-    }
+impl<S: Signature> TryFrom<CertReq> for IdCsr<S> {
+    type Error = Error;
 
-    // TODO: Test this
-    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
-        let uint_version = Uint::new(&[self.version as u8])?;
-        let spki_converted: SubjectPublicKeyInfoOwned = self.subject_public_key_info.clone().into();
-        uint_version.encode(encoder)?;
-        self.subject.encode(encoder)?;
-        spki_converted.encode(encoder)?;
-        self.subject_session_id.encode(encoder)?;
-        Ok(())
+    fn try_from(value: CertReq) -> Result<Self, Error> {
+        Ok(IdCsr {
+            inner_csr: IdCsrInner::try_from(value.info)?,
+            signature_algorithm: value.algorithm,
+            // TODO: raw_bytes() or as_bytes()?
+            signature: S::from_bitstring(value.signature.raw_bytes()),
+        })
     }
 }
 
-impl<S: Signature> Encode for IdCsr<S> {
-    // TODO: Test this
-    fn encoded_len(&self) -> der::Result<Length> {
-        let len_inner = self.inner_csr.encoded_len()?;
-        let len_signature_algorithm = AlgorithmIdentifierOwned {
-            oid: self.signature_algorithm.oid,
-            parameters: self.signature_algorithm.parameters.clone(),
+impl<S: Signature> TryFrom<CertReqInfo> for IdCsrInner<S> {
+    type Error = Error;
+
+    fn try_from(value: CertReqInfo) -> Result<Self, Self::Error> {
+        let rdn_sequence = value.subject;
+        rdn_sequence.validate()?;
+        let public_key = PublicKeyInfo {
+            algorithm: value.public_key.algorithm,
+            public_key_bitstring: value.public_key.subject_public_key,
+        };
+
+        Ok(IdCsrInner {
+            version: PkcsVersion::V1,
+            subject: rdn_sequence,
+            subject_public_key_info: public_key,
+            attributes: value.attributes,
+            phantom_data: PhantomData,
+        })
+    }
+}
+
+impl<S: Signature> TryFrom<IdCsr<S>> for CertReq {
+    type Error = Error;
+
+    fn try_from(value: IdCsr<S>) -> Result<Self, Self::Error> {
+        Ok(CertReq {
+            info: value.inner_csr.into(),
+            algorithm: value.signature_algorithm,
+            signature: value.signature.to_bitstring()?,
+        })
+    }
+}
+
+impl<S: Signature> From<IdCsrInner<S>> for CertReqInfo {
+    fn from(value: IdCsrInner<S>) -> Self {
+        CertReqInfo {
+            version: x509_cert::request::Version::V1,
+            subject: value.subject,
+            public_key: value.subject_public_key_info.into(),
+            attributes: SetOfVec::new(),
         }
-        .encoded_len()?;
-        let len_signature = self.signature.to_bitstring()?.encoded_len()?;
-        len_inner + len_signature_algorithm + len_signature
-    }
-
-    // TODO: Test this
-    fn encode(&self, encoder: &mut impl der::Writer) -> der::Result<()> {
-        self.inner_csr.encode(encoder)?;
-        self.signature_algorithm.clone().encode(encoder)?;
-        self.signature.to_bitstring()?.encode(encoder)?;
-        Ok(())
     }
 }
-
-//TODO: Implement decode trait

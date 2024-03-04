@@ -86,6 +86,20 @@ impl Signature for Ed25519Signature {
             parameters: None,
         }
     }
+
+    fn from_bitstring(signature: &[u8]) -> Self {
+        let mut signature_vec = signature.to_vec();
+        signature_vec.resize(64, 0);
+        let signature_array: [u8; 64] = {
+            let mut array = [0; 64];
+            array.copy_from_slice(&signature_vec[..]);
+            array
+        };
+        Self {
+            signature: Ed25519DalekSignature::from_bytes(&signature_array),
+            algorithm: Self::algorithm_identifier(),
+        }
+    }
 }
 
 // The `SignatureBitStringEncoding` trait is used to convert a signature to a bit string. We implement

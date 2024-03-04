@@ -59,7 +59,7 @@ use std::fmt::Debug;
 
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq, Clone)]
+#[derive(Error, Debug, Clone)]
 pub enum Error {
     #[error("Conversion from TbsCertificate to IdCertTbs failed")]
     TbsCertToIdCert(#[from] TbsCertToIdCert),

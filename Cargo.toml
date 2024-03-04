@@ -13,8 +13,7 @@ crate-type = ["rlib", "cdylib", "staticlib"]
 der = { version = "0.7.8", features = ["pem"] }
 spki = "0.7.3"
 thiserror = "1.0.57"
-x509-cert = { version = "0.2.5", default-features = false, features = ["pem"] }
-openssl = "0.10.64"
+x509-cert = { version = "0.2.5", default-features = false }
 
 [dev-dependencies]
 ed25519-dalek = { version = "2.1.1", features = ["rand_core", "signature"] }
