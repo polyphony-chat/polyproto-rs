@@ -71,7 +71,7 @@ jobs:
           rustup target add wasm32-unknown-unknown
           curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
           cargo binstall --no-confirm wasm-bindgen-cli --version "0.2.88" --force
-          GECKODRIVER=$(which geckodriver) cargo test --target wasm32-unknown-unknown --no-default-features --features="client, rt"
+          GECKODRIVER=$(which geckodriver) cargo test --tests --examples --target wasm32-unknown-unknown"
   wasm-chrome:
     runs-on: macos-latest
     steps:
@@ -85,4 +85,4 @@ jobs:
           rustup target add wasm32-unknown-unknown
           curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
           cargo binstall --no-confirm wasm-bindgen-cli --version "0.2.88" --force
-          CHROMEDRIVER=$(which chromedriver) cargo test --target wasm32-unknown-unknown --no-default-features --features="client, rt"
+          CHROMEDRIVER=$(which chromedriver) cargo test --tests --examples --target wasm32-unknown-unknown"
