@@ -47,5 +47,5 @@ well-defined yet adaptable Rust types.
 [coverage-url]: https://coveralls.io/github/polyphony-chat/polyproto?branch=main
 [Discord]: https://dcbadge.vercel.app/api/server/m3FpcapGDD?style=flat
 [Discord-invite]: https://discord.com/invite/m3FpcapGDD
-[Matrix]: https://img.shields.io/matrix/polyproto%3Atu-dresden.de?server_fqdn=matrix.tu-dresden.de&style=flat&label=Matrix%20Room
+[Matrix]: https://img.shields.io/matrix/polyproto%3Atu-dresden.de?server_fqdn=matrix.org&style=flat&label=Matrix%20Room
 [Matrix-invite]: https://matrix.to/#/#polyproto:tu-dresden.de
