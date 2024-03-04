@@ -25,9 +25,8 @@ fn main() {
     println!();
 
     let _csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat").unwrap(),
+        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
         &priv_key,
-        &SessionId::new(Ia5String::try_from(String::from("value")).unwrap()).unwrap(),
         &Attributes::new(),
     )
     .unwrap();
