@@ -57,24 +57,20 @@ impl<S: Signature> IdCsr<S> {
     pub fn new(
         subject: &Name,
         signing_key: &impl PrivateKey<S>,
-        subject_session_id: &SessionId,
         attributes: &Attributes,
     ) -> Result<IdCsr<S>, Error> {
         subject.validate()?;
-        subject_session_id.validate()?;
         let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey(), attributes)?;
 
         let version_bytes = Uint::new(&[inner_csr.version as u8])?.to_der()?;
         let subject_bytes = inner_csr.subject.to_der()?;
         let spki_bytes =
             SubjectPublicKeyInfoOwned::from(inner_csr.subject_public_key_info.clone()).to_der()?;
-        let session_id_bytes = subject_session_id.to_der()?;
 
         let mut to_sign = Vec::new();
         to_sign.extend(version_bytes);
         to_sign.extend(subject_bytes);
         to_sign.extend(spki_bytes);
-        to_sign.extend(session_id_bytes);
 
         let signature = signing_key.sign(&to_sign);
         let signature_algorithm = S::algorithm_identifier();
