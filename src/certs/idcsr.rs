@@ -61,18 +61,10 @@ impl<S: Signature> IdCsr<S> {
     ) -> Result<IdCsr<S>, Error> {
         subject.validate()?;
         let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey(), attributes)?;
+        let cert_req_info = CertReqInfo::from(inner_csr);
+        let signature = signing_key.sign(&cert_req_info.to_der()?);
+        let inner_csr = IdCsrInner::<S>::try_from(cert_req_info)?;
 
-        let version_bytes = Uint::new(&[inner_csr.version as u8])?.to_der()?;
-        let subject_bytes = inner_csr.subject.to_der()?;
-        let spki_bytes =
-            SubjectPublicKeyInfoOwned::from(inner_csr.subject_public_key_info.clone()).to_der()?;
-
-        let mut to_sign = Vec::new();
-        to_sign.extend(version_bytes);
-        to_sign.extend(subject_bytes);
-        to_sign.extend(spki_bytes);
-
-        let signature = signing_key.sign(&to_sign);
         let signature_algorithm = S::algorithm_identifier();
 
         Ok(IdCsr {
