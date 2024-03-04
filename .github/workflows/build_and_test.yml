@@ -28,37 +28,9 @@ jobs:
           else
             echo "Code Coverage step is skipped on forks!"
             cargo build --verbose --all-features
-            cargo test --verbose --all-features
+            cargo test --verbose --all-features --tests --examples
           fi
-  # wasm-safari:
-  #   runs-on: macos-latest
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #   - name: Clone spacebar server
-  #     run: |
-  #       git clone https://github.com/bitfl0wer/server.git
-  #   - uses: actions/setup-node@v3
-  #     with:
-  #         node-version: 18
-  #         cache: 'npm'
-  #         cache-dependency-path: server/package-lock.json
-  #   - name: Prepare and start Spacebar server
-  #     run: |
-  #       npm install
-  #       npm run setup
-  #       npm run start &
-  #     working-directory: ./server
-  #   - uses: Swatinem/rust-cache@v2
-  #     with:
-  #       cache-all-crates: "true"
-  #       prefix-key: "macos-safari"
-  #   - name: Run WASM tests with Safari, Firefox, Chrome
-  #     run: |
-  #       rustup target add wasm32-unknown-unknown
-  #       curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-  #       cargo binstall --no-confirm wasm-bindgen-cli --version "0.2.88" --force
-  #       SAFARIDRIVER=$(which safaridriver) cargo test --target wasm32-unknown-unknown --no-default-features --features="client, rt" --no-fail-fast
-  wasm-gecko:
+  wasm:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,18 +43,12 @@ jobs:
           rustup target add wasm32-unknown-unknown
           curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
           cargo binstall --no-confirm wasm-bindgen-cli --version "0.2.88" --force
-          GECKODRIVER=$(which geckodriver) cargo test --tests --examples --target wasm32-unknown-unknown --features wasm
-  wasm-chrome:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-all-crates: "true"
-          prefix-key: "macos"
-      - name: Run WASM tests with Safari, Firefox, Chrome
-        run: |
-          rustup target add wasm32-unknown-unknown
-          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-          cargo binstall --no-confirm wasm-bindgen-cli --version "0.2.88" --force
-          CHROMEDRIVER=$(which chromedriver) cargo test --tests --examples --target wasm32-unknown-unknown --features wasm
+          cargo binstall --no-confirm wasm-pack --force
+          wasm-pack test --node -- --features wasm --examples
+          wasm-pack test --firefox -- --features wasm --examples
+          wasm-pack test --chrome -- --features wasm --examples
+          wasm-pack test --safari -- --features wasm --examples
+          wasm-pack test --node -- --features wasm
+          wasm-pack test --firefox -- --features wasm
+          wasm-pack test --chrome -- --features wasm
+          wasm-pack test --safari -- --features wasm
