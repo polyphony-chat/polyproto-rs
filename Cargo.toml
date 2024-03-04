@@ -9,8 +9,12 @@ repository = "https://github.com/polyphony-chat/polyproto"
 [lib]
 crate-type = ["rlib", "cdylib", "staticlib"]
 
+[features]
+wasm = ["dep:getrandom", "getrandom/js"]
+
 [dependencies]
 der = { version = "0.7.8", features = ["pem"] }
+getrandom = { version = "0.2.12", optional = true }
 spki = "0.7.3"
 thiserror = "1.0.57"
 x509-cert = { version = "0.2.5", default-features = false }
@@ -19,3 +23,7 @@ x509-cert = { version = "0.2.5", default-features = false }
 ed25519-dalek = { version = "2.1.1", features = ["rand_core", "signature"] }
 rand = "0.8.5"
 polyproto = { path = "./" }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3.39"
+wasm-bindgen = "0.2.89"

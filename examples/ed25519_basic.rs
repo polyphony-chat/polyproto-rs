@@ -17,6 +17,7 @@ use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 use thiserror::Error;
 
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 fn main() {
     let mut csprng = rand::rngs::OsRng;
     // Generate a key pair

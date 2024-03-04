@@ -1,0 +1,54 @@
+name: Build, Test, Publish Coverage
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main", "dev"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          prefix-key: "linux"
+      - name: Build, Test and Publish Coverage
+        run: |
+          if [ -n "${{ secrets.COVERALLS_REPO_TOKEN }}" ]; then
+            curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+            cargo binstall --no-confirm cargo-tarpaulin --force
+            cargo tarpaulin --all-features --avoid-cfg-tarpaulin --tests --examples --verbose --skip-clean --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }} --timeout 120
+          else
+            echo "Code Coverage step is skipped on forks!"
+            cargo build --verbose --all-features
+            cargo test --verbose --all-features --tests --examples
+          fi
+  wasm:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          prefix-key: "macos"
+      - name: Run WASM tests with Safari, Firefox, Chrome
+        run: |
+          rustup target add wasm32-unknown-unknown
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          cargo binstall --no-confirm wasm-bindgen-cli --version "0.2.88" --force
+          cargo binstall --no-confirm wasm-pack --force
+          wasm-pack test --node -- --features wasm --examples
+          wasm-pack test --firefox -- --features wasm --examples
+          wasm-pack test --chrome -- --features wasm --examples
+          wasm-pack test --safari -- --features wasm --examples
+          wasm-pack test --node -- --features wasm
+          wasm-pack test --firefox -- --features wasm
+          wasm-pack test --chrome -- --features wasm
+          wasm-pack test --safari -- --features wasm

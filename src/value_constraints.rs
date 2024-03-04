@@ -109,7 +109,8 @@ mod name_constraints {
 
     use crate::Constrained;
 
-    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn correct() {
         let name = Name::from_str(
             "cn=flori,dc=localhost,uid=h3g2jt4dhfgj8hjs,uniqueIdentifier=flori@localhost",
@@ -120,19 +121,22 @@ mod name_constraints {
         name.validate().unwrap();
     }
 
-    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn no_domain_component() {
         let name = Name::from_str("CN=flori").unwrap();
         assert!(name.validate().is_err());
     }
 
-    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn two_cns() {
         let name = Name::from_str("CN=flori,CN=xenia,DC=localhost").unwrap();
         assert!(name.validate().is_err())
     }
 
-    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn two_uid_or_uniqueid() {
         let name = Name::from_str("CN=flori,CN=xenia,uid=numbaone,uid=numbatwo").unwrap();
         assert!(name.validate().is_err());
@@ -142,7 +146,8 @@ mod name_constraints {
         assert!(name.validate().is_err())
     }
 
-    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn uid_and_no_uniqueid_or_uniqueid_and_no_uid() {
         let name = Name::from_str("CN=flori,CN=xenia,uid=numbaone").unwrap();
         assert!(name.validate().is_err());
@@ -157,17 +162,20 @@ mod session_id_constraints {
 
     use crate::certs::SessionId;
 
-    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn zero_long_session_id_fails() {
         assert!(SessionId::new(Ia5String::new("").unwrap()).is_err())
     }
 
-    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn thirtytwo_length_session_id_is_ok() {
         assert!(SessionId::new(Ia5String::new("11111111111111111111111111222222").unwrap()).is_ok())
     }
 
-    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn thirtythree_length_session_id_fails() {
         assert!(
             SessionId::new(Ia5String::new("111111111111111111111111112222223").unwrap()).is_err()
