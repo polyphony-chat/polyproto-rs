@@ -28,6 +28,7 @@ use x509_cert::request::CertReq;
 /// ```
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
 fn main() {
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
