@@ -4,9 +4,9 @@
 
 use std::marker::PhantomData;
 
-use der::asn1::{BitString, SetOfVec, Uint};
+use der::asn1::{BitString, SetOfVec};
 use der::{Decode, Encode};
-use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
+use spki::AlgorithmIdentifierOwned;
 use x509_cert::attr::Attributes;
 use x509_cert::name::Name;
 use x509_cert::request::{CertReq, CertReqInfo};
@@ -15,7 +15,7 @@ use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 use crate::{Constrained, Error};
 
-use super::{PkcsVersion, PublicKeyInfo, SessionId};
+use super::{PkcsVersion, PublicKeyInfo};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A polyproto Certificate Signing Request, compatible with [IETF RFC 2986 "PKCS #10"](https://datatracker.ietf.org/doc/html/rfc2986).
