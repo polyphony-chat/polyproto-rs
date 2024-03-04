@@ -155,7 +155,8 @@ mod test {
         }
     }
 
-    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn test_convert_serial_number() {
         let biguint = Uint::new(&[10u8, 240u8]).unwrap();
         assert_eq!(biguint.as_bytes(), &[10u8, 240u8]);
