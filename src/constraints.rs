@@ -32,7 +32,14 @@ impl Constrained for Name {
             for item in rdn.0.iter() {
                 match item.oid.to_string().as_str() {
                     "0.9.2342.19200300.100.1.1" => num_uid += 1,
-                    "0.9.2342.19200300.100.1.44" => num_unique_identifier += 1,
+                    "0.9.2342.19200300.100.1.44" => {
+                        num_unique_identifier += 1;
+                        if let Ok(value) = item.value.decode_as::<String>() {
+                            SessionId::new_validated(value)?;
+                        } else {
+                            return Err(crate::ConstraintError::Malformed);
+                        }
+                    }
                     "2.5.4.3" => {
                         num_cn += 1;
                         if num_cn > 1 {
@@ -113,7 +120,7 @@ mod name_constraints {
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn correct() {
         let name = Name::from_str(
-            "cn=flori,dc=localhost,uid=h3g2jt4dhfgj8hjs,uniqueIdentifier=flori@localhost",
+            "cn=flori,dc=localhost,uid=flori@localhost,uniqueIdentifier=h3g2jt4dhfgj8hjs",
         )
         .unwrap();
         name.validate().unwrap();
@@ -154,6 +161,16 @@ mod name_constraints {
         let name = Name::from_str("CN=flori,CN=xenia,uniqueIdentifier=numbaone").unwrap();
         assert!(name.validate().is_err())
     }
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn malformed_session_id_failes() {
+        let name =
+            Name::from_str("cn=flori,dc=localhost,uid=flori@localhost,uniqueIdentifier=").unwrap();
+        assert!(name.validate().is_err());
+        let name =
+            Name::from_str("cn=flori,dc=localhost,uid=flori@localhost,uniqueIdentifier=123456789012345678901234567890123").unwrap();
+        assert!(name.validate().is_err());
+    }
 }
 
 #[cfg(test)]
@@ -165,20 +182,20 @@ mod session_id_constraints {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn zero_long_session_id_fails() {
-        assert!(SessionId::new(Ia5String::new("").unwrap()).is_err())
+        assert!(SessionId::new_validated(String::from("")).is_err())
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn thirtytwo_length_session_id_is_ok() {
-        assert!(SessionId::new(Ia5String::new("11111111111111111111111111222222").unwrap()).is_ok())
+        assert!(SessionId::new_validated(String::from("11111111111111111111111111222222")).is_ok())
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn thirtythree_length_session_id_fails() {
         assert!(
-            SessionId::new(Ia5String::new("111111111111111111111111112222223").unwrap()).is_err()
+            SessionId::new_validated(String::from("111111111111111111111111112222223")).is_err()
         )
     }
 }
