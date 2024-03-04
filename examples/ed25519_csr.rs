@@ -17,6 +17,16 @@ use x509_cert::attr::Attributes;
 use x509_cert::name::RdnSequence;
 use x509_cert::request::CertReq;
 
+/// The following example uses the same setup as in ed25519_basic.rs, but in its main method, it
+/// creates a certificate signing request (CSR) and writes it to a file. The CSR is created from a
+/// polyproto ID CSR, which is a wrapper around a PKCS #10 CSR.
+///
+/// If you have openssl installed, you can inspect the CSR by running:
+///
+/// ```sh
+/// openssl req -in cert.csr -verify
+/// ```
+
 fn main() {
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
