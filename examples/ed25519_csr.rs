@@ -13,6 +13,7 @@ use polyproto::signature::Signature;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 use thiserror::Error;
+use x509_cert::attr::Attributes;
 use x509_cert::name::RdnSequence;
 use x509_cert::request::CertReq;
 
@@ -24,9 +25,10 @@ fn main() {
     println!();
 
     let _csr = polyproto::certs::idcsr::IdCsr::new(
-        RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat").unwrap(),
-        priv_key,
-        SessionId::new(Ia5String::try_from(String::from("value")).unwrap()).unwrap(),
+        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat").unwrap(),
+        &priv_key,
+        &SessionId::new(Ia5String::try_from(String::from("value")).unwrap()).unwrap(),
+        &Attributes::new(),
     )
     .unwrap();
 
@@ -73,8 +75,15 @@ impl Signature for Ed25519Signature {
     }
 
     fn from_bitstring(signature: &[u8]) -> Self {
+        let mut signature_vec = signature.to_vec();
+        signature_vec.resize(64, 0);
+        let signature_array: [u8; 64] = {
+            let mut array = [0; 64];
+            array.copy_from_slice(&signature_vec[..]);
+            array
+        };
         Self {
-            signature: Ed25519DalekSignature::from_slice(signature).unwrap(),
+            signature: Ed25519DalekSignature::from_bytes(&signature_array),
             algorithm: Self::algorithm_identifier(),
         }
     }
