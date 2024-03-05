@@ -108,6 +108,9 @@ impl Constrained for SessionId {
     }
 }
 
+// TODO: The attributes are still missing. CA Certificates and Actor Certificates should have
+//       their respective set of capabilities
+
 #[cfg(test)]
 mod name_constraints {
     use std::str::FromStr;
