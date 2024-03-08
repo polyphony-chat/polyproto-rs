@@ -9,7 +9,7 @@
 ///
 /// This struct only covers the CertCapability subtype trees of which at least one of the subtypes
 /// are relevant to polyproto certificates.
-pub struct CertCapabilities {
+pub struct Capabilities {
     /// The key usage extension defines the purpose of the key contained in the certificate.
     pub key_usage: Vec<KeyUsage>,
     /// Extension type that defines whether a given certificate is allowed

@@ -12,7 +12,7 @@ use x509_cert::ext::Extension;
 
 use crate::{Constrained, ConstraintError};
 
-use self::capabilities::CertCapabilities;
+use self::capabilities::Capabilities;
 
 /// Additional capabilities ([x509_cert::ext::Extensions] or [x509_cert::attr::Attributes], depending
 /// on the context) of X.509 certificates.
@@ -121,7 +121,7 @@ pub struct ExtensionOrAttribute {
     value: Any,
 }
 impl ExtensionOrAttribute {
-    pub fn build(capabilities: &CertCapabilities) -> Result<&[Self], crate::Error> {
+    pub fn build(capabilities: &Capabilities) -> Result<&[Self], crate::Error> {
         let validated = capabilities.validate();
         if validated.is_err() {
             return Err(crate::Error::ConstraintError(ConstraintError::Malformed));

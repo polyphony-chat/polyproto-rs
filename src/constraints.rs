@@ -5,7 +5,7 @@
 use der::Length;
 use x509_cert::name::Name;
 
-use crate::certs::capabilities::{BasicConstraints, CertCapabilities, KeyUsage};
+use crate::certs::capabilities::{BasicConstraints, Capabilities, KeyUsage};
 use crate::certs::SessionId;
 use crate::Constrained;
 
@@ -112,7 +112,7 @@ impl Constrained for SessionId {
 // TODO: The attributes are still missing. CA Certificates and Actor Certificates should have
 //       their respective set of capabilities
 
-impl Constrained for CertCapabilities {
+impl Constrained for Capabilities {
     fn validate(&self) -> Result<(), crate::ConstraintError> {
         let mut has_only_encipher = false;
         let mut has_only_decipher = false;
