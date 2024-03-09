@@ -56,8 +56,6 @@ pub struct IdCertTbs {
     pub extensions: Extensions,
 }
 
-// TODO: Check for bounds required by polyproto.
-// - If CA, check for path length etc.
 // TODO: Add ::new() method to IdCertTbs
 // TODO: Add ::sign() method to IdCertTbs, yielding an IdCert
 
