@@ -31,7 +31,7 @@ pub mod idcsr;
 ///
 /// [Constrained] is implemented for this type, meaning it can be validated using `.validate()`.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct SessionId {
+pub struct SessionId {
     /// The session ID, represented as an [Ia5String].
     session_id: Ia5String,
 }
@@ -55,7 +55,7 @@ impl SessionId {
     /// Creates a new [SessionId] which can be converted into an [Attribute] using `.as_attribute()`,
     /// if needed. Checks if the input is a valid Ia5String and if the [SessionId] constraints have
     /// been violated.
-    pub(crate) fn new_validated(id: String) -> Result<Self, ConstraintError> {
+    pub fn new_validated(id: String) -> Result<Self, ConstraintError> {
         let ia5string = Ia5String::new(&id);
         if let Ok(converted) = ia5string {
             let session_id = Self {
