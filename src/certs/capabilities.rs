@@ -7,7 +7,9 @@ use std::str::FromStr;
 use der::asn1::SetOfVec;
 use der::Any;
 use spki::ObjectIdentifier;
-use x509_cert::attr::Attribute;
+use x509_cert::attr::{Attribute, Attributes};
+
+use crate::{Constrained, ConstraintError};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Capabilities which an ID-Cert or ID-CSR might have. For ID-Certs, you'd find these capabilities
@@ -22,6 +24,23 @@ pub struct Capabilities {
     /// Extension type that defines whether a given certificate is allowed
     /// to sign additional certificates and what path length restrictions may exist.
     pub basic_constraints: BasicConstraints,
+}
+
+impl TryFrom<Capabilities> for Attributes {
+    /// Performs the conversion.
+    ///
+    /// Fails, if `Capabilities::verify()` using the `Constrained` trait fails.
+    fn try_from(value: Capabilities) -> Result<Self, Self::Error> {
+        value.validate()?;
+        let mut sov = SetOfVec::new();
+        for item in value.key_usage.iter() {
+            sov.insert(Attribute::from(*item));
+        }
+        sov.insert(Attribute::from(value.basic_constraints));
+        Ok(sov)
+    }
+
+    type Error = ConstraintError;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -82,6 +101,16 @@ impl From<KeyUsage> for bool {
     }
 }
 
+impl From<KeyUsage> for Any {
+    fn from(value: KeyUsage) -> Self {
+        Any::new(der::Tag::Boolean,match bool::from(value) {
+            true => vec![0xff],
+            false => vec![0x00],
+        },
+        ).expect("Error occurred when converting BasicConstraints bool to der::Any. Please report this crash at https://github.com/polyphony-chat/polyproto.")
+    }
+}
+
 impl From<KeyUsage> for ObjectIdentifier {
     fn from(value: KeyUsage) -> Self {
         let result = match value {
@@ -102,13 +131,7 @@ impl From<KeyUsage> for ObjectIdentifier {
 impl From<KeyUsage> for Attribute {
     fn from(value: KeyUsage) -> Self {
         // Creating a Any from a bool is really simple, so we can expect this to never fail.
-        let any_val = Any::new(
-            der::Tag::Boolean,
-            match bool::from(value) {
-                true => vec![0xff],
-                false => vec![0x00],
-            },
-        ).expect("Error occurred when converting KeyUsage bool to der::Any. Please report this crash at https://github.com/polyphony-chat/polyproto.");
+        let any_val = Any::from(value);
         let mut sov = SetOfVec::new();
         // .insert() only fails if the value is not unique. We are inserting a single value, so this
         // should never fail. See tests below for verification.
