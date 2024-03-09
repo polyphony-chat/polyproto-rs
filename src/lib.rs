@@ -68,7 +68,7 @@ pub enum Error {
     #[error("Invalid input cannot be handled")]
     InvalidInput(#[from] InvalidInput),
     #[error("Value failed to meet constraints")]
-    ConstraintError(#[from] ConstraintError),
+    ConstraintError(ConstraintError),
 }
 
 /// Error type covering possible failures when converting a [x509_cert::TbsCertificate]
@@ -123,6 +123,12 @@ pub enum ConstraintError {
         actual: String,
         reason: Option<String>,
     },
+}
+
+impl From<ConstraintError> for Error {
+    fn from(value: ConstraintError) -> Self {
+        Error::ConstraintError(value)
+    }
 }
 
 /// Traits implementing [Constrained] can be validated to be well-formed. This does not guarantee
