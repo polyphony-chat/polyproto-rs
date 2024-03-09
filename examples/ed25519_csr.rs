@@ -7,6 +7,7 @@ use std::str::FromStr;
 use der::asn1::{BitString, Ia5String};
 use der::Encode;
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
+use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::PublicKeyInfo;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
@@ -39,7 +40,7 @@ fn main() {
     let _csr = polyproto::certs::idcsr::IdCsr::new(
         &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
         &priv_key,
-        &Attributes::new(),
+        &Capabilities::default(),
     )
     .unwrap();
 
