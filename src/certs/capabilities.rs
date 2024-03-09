@@ -2,6 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::str::FromStr;
+
+use der::asn1::SetOfVec;
+use der::Any;
+use spki::ObjectIdentifier;
+use x509_cert::attr::Attribute;
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 /// Capabilities which an ID-Cert or ID-CSR might have. For ID-Certs, you'd find these capabilities
 /// in the `Extensions` field of a certificate. ID-CSRs store these capabilities as part of the
@@ -59,6 +66,60 @@ pub enum KeyUsage {
     DecipherOnly(bool),
 }
 
+impl From<KeyUsage> for bool {
+    fn from(value: KeyUsage) -> Self {
+        match value {
+            KeyUsage::DigitalSignature(val) => val,
+            KeyUsage::CrlSign(val) => val,
+            KeyUsage::ContentCommitment(val) => val,
+            KeyUsage::KeyEncipherment(val) => val,
+            KeyUsage::DataEncipherment(val) => val,
+            KeyUsage::KeyAgreement(val) => val,
+            KeyUsage::KeyCertSign(val) => val,
+            KeyUsage::EncipherOnly(val) => val,
+            KeyUsage::DecipherOnly(val) => val,
+        }
+    }
+}
+
+impl From<KeyUsage> for ObjectIdentifier {
+    fn from(value: KeyUsage) -> Self {
+        let result = match value {
+            KeyUsage::DigitalSignature(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.3"),
+            KeyUsage::CrlSign(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.2"),
+            KeyUsage::ContentCommitment(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.8"),
+            KeyUsage::KeyEncipherment(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.1"),
+            KeyUsage::DataEncipherment(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.4"),
+            KeyUsage::KeyAgreement(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.9"),
+            KeyUsage::KeyCertSign(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.3"),
+            KeyUsage::EncipherOnly(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.7"),
+            KeyUsage::DecipherOnly(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.6"),
+        };
+        result.expect("Error occurred when converting KeyUsage enum to ObjectIdentifier. Please report this crash at https://github.com/polyphony-chat/polyproto.")
+    }
+}
+
+impl From<KeyUsage> for Attribute {
+    fn from(value: KeyUsage) -> Self {
+        // Creating a Any from a bool is really simple, so we can expect this to never fail.
+        let any_val = Any::new(
+            der::Tag::Boolean,
+            match bool::from(value) {
+                true => vec![0xff],
+                false => vec![0x00],
+            },
+        ).expect("Error occurred when converting KeyUsage bool to der::Any. Please report this crash at https://github.com/polyphony-chat/polyproto.");
+        let mut sov = SetOfVec::new();
+        // .insert() only fails if the value is not unique. We are inserting a single value, so this
+        // should never fail. See tests below for verification.
+        sov.insert(any_val).expect("Error occurred when converting KeyUsage der::Any to SetOfVec. Please report this crash at https://github.com/polyphony-chat/polyproto");
+        Attribute {
+            oid: value.into(),
+            values: sov,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Basic constraints is an X.509 extension type that defines whether a given certificate is allowed
 /// to sign additional certificates and what path length restrictions may exist.
@@ -72,4 +133,46 @@ pub enum BasicConstraints {
     /// example, a `path_length` of 1 means the certificate can sign a subordinate CA, but the
     /// subordinate CA is not allowed to create subordinates with `ca` set to true.
     PathLength(Option<u64>),
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_key_usage_to_object_identifier() {
+        let _ = ObjectIdentifier::from(KeyUsage::DigitalSignature(true));
+        let _ = ObjectIdentifier::from(KeyUsage::CrlSign(true));
+        let _ = ObjectIdentifier::from(KeyUsage::ContentCommitment(true));
+        let _ = ObjectIdentifier::from(KeyUsage::KeyEncipherment(true));
+        let _ = ObjectIdentifier::from(KeyUsage::DataEncipherment(true));
+        let _ = ObjectIdentifier::from(KeyUsage::KeyAgreement(true));
+        let _ = ObjectIdentifier::from(KeyUsage::KeyCertSign(true));
+        let _ = ObjectIdentifier::from(KeyUsage::EncipherOnly(true));
+        let _ = ObjectIdentifier::from(KeyUsage::DecipherOnly(true));
+    }
+
+    fn test_key_usage_to_attribute(val: bool) {
+        let _ = Attribute::from(KeyUsage::DigitalSignature(val));
+        let _ = Attribute::from(KeyUsage::CrlSign(val));
+        let _ = Attribute::from(KeyUsage::ContentCommitment(val));
+        let _ = Attribute::from(KeyUsage::KeyEncipherment(val));
+        let _ = Attribute::from(KeyUsage::DataEncipherment(val));
+        let _ = Attribute::from(KeyUsage::KeyAgreement(val));
+        let _ = Attribute::from(KeyUsage::KeyCertSign(val));
+        let _ = Attribute::from(KeyUsage::EncipherOnly(val));
+        let _ = Attribute::from(KeyUsage::DecipherOnly(val));
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_key_usage_to_attribute_true() {
+        test_key_usage_to_attribute(true);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_key_usage_to_attribute_false() {
+        test_key_usage_to_attribute(false);
+    }
 }
