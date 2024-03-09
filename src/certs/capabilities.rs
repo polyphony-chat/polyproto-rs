@@ -26,6 +26,18 @@ pub struct Capabilities {
     pub basic_constraints: BasicConstraints,
 }
 
+impl Default for Capabilities {
+    fn default() -> Self {
+        Self {
+            key_usage: Default::default(),
+            basic_constraints: BasicConstraints {
+                ca: false,
+                path_length: None,
+            },
+        }
+    }
+}
+
 impl TryFrom<Capabilities> for Attributes {
     /// Performs the conversion.
     ///
