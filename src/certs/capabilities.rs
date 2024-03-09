@@ -112,7 +112,7 @@ impl From<KeyUsage> for Attribute {
         let mut sov = SetOfVec::new();
         // .insert() only fails if the value is not unique. We are inserting a single value, so this
         // should never fail. See tests below for verification.
-        sov.insert(any_val).expect("Error occurred when converting KeyUsage der::Any to SetOfVec. Please report this crash at https://github.com/polyphony-chat/polyproto");
+        sov.insert(any_val).expect("Error occurred when inserting KeyUsage into der::Any to SetOfVec. Please report this crash at https://github.com/polyphony-chat/polyproto");
         Attribute {
             oid: value.into(),
             values: sov,
@@ -123,16 +123,41 @@ impl From<KeyUsage> for Attribute {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Basic constraints is an X.509 extension type that defines whether a given certificate is allowed
 /// to sign additional certificates and what path length restrictions may exist.
-pub enum BasicConstraints {
+pub struct BasicConstraints {
     /// Whether the certificate can sign certificates.
-    Ca(bool),
+    pub ca: bool,
     /// The maximum path length for certificates subordinate to this certificate. This attribute
     /// only has meaning if `ca` is true. If `ca` is true then a path length of None means there’s no
     /// restriction on the number of subordinate CAs in the certificate chain. If it is zero or
     /// greater then it defines the maximum length for a subordinate CA’s certificate chain. For
     /// example, a `path_length` of 1 means the certificate can sign a subordinate CA, but the
     /// subordinate CA is not allowed to create subordinates with `ca` set to true.
-    PathLength(Option<u64>),
+    pub path_length: Option<u64>,
+}
+
+impl From<BasicConstraints> for ObjectIdentifier {
+    fn from(_value: BasicConstraints) -> Self {
+        ObjectIdentifier::from_str("2.5.29.19").expect("Error occurred when converting BasicConstraints to ObjectIdentifier. Please report this crash at https://github.com/polyphony-chat/polyproto")
+    }
+}
+
+impl From<BasicConstraints> for Attribute {
+    fn from(value: BasicConstraints) -> Self {
+        let mut sov = SetOfVec::new();
+        sov.insert(Any::new(der::Tag::Boolean, match value.ca {
+                        true => vec![0xff],
+                        false => vec![0x00],
+                    },
+                ).expect("Error occurred when converting BasicConstraints bool to der::Any. Please report this crash at https://github.com/polyphony-chat/polyproto.")).expect("Error occurred when inserting into der::Any to SetOfVec. Please report this crash at https://github.com/polyphony-chat/polyproto");
+        if let Some(length) = value.path_length {
+            sov.insert(Any::new(der::Tag::Integer, length.to_be_bytes()).expect("Error occurred when converting BasicConstraints u64 to der::Any. Please report this crash at https://github.com/polyphony-chat/polyproto.")).
+            expect("Error occurred when inserting into der::Any to SetOfVec. Please report this crash at https://github.com/polyphony-chat/polyproto");
+        }
+        Attribute {
+            oid: value.into(),
+            values: sov,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -174,5 +199,44 @@ mod test {
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn test_key_usage_to_attribute_false() {
         test_key_usage_to_attribute(false);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_basic_constraints_to_object_identifier() {
+        let bc = BasicConstraints {
+            ca: true,
+            path_length: None,
+        };
+        let _ = ObjectIdentifier::from(bc);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_basic_constraints_to_attribute() {
+        let mut bc = BasicConstraints {
+            ca: false,
+            path_length: None,
+        };
+        let _ = Attribute::from(bc);
+
+        bc.ca = true;
+        let _ = Attribute::from(bc);
+
+        bc.path_length = Some(0);
+        let _ = Attribute::from(bc);
+
+        // Why not test all sorts of values? :3
+        let mut county_count = 2u64;
+        while county_count != u64::MAX {
+            dbg!(county_count);
+            bc.path_length = Some(county_count);
+            let _ = Attribute::from(bc);
+            if let Some(res) = county_count.checked_mul(2) {
+                county_count = res;
+            } else {
+                county_count = u64::MAX;
+            }
+        }
     }
 }
