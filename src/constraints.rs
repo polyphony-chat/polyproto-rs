@@ -5,6 +5,7 @@
 use der::Length;
 use x509_cert::name::Name;
 
+use crate::certs::capabilities::{Capabilities, KeyUsage};
 use crate::certs::SessionId;
 use crate::Constrained;
 
@@ -108,6 +109,93 @@ impl Constrained for SessionId {
     }
 }
 
+// TODO: The attributes are still missing. CA Certificates and Actor Certificates should have
+//       their respective set of capabilities
+
+impl Constrained for Capabilities {
+    fn validate(&self) -> Result<(), crate::ConstraintError> {
+        let is_ca = self.basic_constraints.ca;
+        // Path length must be <= 1 in polyproto, if a path length is specified
+        if is_ca {
+            if let Some(length) = self.basic_constraints.path_length {
+                if length > 1 {
+                    return Err(crate::ConstraintError::OutOfBounds {
+                        lower: 1,
+                        upper: 1,
+                        actual: length.to_string(),
+                    });
+                }
+            // None in this case means unlimited path length, which is not <= 1.
+            } else {
+                return Err(crate::ConstraintError::OutOfBounds {
+                    lower: 1,
+                    upper: 1,
+                    actual: "none".to_string(),
+                });
+            }
+        }
+
+        let mut can_commit_content = false;
+        let mut can_sign = false;
+        let mut key_cert_sign = false;
+
+        let mut has_only_encipher = false;
+        let mut has_only_decipher = false;
+        let mut has_key_agreement = false;
+        for item in self.key_usage.iter() {
+            if !has_only_encipher && item == &KeyUsage::EncipherOnly(true) {
+                has_only_encipher = true;
+            }
+            if !has_only_decipher && item == &KeyUsage::DecipherOnly(true) {
+                has_only_decipher = true;
+            }
+            if !has_key_agreement && item == &KeyUsage::KeyAgreement(true) {
+                has_key_agreement = true;
+            }
+            if !has_key_agreement && item == &KeyUsage::ContentCommitment(true) {
+                can_commit_content = true;
+            }
+            if !has_key_agreement && item == &KeyUsage::DigitalSignature(true) {
+                can_sign = true;
+            }
+            if !has_key_agreement && item == &KeyUsage::KeyCertSign(true) {
+                key_cert_sign = true;
+            }
+        }
+
+        // Non-CAs must be able to sign their messages. Whether with or without non-repudiation
+        // does not matter.
+        if !is_ca && !can_sign && !can_commit_content {
+            return Err(crate::ConstraintError::Malformed);
+        }
+
+        // Certificates cannot be both non-repudiating and repudiating
+        if can_sign && can_commit_content {
+            return Err(crate::ConstraintError::Malformed);
+        }
+
+        // If these Capabilities are for a CA, it also must have the KeyCertSign Capability set to
+        // true. Also, non-CAs are not allowed to have the KeyCertSign flag set to true.
+        if is_ca || key_cert_sign {
+            if !is_ca {
+                return Err(crate::ConstraintError::Malformed);
+            }
+            if !key_cert_sign {
+                return Err(crate::ConstraintError::Malformed);
+            }
+        }
+
+        // has_key_agreement needs to be true if has_only_encipher or _decipher are true.
+        // See: <https://cryptography.io/en/latest/x509/reference/#cryptography.x509.KeyUsage.encipher_only>
+        // See: <https://cryptography.io/en/latest/x509/reference/#cryptography.x509.KeyUsage.decipher_only>
+        if (has_only_encipher || has_only_decipher) && !has_key_agreement {
+            Err(crate::ConstraintError::Malformed)
+        } else {
+            Ok(())
+        }
+    }
+}
+
 #[cfg(test)]
 mod name_constraints {
     use std::str::FromStr;
@@ -175,7 +263,6 @@ mod name_constraints {
 
 #[cfg(test)]
 mod session_id_constraints {
-    use der::asn1::Ia5String;
 
     use crate::certs::SessionId;
 

@@ -49,9 +49,6 @@ fn main() {
     let file_name_with_extension = "cert.csr";
     #[cfg(not(target_arch = "wasm32"))]
     std::fs::write(file_name_with_extension, &data).unwrap();
-
-    // TODO: The attributes are still missing. CA Certificates and Actor Certificates should have
-    //       their respective set of capabilities
 }
 
 // As mentioned in the README, we start by implementing the signature trait.
