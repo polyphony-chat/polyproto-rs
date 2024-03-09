@@ -115,12 +115,13 @@ impl From<der::Error> for Error {
 #[derive(Error, Debug, PartialEq, Clone)]
 pub enum ConstraintError {
     #[error("The value did not meet the set validation criteria and is considered malformed")]
-    Malformed,
+    Malformed(Option<String>),
     #[error("The value was expected to be between {lower:?} and {upper:?} but was {actual:?}")]
     OutOfBounds {
         lower: i32,
         upper: i32,
         actual: String,
+        reason: Option<String>,
     },
 }
 

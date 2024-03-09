@@ -64,7 +64,9 @@ impl SessionId {
             session_id.validate()?;
             Ok(session_id)
         } else {
-            Err(ConstraintError::Malformed)
+            Err(ConstraintError::Malformed(Some(
+                "Cannot turn input String into Ia5String".to_string(),
+            )))
         }
     }
 }
@@ -123,9 +125,10 @@ pub struct ExtensionOrAttribute {
 impl ExtensionOrAttribute {
     pub fn build(capabilities: &Capabilities) -> Result<&[Self], crate::Error> {
         let validated = capabilities.validate();
-        if validated.is_err() {
-            return Err(crate::Error::ConstraintError(ConstraintError::Malformed));
+        if let Err(e) = validated {
+            return Err(crate::Error::ConstraintError(e));
         }
+        // TODO why is this todo??
         todo!()
     }
 

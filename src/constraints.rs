@@ -38,7 +38,9 @@ impl Constrained for Name {
                         if let Ok(value) = item.value.decode_as::<String>() {
                             SessionId::new_validated(value)?;
                         } else {
-                            return Err(crate::ConstraintError::Malformed);
+                            return Err(crate::ConstraintError::Malformed(Some(
+                                "Tried to decode SessionID as String and failed".to_string(),
+                            )));
                         }
                     }
                     "2.5.4.3" => {
@@ -48,6 +50,7 @@ impl Constrained for Name {
                                 lower: 1,
                                 upper: 1,
                                 actual: num_cn.to_string(),
+                                reason: Some("Distinguished Names must include exactly one common name attribute.".to_string())
                             });
                         }
                     }
@@ -61,6 +64,7 @@ impl Constrained for Name {
                 lower: 1,
                 upper: u8::MAX as i32,
                 actual: "0".to_string(),
+                reason: Some("Domain Component is missing".to_string()),
             });
         }
         if num_uid > 1 {
@@ -68,6 +72,7 @@ impl Constrained for Name {
                 lower: 0,
                 upper: 1,
                 actual: num_uid.to_string(),
+                reason: Some("Too many UID components supplied".to_string()),
             });
         }
         if num_unique_identifier > 1 {
@@ -75,6 +80,7 @@ impl Constrained for Name {
                 lower: 0,
                 upper: 1,
                 actual: num_unique_identifier.to_string(),
+                reason: Some("Too many uniqueIdentifier components supplied".to_string()),
             });
         }
         if num_unique_identifier > 0 && num_uid == 0 {
@@ -82,6 +88,10 @@ impl Constrained for Name {
                 lower: 1,
                 upper: 1,
                 actual: num_uid.to_string(),
+                reason: Some(
+                    "Actors must have uniqueIdentifier AND UID, only uniqueIdentifier found"
+                        .to_string(),
+                ),
             });
         }
         if num_uid > 0 && num_unique_identifier == 0 {
@@ -89,6 +99,9 @@ impl Constrained for Name {
                 lower: 1,
                 upper: 1,
                 actual: num_unique_identifier.to_string(),
+                reason: Some(
+                    "Actors must have uniqueIdentifier AND UID, only UID found".to_string(),
+                ),
             });
         }
         Ok(())
@@ -103,6 +116,7 @@ impl Constrained for SessionId {
                 lower: 1,
                 upper: 32,
                 actual: self.len().to_string(),
+                reason: Some("SessionId too long".to_string()),
             });
         }
         Ok(())
@@ -123,6 +137,7 @@ impl Constrained for Capabilities {
                         lower: 1,
                         upper: 1,
                         actual: length.to_string(),
+                        reason: Some("Path length must not exceed one (1)".to_string()),
                     });
                 }
             // None in this case means unlimited path length, which is not <= 1.
@@ -130,7 +145,8 @@ impl Constrained for Capabilities {
                 return Err(crate::ConstraintError::OutOfBounds {
                     lower: 1,
                     upper: 1,
-                    actual: "none".to_string(),
+                    actual: "none (infinity)".to_string(),
+                    reason: Some("Path length must not exceed one (1)".to_string()),
                 });
             }
         }
@@ -168,22 +184,30 @@ impl Constrained for Capabilities {
         // Non-CAs must be able to sign their messages. Whether with or without non-repudiation
         // does not matter.
         if !is_ca && !can_sign && !can_commit_content {
-            return Err(crate::ConstraintError::Malformed);
+            return Err(crate::ConstraintError::Malformed(Some(
+                "Actors require signing capabilities, none found".to_string(),
+            )));
         }
 
         // Certificates cannot be both non-repudiating and repudiating
         if can_sign && can_commit_content {
-            return Err(crate::ConstraintError::Malformed);
+            return Err(crate::ConstraintError::Malformed(Some(
+                "Cannot have both signing and non-repudiation signing capabilities".to_string(),
+            )));
         }
 
         // If these Capabilities are for a CA, it also must have the KeyCertSign Capability set to
         // true. Also, non-CAs are not allowed to have the KeyCertSign flag set to true.
         if is_ca || key_cert_sign {
             if !is_ca {
-                return Err(crate::ConstraintError::Malformed);
+                return Err(crate::ConstraintError::Malformed(Some(
+                    "If KeyCertSign capability is wanted, CA flag must be true".to_string(),
+                )));
             }
             if !key_cert_sign {
-                return Err(crate::ConstraintError::Malformed);
+                return Err(crate::ConstraintError::Malformed(Some(
+                    "CA must have KeyCertSign capability".to_string(),
+                )));
             }
         }
 
@@ -191,7 +215,10 @@ impl Constrained for Capabilities {
         // See: <https://cryptography.io/en/latest/x509/reference/#cryptography.x509.KeyUsage.encipher_only>
         // See: <https://cryptography.io/en/latest/x509/reference/#cryptography.x509.KeyUsage.decipher_only>
         if (has_only_encipher || has_only_decipher) && !has_key_agreement {
-            Err(crate::ConstraintError::Malformed)
+            Err(crate::ConstraintError::Malformed(Some(
+                "KeyAgreement capability needs to be true to use OnlyEncipher or OnlyDecipher"
+                    .to_string(),
+            )))
         } else {
             Ok(())
         }
