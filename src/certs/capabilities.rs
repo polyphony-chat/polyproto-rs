@@ -9,7 +9,7 @@ use der::Any;
 use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Capabilities which an ID-Cert or ID-CSR might have. For ID-Certs, you'd find these capabilities
 /// in the `Extensions` field of a certificate. ID-CSRs store these capabilities as part of the
 /// `Attributes` field.
@@ -21,7 +21,7 @@ pub struct Capabilities {
     pub key_usage: Vec<KeyUsage>,
     /// Extension type that defines whether a given certificate is allowed
     /// to sign additional certificates and what path length restrictions may exist.
-    pub basic_constraints: Vec<BasicConstraints>,
+    pub basic_constraints: BasicConstraints,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
