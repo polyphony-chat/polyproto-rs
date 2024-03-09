@@ -5,7 +5,7 @@
 use der::Length;
 use x509_cert::name::Name;
 
-use crate::certs::capabilities::{BasicConstraints, Capabilities, KeyUsage};
+use crate::certs::capabilities::{Capabilities, KeyUsage};
 use crate::certs::SessionId;
 use crate::Constrained;
 
@@ -204,7 +204,6 @@ mod name_constraints {
 
 #[cfg(test)]
 mod session_id_constraints {
-    use der::asn1::Ia5String;
 
     use crate::certs::SessionId;
 
