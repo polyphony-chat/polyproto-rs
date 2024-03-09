@@ -15,6 +15,7 @@ use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 use crate::{Constrained, Error};
 
+use super::capabilities::Capabilities;
 use super::{PkcsVersion, PublicKeyInfo};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -60,10 +61,10 @@ impl<S: Signature> IdCsr<S> {
     pub fn new(
         subject: &Name,
         signing_key: &impl PrivateKey<S>,
-        attributes: &Attributes,
+        capabilities: &Capabilities,
     ) -> Result<IdCsr<S>, Error> {
         subject.validate()?;
-        let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey(), attributes)?;
+        let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey(), capabilities)?;
         let cert_req_info = CertReqInfo::from(inner_csr);
         let signature = signing_key.sign(&cert_req_info.to_der()?);
         let inner_csr = IdCsrInner::<S>::try_from(cert_req_info)?;
@@ -123,7 +124,7 @@ impl<S: Signature> IdCsrInner<S> {
     pub fn new(
         subject: &Name,
         public_key: &impl PublicKey<S>,
-        attributes: &Attributes,
+        capabilities: &Capabilities,
     ) -> Result<IdCsrInner<S>, Error> {
         subject.validate()?;
 
@@ -135,7 +136,7 @@ impl<S: Signature> IdCsrInner<S> {
         };
 
         let subject = subject.clone();
-        let attributes = attributes.clone();
+        let attributes = Attributes::try_from(capabilities.clone())?;
 
         Ok(IdCsrInner {
             version: PkcsVersion::V1,
