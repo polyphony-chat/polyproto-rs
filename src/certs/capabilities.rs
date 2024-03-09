@@ -34,9 +34,15 @@ impl TryFrom<Capabilities> for Attributes {
         value.validate()?;
         let mut sov = SetOfVec::new();
         for item in value.key_usage.iter() {
-            sov.insert(Attribute::from(*item));
+            let insertion = sov.insert(Attribute::from(*item));
+            if insertion.is_err() {
+                return Err(ConstraintError::Malformed(Some("Tried inserting non-unique element into SetOfVec. You likely have a duplicate value in your Capabilities".to_string())));
+            }
         }
-        sov.insert(Attribute::from(value.basic_constraints));
+        let insertion = sov.insert(Attribute::from(value.basic_constraints));
+        if insertion.is_err() {
+            return Err(ConstraintError::Malformed(Some("Tried inserting non-unique element into SetOfVec. You likely have a duplicate value in your Capabilities".to_string())));
+        }
         Ok(sov)
     }
 
