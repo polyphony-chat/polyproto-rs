@@ -135,13 +135,15 @@ impl Constrained for Capabilities {
             }
         }
 
+        // Define the flags to check
         let mut can_commit_content = false;
         let mut can_sign = false;
         let mut key_cert_sign = false;
-
         let mut has_only_encipher = false;
         let mut has_only_decipher = false;
         let mut has_key_agreement = false;
+
+        // Iterate over all the entries in the KeyUsage vector, check if they exist/are true
         for item in self.key_usage.iter() {
             if !has_only_encipher && item == &KeyUsage::EncipherOnly(true) {
                 has_only_encipher = true;
