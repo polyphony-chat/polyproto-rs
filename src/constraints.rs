@@ -137,6 +137,7 @@ impl Constrained for Capabilities {
 
         let mut can_commit_content = false;
         let mut can_sign = false;
+        let mut key_cert_sign = false;
 
         let mut has_only_encipher = false;
         let mut has_only_decipher = false;
@@ -157,6 +158,9 @@ impl Constrained for Capabilities {
             if !has_key_agreement && item == &KeyUsage::DigitalSignature(true) {
                 can_sign = true;
             }
+            if !has_key_agreement && item == &KeyUsage::KeyCertSign(true) {
+                key_cert_sign = true;
+            }
         }
 
         // Non-CAs must be able to sign their messages. Whether with or without non-repudiation
@@ -164,6 +168,23 @@ impl Constrained for Capabilities {
         if !is_ca && !can_sign && !can_commit_content {
             return Err(crate::ConstraintError::Malformed);
         }
+
+        // Certificates cannot be both non-repudiating and repudiating
+        if can_sign && can_commit_content {
+            return Err(crate::ConstraintError::Malformed);
+        }
+
+        // If these Capabilities are for a CA, it also must have the KeyCertSign Capability set to
+        // true. Also, non-CAs are not allowed to have the KeyCertSign flag set to true.
+        if is_ca || key_cert_sign {
+            if !is_ca {
+                return Err(crate::ConstraintError::Malformed);
+            }
+            if !key_cert_sign {
+                return Err(crate::ConstraintError::Malformed);
+            }
+        }
+
         // has_key_agreement needs to be true if has_only_encipher or _decipher are true.
         // See: <https://cryptography.io/en/latest/x509/reference/#cryptography.x509.KeyUsage.encipher_only>
         // See: <https://cryptography.io/en/latest/x509/reference/#cryptography.x509.KeyUsage.decipher_only>
