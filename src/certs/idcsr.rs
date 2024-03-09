@@ -32,8 +32,11 @@ use super::{PkcsVersion, PublicKeyInfo};
 /// }
 /// ```
 pub struct IdCsr<S: Signature> {
+    /// The CSRs main contents.
     pub inner_csr: IdCsrInner<S>,
+    /// The signature algorithm, with which the [Signature] was created.
     pub signature_algorithm: AlgorithmIdentifierOwned,
+    /// [Signature] value for the `inner_csr`
     pub signature: S,
 }
 
