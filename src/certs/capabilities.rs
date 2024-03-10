@@ -67,6 +67,24 @@ impl Capabilities {
     }
 }
 
+impl TryFrom<Attributes> for Capabilities {
+    type Error = crate::Error;
+
+    fn try_from(value: Attributes) -> Result<Self, Self::Error> {
+        let key_usage = Vec::new();
+        let basic_constraints;
+        for item in value.iter() {
+            // TODO: We have to convert an Attribute into a Capability.
+            // First, we have to parse the OID of the item to determine which type of capability this
+            // is. Then, we have to parse the actual Any information into a bool or number (depending)
+            // on the capability type. Lastly, we can put it all together into the capabilities struct,
+            // and perhaps call validate on it - although I am not sure this belongs in a try_from
+            // method.
+        }
+        todo!()
+    }
+}
+
 impl TryFrom<Capabilities> for Attributes {
     /// Performs the conversion.
     ///
