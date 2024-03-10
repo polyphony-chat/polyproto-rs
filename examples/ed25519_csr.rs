@@ -40,7 +40,7 @@ fn main() {
     let _csr = polyproto::certs::idcsr::IdCsr::new(
         &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
         &priv_key,
-        &Capabilities::default(),
+        &Capabilities::default_actor(),
     )
     .unwrap();
 

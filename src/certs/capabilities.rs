@@ -38,6 +38,35 @@ impl Default for Capabilities {
     }
 }
 
+impl Capabilities {
+    /// Sane default for actor [IdCsr]/[IdCert] [Capabilities]. Uses the DigitalSignature flag,
+    /// not the ContentCommitment flag.
+    pub fn default_actor() -> Self {
+        let key_usage = vec![KeyUsage::DigitalSignature(true)];
+        let basic_constraints = BasicConstraints {
+            ca: false,
+            path_length: None,
+        };
+        Self {
+            key_usage,
+            basic_constraints,
+        }
+    }
+
+    /// Sane default for home server [IdCsr]/[IdCert] [Capabilities].
+    pub fn default_home_server() -> Self {
+        let key_usage = vec![KeyUsage::KeyCertSign(true)];
+        let basic_constraints = BasicConstraints {
+            ca: true,
+            path_length: Some(1),
+        };
+        Self {
+            key_usage,
+            basic_constraints,
+        }
+    }
+}
+
 impl TryFrom<Capabilities> for Attributes {
     /// Performs the conversion.
     ///
