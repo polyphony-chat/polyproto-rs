@@ -5,11 +5,21 @@
 use std::str::FromStr;
 
 use der::asn1::SetOfVec;
-use der::Any;
+use der::{Any, Tag, Tagged};
 use spki::ObjectIdentifier;
 use x509_cert::attr::{Attribute, Attributes};
 
 use crate::{Constrained, ConstraintError};
+
+pub const OID_KEY_USAGE_DIGITAL_SIGNATURE: &str = "1.3.6.1.5.5.7.3.3";
+pub const OID_KEY_USAGE_CRL_SIGN: &str = "1.3.6.1.5.5.7.3.2";
+pub const OID_KEY_USAGE_CONTENT_COMMITMENT: &str = "1.3.6.1.5.5.7.3.8";
+pub const OID_KEY_USAGE_KEY_ENCIPHERMENT: &str = "1.3.6.1.5.5.7.3.1";
+pub const OID_KEY_USAGE_DATA_ENCIPHERMENT: &str = "1.3.6.1.5.5.7.3.4";
+pub const OID_KEY_USAGE_KEY_AGREEMENT: &str = "1.3.6.1.5.5.7.3.9";
+pub const OID_KEY_USAGE_KEY_CERT_SIGN: &str = "1.3.6.1.5.5.7.3.3";
+pub const OID_KEY_USAGE_ENCIPHER_ONLY: &str = "1.3.6.1.5.5.7.3.7";
+pub const OID_KEY_USAGE_DECIPHER_ONLY: &str = "1.3.6.1.5.5.7.3.6";
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Capabilities which an ID-Cert or ID-CSR might have. For ID-Certs, you'd find these capabilities
@@ -166,6 +176,64 @@ impl From<KeyUsage> for bool {
     }
 }
 
+impl TryFrom<Attribute> for KeyUsage {
+    type Error = crate::Error;
+
+    /// Performs the conversion.
+    ///
+    /// Fails, if the input attribute does not contain exactly one value, or if the input attribute
+    /// does not contain a boolean value. Also fails if the OID of the attribute does not match any
+    /// known KeyUsage variant.
+    fn try_from(value: Attribute) -> Result<Self, Self::Error> {
+        // PRETTYFYME: I know this is a bit of a mess, but it works. If anyone wants to make it
+        // prettier, feel free to do so.
+
+        // Check if the attribute contains exactly one value
+        if &value.values.len() != &1usize {
+            return Err(crate::Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "This attribute does not store exactly one value, as would be expected for a value with Tag boolean".to_string() }));
+        }
+        let sov = value.values.get(0);
+        if let Some(inner_value) = sov {
+            if value.tag() != Tag::Boolean {
+                return Err(crate::Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "Only Any objects with boolean tags can be converted to a KeyUsage enum variant".to_string() }));
+            }
+            // This is how booleans are apparently encoded in ASN.1
+            let boolean_value = match inner_value.value() {
+                &[0x00] => false,
+                &[0xFF] | &[0x01] => true,
+            };
+            // Now we have to match the OID of the attribute to the known KeyUsage variants
+            return Ok(match value.oid.to_string().as_str() {
+                OID_KEY_USAGE_CONTENT_COMMITMENT => KeyUsage::ContentCommitment(boolean_value),
+                OID_KEY_USAGE_CRL_SIGN => KeyUsage::CrlSign(boolean_value),
+                OID_KEY_USAGE_DATA_ENCIPHERMENT => KeyUsage::DataEncipherment(boolean_value),
+                OID_KEY_USAGE_DECIPHER_ONLY => KeyUsage::DecipherOnly(boolean_value),
+                OID_KEY_USAGE_DIGITAL_SIGNATURE => KeyUsage::DigitalSignature(boolean_value),
+                OID_KEY_USAGE_ENCIPHER_ONLY => KeyUsage::EncipherOnly(boolean_value),
+                OID_KEY_USAGE_KEY_AGREEMENT => KeyUsage::KeyAgreement(boolean_value),
+                OID_KEY_USAGE_KEY_CERT_SIGN => KeyUsage::KeyCertSign(boolean_value),
+                OID_KEY_USAGE_KEY_ENCIPHERMENT => KeyUsage::KeyEncipherment(boolean_value),
+                // If the OID does not match any known KeyUsage variant, we return an error
+                _ => {
+                    return Err(crate::Error::InvalidInput(
+                        crate::InvalidInput::IncompatibleVariantForConversion {
+                            reason:
+                                "The OID of the attribute does not match any known KeyUsage variant"
+                                    .to_string(),
+                        },
+                    ))
+                }
+            });
+        }
+        // If the attribute does not contain a value, we return an error
+        Err(crate::Error::InvalidInput(
+            crate::InvalidInput::IncompatibleVariantForConversion {
+                reason: "The attribute does not contain a value".to_string(),
+            },
+        ))
+    }
+}
+
 impl From<KeyUsage> for Any {
     fn from(value: KeyUsage) -> Self {
         Any::new(der::Tag::Boolean,match bool::from(value) {
@@ -179,15 +247,23 @@ impl From<KeyUsage> for Any {
 impl From<KeyUsage> for ObjectIdentifier {
     fn from(value: KeyUsage) -> Self {
         let result = match value {
-            KeyUsage::DigitalSignature(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.3"),
-            KeyUsage::CrlSign(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.2"),
-            KeyUsage::ContentCommitment(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.8"),
-            KeyUsage::KeyEncipherment(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.1"),
-            KeyUsage::DataEncipherment(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.4"),
-            KeyUsage::KeyAgreement(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.9"),
-            KeyUsage::KeyCertSign(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.3"),
-            KeyUsage::EncipherOnly(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.7"),
-            KeyUsage::DecipherOnly(_) => ObjectIdentifier::from_str("1.3.6.1.5.5.7.3.6"),
+            KeyUsage::DigitalSignature(_) => {
+                ObjectIdentifier::from_str(OID_KEY_USAGE_DIGITAL_SIGNATURE)
+            }
+            KeyUsage::CrlSign(_) => ObjectIdentifier::from_str(OID_KEY_USAGE_CRL_SIGN),
+            KeyUsage::ContentCommitment(_) => {
+                ObjectIdentifier::from_str(OID_KEY_USAGE_CONTENT_COMMITMENT)
+            }
+            KeyUsage::KeyEncipherment(_) => {
+                ObjectIdentifier::from_str(OID_KEY_USAGE_KEY_ENCIPHERMENT)
+            }
+            KeyUsage::DataEncipherment(_) => {
+                ObjectIdentifier::from_str(OID_KEY_USAGE_DATA_ENCIPHERMENT)
+            }
+            KeyUsage::KeyAgreement(_) => ObjectIdentifier::from_str(OID_KEY_USAGE_KEY_AGREEMENT),
+            KeyUsage::KeyCertSign(_) => ObjectIdentifier::from_str(OID_KEY_USAGE_KEY_CERT_SIGN),
+            KeyUsage::EncipherOnly(_) => ObjectIdentifier::from_str(OID_KEY_USAGE_ENCIPHER_ONLY),
+            KeyUsage::DecipherOnly(_) => ObjectIdentifier::from_str(OID_KEY_USAGE_DECIPHER_ONLY),
         };
         result.expect("Error occurred when converting KeyUsage enum to ObjectIdentifier. Please report this crash at https://github.com/polyphony-chat/polyproto.")
     }
