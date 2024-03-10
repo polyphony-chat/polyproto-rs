@@ -109,7 +109,7 @@ pub struct IdCsrInner<S: Signature> {
     pub subject_public_key_info: PublicKeyInfo,
     /// attributes is a collection of attributes providing additional
     /// information about the subject of the certificate.
-    pub attributes: Attributes,
+    pub capabilities: Capabilities,
     phantom_data: PhantomData<S>,
 }
 
@@ -120,13 +120,14 @@ pub struct IdCsrInner<S: Signature> {
 impl<S: Signature> IdCsrInner<S> {
     /// Creates a new [IdCsrInner].
     ///
-    /// The length of `subject_session_id` MUST NOT exceed 32.
+    /// Fails, if [Name] or [Capabilities] do not meet polyproto validation criteria.
     pub fn new(
         subject: &Name,
         public_key: &impl PublicKey<S>,
         capabilities: &Capabilities,
     ) -> Result<IdCsrInner<S>, Error> {
         subject.validate()?;
+        capabilities.validate()?;
 
         let subject_public_key_info = PublicKeyInfo {
             algorithm: public_key.public_key_info().algorithm,
@@ -142,7 +143,7 @@ impl<S: Signature> IdCsrInner<S> {
             version: PkcsVersion::V1,
             subject,
             subject_public_key_info,
-            attributes,
+            capabilities: capabilities.clone(),
             phantom_data: PhantomData,
         })
     }
