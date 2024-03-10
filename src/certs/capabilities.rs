@@ -9,7 +9,7 @@ use der::{Any, Tag, Tagged};
 use spki::ObjectIdentifier;
 use x509_cert::attr::{Attribute, Attributes};
 
-use crate::{Constrained, ConstraintError};
+use crate::{Constrained, ConstraintError, Error};
 
 pub const OID_KEY_USAGE_DIGITAL_SIGNATURE: &str = "1.3.6.1.5.5.7.3.3";
 pub const OID_KEY_USAGE_CRL_SIGN: &str = "1.3.6.1.5.5.7.3.2";
@@ -20,6 +20,7 @@ pub const OID_KEY_USAGE_KEY_AGREEMENT: &str = "1.3.6.1.5.5.7.3.9";
 pub const OID_KEY_USAGE_KEY_CERT_SIGN: &str = "1.3.6.1.5.5.7.3.3";
 pub const OID_KEY_USAGE_ENCIPHER_ONLY: &str = "1.3.6.1.5.5.7.3.7";
 pub const OID_KEY_USAGE_DECIPHER_ONLY: &str = "1.3.6.1.5.5.7.3.6";
+pub const OID_BASIC_CONSTRAINTS: &str = "2.5.29.19";
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Capabilities which an ID-Cert or ID-CSR might have. For ID-Certs, you'd find these capabilities
@@ -78,7 +79,7 @@ impl Capabilities {
 }
 
 impl TryFrom<Attributes> for Capabilities {
-    type Error = crate::Error;
+    type Error = Error;
 
     fn try_from(value: Attributes) -> Result<Self, Self::Error> {
         let key_usage = Vec::new();
@@ -177,7 +178,7 @@ impl From<KeyUsage> for bool {
 }
 
 impl TryFrom<Attribute> for KeyUsage {
-    type Error = crate::Error;
+    type Error = Error;
 
     /// Performs the conversion.
     ///
@@ -190,12 +191,12 @@ impl TryFrom<Attribute> for KeyUsage {
 
         // Check if the attribute contains exactly one value
         if &value.values.len() != &1usize {
-            return Err(crate::Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "This attribute does not store exactly one value, as would be expected for a value with Tag boolean".to_string() }));
+            return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "This attribute does not store exactly one value, as would be expected for a value with Tag boolean".to_string() }));
         }
         let sov = value.values.get(0);
         if let Some(inner_value) = sov {
             if value.tag() != Tag::Boolean {
-                return Err(crate::Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "Only Any objects with boolean tags can be converted to a KeyUsage enum variant".to_string() }));
+                return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "Only Any objects with boolean tags can be converted to a KeyUsage enum variant".to_string() }));
             }
             // This is how booleans are apparently encoded in ASN.1
             let boolean_value = match inner_value.value() {
@@ -215,7 +216,7 @@ impl TryFrom<Attribute> for KeyUsage {
                 OID_KEY_USAGE_KEY_ENCIPHERMENT => KeyUsage::KeyEncipherment(boolean_value),
                 // If the OID does not match any known KeyUsage variant, we return an error
                 _ => {
-                    return Err(crate::Error::InvalidInput(
+                    return Err(Error::InvalidInput(
                         crate::InvalidInput::IncompatibleVariantForConversion {
                             reason:
                                 "The OID of the attribute does not match any known KeyUsage variant"
@@ -226,7 +227,7 @@ impl TryFrom<Attribute> for KeyUsage {
             });
         }
         // If the attribute does not contain a value, we return an error
-        Err(crate::Error::InvalidInput(
+        Err(Error::InvalidInput(
             crate::InvalidInput::IncompatibleVariantForConversion {
                 reason: "The attribute does not contain a value".to_string(),
             },
@@ -301,7 +302,33 @@ pub struct BasicConstraints {
 
 impl From<BasicConstraints> for ObjectIdentifier {
     fn from(_value: BasicConstraints) -> Self {
-        ObjectIdentifier::from_str("2.5.29.19").expect("Error occurred when converting BasicConstraints to ObjectIdentifier. Please report this crash at https://github.com/polyphony-chat/polyproto")
+        ObjectIdentifier::from_str(OID_BASIC_CONSTRAINTS).expect("Error occurred when converting BasicConstraints to ObjectIdentifier. Please report this crash at https://github.com/polyphony-chat/polyproto")
+    }
+}
+
+impl TryFrom<Attribute> for BasicConstraints {
+    type Error = Error;
+
+    fn try_from(value: Attribute) -> Result<Self, Self::Error> {
+        if value.oid.to_string() != OID_BASIC_CONSTRAINTS {
+            return Err(Error::InvalidInput(
+                crate::InvalidInput::IncompatibleVariantForConversion {
+                    reason: "OID of value does not match OID_BASIC_CONSTRAINTS".to_string(),
+                },
+            ));
+        }
+        let values = value.values;
+        if values.len() != 2usize {
+            return Err(Error::InvalidInput(
+                crate::InvalidInput::IncompatibleVariantForConversion {
+                    reason: format!(
+                        "Expected two values for BasicConstraints, found {}",
+                        values.len()
+                    ),
+                },
+            ));
+        }
+        todo!()
     }
 }
 
