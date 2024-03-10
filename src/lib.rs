@@ -92,12 +92,16 @@ pub enum IdCertToTbsCert {
 }
 
 /// Represents errors for invalid input in IdCsr or IdCert generation.
-#[derive(Error, Debug, PartialEq, Clone, Copy)]
+#[derive(Error, Debug, PartialEq, Clone)]
 pub enum InvalidInput {
     #[error("The der library has reported the following error with the input")]
     DerError(der::Error),
     #[error("subject_session_id MUST NOT exceed length limit of 32 characters")]
     SessionIdTooLong,
+    #[error(
+        "Cannot perform conversion, as input variant can not be converted to output. {reason:}"
+    )]
+    IncompatibleVariantForConversion { reason: String },
 }
 
 impl From<der::Error> for InvalidInput {
