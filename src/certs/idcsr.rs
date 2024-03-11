@@ -116,6 +116,11 @@ impl<S: Signature> IdCsr<S> {
         }
         Ok(())
     }
+
+    /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
+    pub fn from_der(bytes: &[u8]) -> Result<Self, Error> {
+        IdCsr::try_from(CertReq::from_der(bytes)?)
+    }
 }
 
 /// In the context of PKCS #10, this is a `CertificationRequestInfo`:
