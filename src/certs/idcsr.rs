@@ -180,6 +180,11 @@ impl<S: Signature> IdCsrInner<S> {
             phantom_data: PhantomData,
         })
     }
+
+    /// Create an IdCsrInner from a byte slice containing a DER encoded PKCS #10 CSR.
+    pub fn from_der(bytes: &[u8]) -> Result<Self, Error> {
+        IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)
+    }
 }
 
 impl<S: Signature> TryFrom<CertReq> for IdCsr<S> {
