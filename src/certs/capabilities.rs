@@ -11,15 +11,25 @@ use x509_cert::attr::{Attribute, Attributes};
 
 use crate::{Constrained, ConstraintError, Error};
 
+/// Object Identifier for the KeyUsage::DigitalSignature variant.
 pub const OID_KEY_USAGE_DIGITAL_SIGNATURE: &str = "1.3.6.1.5.5.7.3.3";
+/// Object Identifier for the KeyUsage::CrlSign variant.
 pub const OID_KEY_USAGE_CRL_SIGN: &str = "1.3.6.1.5.5.7.3.2";
+/// Object Identifier for the KeyUsage::ContentCommitment variant.
 pub const OID_KEY_USAGE_CONTENT_COMMITMENT: &str = "1.3.6.1.5.5.7.3.8";
+/// Object Identifier for the KeyUsage::KeyEncipherment variant.
 pub const OID_KEY_USAGE_KEY_ENCIPHERMENT: &str = "1.3.6.1.5.5.7.3.1";
+/// Object Identifier for the KeyUsage::DataEncipherment variant.
 pub const OID_KEY_USAGE_DATA_ENCIPHERMENT: &str = "1.3.6.1.5.5.7.3.4";
+/// Object Identifier for the KeyUsage::KeyAgreement variant.
 pub const OID_KEY_USAGE_KEY_AGREEMENT: &str = "1.3.6.1.5.5.7.3.9";
+/// Object Identifier for the KeyUsage::KeyCertSign variant.
 pub const OID_KEY_USAGE_KEY_CERT_SIGN: &str = "1.3.6.1.5.5.7.3.3";
+/// Object Identifier for the KeyUsage::EncipherOnly variant.
 pub const OID_KEY_USAGE_ENCIPHER_ONLY: &str = "1.3.6.1.5.5.7.3.7";
+/// Object Identifier for the KeyUsage::DecipherOnly variant.
 pub const OID_KEY_USAGE_DECIPHER_ONLY: &str = "1.3.6.1.5.5.7.3.6";
+/// Object Identifier for the BasicConstraints variant.
 pub const OID_BASIC_CONSTRAINTS: &str = "2.5.29.19";
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -598,6 +608,7 @@ mod test_key_usage_from_attribute {
     }
 }
 
+#[cfg(test)]
 mod test_basic_constraints_from_attribute {
     use der::asn1::Ia5String;
 
