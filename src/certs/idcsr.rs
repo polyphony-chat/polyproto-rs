@@ -78,8 +78,15 @@ impl<S: Signature> IdCsr<S> {
         })
     }
 
-    // TODO: verify signature of csr
-    // TODO: add optional parameter for timestamp
+    /// Validates the well-formedness of the [IdCsr] and its contents. Fails, if the [Name] or
+    /// [Capabilities] do not meet polyprotos' validation criteria for actor CSRs.
+    ///
+    /// ## Signature Verification
+    ///
+    /// This method does not verify the signature of the [IdCsr]. To verify the signature, use the
+    /// [crate::key::PublicKey::verify_signature] method. If you do not have the public key as a
+    /// `dyn PublicKey`, you can use the [crate::key::PublicKey::from_public_key_info] method to
+    /// create a `dyn PublicKey` from the [PublicKeyInfo] in the [IdCsrInner].
     pub fn valid_actor_csr(&self) -> Result<(), Error> {
         self.inner_csr.subject.validate()?;
         self.inner_csr.capabilities.validate()?;
@@ -91,6 +98,15 @@ impl<S: Signature> IdCsr<S> {
         Ok(())
     }
 
+    /// Validates the well-formedness of the [IdCsr] and its contents. Fails, if the [Name] or
+    /// [Capabilities] do not meet polyprotos' validation criteria for home server CSRs.
+    ///
+    /// ## Signature Verification
+    ///
+    /// This method does not verify the signature of the [IdCsr]. To verify the signature, use the
+    /// [crate::key::PublicKey::verify_signature] method. If you do not have the public key as a
+    /// `dyn PublicKey`, you can use the [crate::key::PublicKey::from_public_key_info] method to
+    /// create a `dyn PublicKey` from the [PublicKeyInfo] in the [IdCsrInner].
     pub fn valid_home_server_csr(&self) -> Result<(), Error> {
         self.inner_csr.subject.validate()?;
         self.inner_csr.capabilities.validate()?;
