@@ -69,6 +69,10 @@ pub enum Error {
     InvalidInput(#[from] InvalidInput),
     #[error("Value failed to meet constraints")]
     ConstraintError(ConstraintError),
+    #[error("Conversion failed")]
+    UnsuccessfulConversion(#[from] UnsuccessfulConversion),
+    #[error("Invalid certificate")]
+    InvalidCert(InvalidCert),
 }
 
 /// Error type covering possible failures when converting a [x509_cert::TbsCertificate]
@@ -102,6 +106,31 @@ pub enum InvalidInput {
         "Cannot perform conversion, as input variant can not be converted to output. {reason:}"
     )]
     IncompatibleVariantForConversion { reason: String },
+}
+
+#[derive(Error, Debug, PartialEq, Clone)]
+// TODO: Replace usages of InvalidInput::IncompatibleVariantForConversion with this Enum
+pub enum UnsuccessfulConversion {
+    #[error(
+        "Cannot perform conversion, as input variant can not be converted to output. {reason:}"
+    )]
+    IncompatibleVariant { reason: String },
+    #[error("Conversion failed due to invalid input")]
+    InvalidInput(String),
+}
+
+#[derive(Error, Debug, PartialEq, Clone)]
+pub enum InvalidCert {
+    #[error("The signature does not match the contents of the certificate")]
+    InvalidSignature,
+    #[error("The subject presented on the certificate is malformed or otherwise invalid")]
+    InvalidSubject(ConstraintError),
+    #[error("The issuer presented on the certificate is malformed or otherwise invalid")]
+    InvalidIssuer(ConstraintError),
+    #[error("The validity period of the certificate is invalid, or the certificate is expired")]
+    InvalidValidity,
+    #[error("The capabilities presented on the certificate are invalid or otherwise malformed")]
+    InvalidCapabilities(ConstraintError),
 }
 
 impl From<der::Error> for InvalidInput {
