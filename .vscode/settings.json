@@ -1,0 +1,3 @@
+{
+	"markiscodecoverage.searchCriteria": ".coverage/lcov*.info"
+}

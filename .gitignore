@@ -3,3 +3,5 @@
 .idea
 .DS_Store
 .VSCodeCounter
+.coverage
+cert.csr
