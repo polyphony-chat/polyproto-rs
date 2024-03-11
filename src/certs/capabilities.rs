@@ -308,7 +308,7 @@ impl From<BasicConstraints> for ObjectIdentifier {
 
 impl TryFrom<Attribute> for BasicConstraints {
     type Error = Error;
-
+    // Basic input validation. Check OID of Attribute and length of the "values" SetOfVec provided.
     fn try_from(value: Attribute) -> Result<Self, Self::Error> {
         if value.oid.to_string() != OID_BASIC_CONSTRAINTS {
             return Err(Error::InvalidInput(
@@ -318,17 +318,52 @@ impl TryFrom<Attribute> for BasicConstraints {
             ));
         }
         let values = value.values;
-        if values.len() != 2usize {
+        if values.len() > 2usize {
             return Err(Error::InvalidInput(
                 crate::InvalidInput::IncompatibleVariantForConversion {
                     reason: format!(
-                        "Expected two values for BasicConstraints, found {}",
+                        "Expected 1 or 2 values for BasicConstraints, found {}",
                         values.len()
                     ),
                 },
             ));
         }
-        todo!()
+        let mut num_ca = 0u8;
+        let mut num_path_length = 0u8;
+        let mut ca: bool;
+        let mut path_length: Option<u64> = None;
+        for value in values.iter() {
+            match value.tag() {
+                Tag::Boolean => {
+                    // Keep track of how many Boolean tags we encounter
+                    if num_ca == 0 {
+                        num_ca += 1;
+                        ca = match value.value() {
+                            &[0x00] => false,
+                            &[0xFF] | &[0x01] => true,
+                        }
+                    } else {
+                        return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string() }));
+                    }
+                }
+                Tag::Integer => {
+                    // Keep track of how many Integer tags we encounter
+                    if num_path_length == 0 {
+                        num_path_length += 1;
+                        // The value is given to us a a byte slice of u8. We need to convert this
+                        // into a u64.
+                        let mut buf = [0u8; 8];
+                        let len = 8.min(value.value().len());
+                        buf[..len].copy_from_slice(value.value());
+                        path_length = Some(u64::from_be_bytes(buf));
+                    } else {
+                        return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "Encountered > 1 Integer tags. Expected 0 or 1 Integer tags.".to_string() }));
+                    }
+                }
+                _ => return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: format!("Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer", value.tag()) })),
+            }
+        }
+        Ok(BasicConstraints { ca, path_length })
     }
 }
 
