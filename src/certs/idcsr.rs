@@ -4,9 +4,10 @@
 
 use std::marker::PhantomData;
 
-use der::asn1::{BitString, SetOfVec};
+use der::asn1::BitString;
 use der::{Decode, Encode};
 use spki::AlgorithmIdentifierOwned;
+use x509_cert::attr::Attributes;
 use x509_cert::name::Name;
 use x509_cert::request::{CertReq, CertReqInfo};
 
@@ -64,7 +65,7 @@ impl<S: Signature> IdCsr<S> {
     ) -> Result<IdCsr<S>, Error> {
         subject.validate()?;
         let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey(), capabilities)?;
-        let cert_req_info = CertReqInfo::from(inner_csr);
+        let cert_req_info = CertReqInfo::try_from(inner_csr)?;
         let signature = signing_key.sign(&cert_req_info.to_der()?);
         let inner_csr = IdCsrInner::<S>::try_from(cert_req_info)?;
 
@@ -120,6 +121,11 @@ impl<S: Signature> IdCsr<S> {
     /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
     pub fn from_der(bytes: &[u8]) -> Result<Self, Error> {
         IdCsr::try_from(CertReq::from_der(bytes)?)
+    }
+
+    /// Encode this type as DER, returning a byte vector.
+    pub fn to_der(self) -> Result<Vec<u8>, Error> {
+        Ok(CertReq::try_from(self)?.to_der()?)
     }
 }
 
@@ -185,6 +191,11 @@ impl<S: Signature> IdCsrInner<S> {
     pub fn from_der(bytes: &[u8]) -> Result<Self, Error> {
         IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)
     }
+
+    /// Encode this type as DER, returning a byte vector.
+    pub fn to_der(self) -> Result<Vec<u8>, Error> {
+        Ok(CertReqInfo::try_from(self)?.to_der()?)
+    }
 }
 
 impl<S: Signature> TryFrom<CertReq> for IdCsr<S> {
@@ -226,20 +237,21 @@ impl<S: Signature> TryFrom<IdCsr<S>> for CertReq {
 
     fn try_from(value: IdCsr<S>) -> Result<Self, Self::Error> {
         Ok(CertReq {
-            info: value.inner_csr.into(),
+            info: value.inner_csr.try_into()?,
             algorithm: value.signature_algorithm,
             signature: value.signature.to_bitstring()?,
         })
     }
 }
 
-impl<S: Signature> From<IdCsrInner<S>> for CertReqInfo {
-    fn from(value: IdCsrInner<S>) -> Self {
-        CertReqInfo {
+impl<S: Signature> TryFrom<IdCsrInner<S>> for CertReqInfo {
+    type Error = Error;
+    fn try_from(value: IdCsrInner<S>) -> Result<Self, Self::Error> {
+        Ok(CertReqInfo {
             version: x509_cert::request::Version::V1,
             subject: value.subject,
             public_key: value.subject_public_key_info.into(),
-            attributes: SetOfVec::new(),
-        }
+            attributes: Attributes::try_from(value.capabilities)?,
+        })
     }
 }
