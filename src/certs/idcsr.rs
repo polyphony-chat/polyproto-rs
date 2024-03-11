@@ -7,7 +7,6 @@ use std::marker::PhantomData;
 use der::asn1::{BitString, SetOfVec};
 use der::{Decode, Encode};
 use spki::AlgorithmIdentifierOwned;
-use x509_cert::attr::Attributes;
 use x509_cert::name::Name;
 use x509_cert::request::{CertReq, CertReqInfo};
 
