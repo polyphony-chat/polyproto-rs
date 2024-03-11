@@ -81,18 +81,44 @@ impl Capabilities {
 impl TryFrom<Attributes> for Capabilities {
     type Error = Error;
 
+    /// Performs the conversion.
+    ///
+    /// Fails if the BasicConstraints or KeyUsages are malformed. The constraints returned by
+    /// this method are not guaranteed to be valid. You should call `validate()` on the result
+    /// to ensure that the constraints are valid according to the X.509 standard and the polyproto
+    /// specification.
     fn try_from(value: Attributes) -> Result<Self, Self::Error> {
-        //let key_usage = Vec::new();
-        //let basic_constraints;
+        let mut key_usages: Vec<KeyUsage> = Vec::new();
+        let mut basic_constraints = BasicConstraints::default();
+        let mut num_basic_constraints = 0u8;
         for item in value.iter() {
-            // TODO: We have to convert an Attribute into a Capability.
-            // First, we have to parse the OID of the item to determine which type of capability this
-            // is. Then, we have to parse the actual Any information into a bool or number (depending)
-            // on the capability type. Lastly, we can put it all together into the capabilities struct,
-            // and perhaps call validate on it - although I am not sure this belongs in a try_from
-            // method.
+            match item.oid.to_string().as_str() {
+                OID_KEY_USAGE_CONTENT_COMMITMENT
+                | OID_KEY_USAGE_CRL_SIGN
+                | OID_KEY_USAGE_DATA_ENCIPHERMENT
+                | OID_KEY_USAGE_DECIPHER_ONLY
+                | OID_KEY_USAGE_DIGITAL_SIGNATURE
+                | OID_KEY_USAGE_ENCIPHER_ONLY
+                | OID_KEY_USAGE_KEY_AGREEMENT
+                | OID_KEY_USAGE_KEY_CERT_SIGN
+                | OID_KEY_USAGE_KEY_ENCIPHERMENT => {
+                    key_usages.push(KeyUsage::try_from(item.clone())?);
+                }
+                OID_BASIC_CONSTRAINTS => {
+                    num_basic_constraints += 1;
+                    if num_basic_constraints > 1 {
+                        return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "Tried inserting > 1 BasicConstraints into Capabilities. Expected 1 BasicConstraints".to_string() }));
+                    } else {
+                        basic_constraints = BasicConstraints::try_from(item.clone())?;
+                    }
+                }
+                _ => (),
+            }
         }
-        todo!()
+        Ok(Capabilities {
+            key_usage: key_usages,
+            basic_constraints,
+        })
     }
 }
 
@@ -293,7 +319,7 @@ impl From<KeyUsage> for Attribute {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 /// Basic constraints is an X.509 extension type that defines whether a given certificate is allowed
 /// to sign additional certificates and what path length restrictions may exist.
 pub struct BasicConstraints {
