@@ -78,6 +78,8 @@ impl<S: Signature> IdCsr<S> {
         })
     }
 
+    // TODO: verify signature of csr
+    // TODO: add optional parameter for timestamp
     pub fn valid_actor_csr(&self) -> Result<(), Error> {
         self.inner_csr.subject.validate()?;
         self.inner_csr.capabilities.validate()?;
