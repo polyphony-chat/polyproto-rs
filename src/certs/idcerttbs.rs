@@ -56,9 +56,6 @@ pub struct IdCertTbs {
     pub extensions: Extensions,
 }
 
-// TODO: Add ::new() method to IdCertTbs
-// TODO: Add ::sign() method to IdCertTbs, yielding an IdCert
-
 impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
     type Error = Error;
 
