@@ -153,10 +153,6 @@ pub struct IdCsrInner<S: Signature> {
     phantom_data: PhantomData<S>,
 }
 
-// TODO: Problem: SubjectPublicKeyInfo only stores the BitString of a PublicKey. This is not good,
-// because we cannot use the PublicKey trait and its verify() method to verify that the signature
-// in a given IdCsr matches the PublicKey presented in the IdCsrInner.
-
 impl<S: Signature> IdCsrInner<S> {
     /// Creates a new [IdCsrInner].
     ///
