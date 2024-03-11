@@ -6,7 +6,9 @@ use der::Length;
 use x509_cert::name::Name;
 
 use crate::certs::capabilities::{Capabilities, KeyUsage};
+use crate::certs::idcsr::IdCsr;
 use crate::certs::SessionId;
+use crate::signature::Signature;
 use crate::Constrained;
 
 impl Constrained for Name {
@@ -123,33 +125,9 @@ impl Constrained for SessionId {
     }
 }
 
-// TODO: The attributes are still missing. CA Certificates and Actor Certificates should have
-//       their respective set of capabilities
-
 impl Constrained for Capabilities {
     fn validate(&self) -> Result<(), crate::ConstraintError> {
         let is_ca = self.basic_constraints.ca;
-        // Path length must be <= 1 in polyproto, if a path length is specified
-        if is_ca {
-            if let Some(length) = self.basic_constraints.path_length {
-                if length > 1 {
-                    return Err(crate::ConstraintError::OutOfBounds {
-                        lower: 1,
-                        upper: 1,
-                        actual: length.to_string(),
-                        reason: Some("Path length must not exceed one (1)".to_string()),
-                    });
-                }
-            // None in this case means unlimited path length, which is not <= 1.
-            } else {
-                return Err(crate::ConstraintError::OutOfBounds {
-                    lower: 1,
-                    upper: 1,
-                    actual: "none (infinity)".to_string(),
-                    reason: Some("Path length must not exceed one (1)".to_string()),
-                });
-            }
-        }
 
         // Define the flags to check
         let mut can_commit_content = false;
@@ -222,6 +200,14 @@ impl Constrained for Capabilities {
         } else {
             Ok(())
         }
+    }
+}
+
+impl<S: Signature> Constrained for IdCsr<S> {
+    fn validate(&self) -> Result<(), crate::ConstraintError> {
+        self.inner_csr.capabilities.validate()?;
+        self.inner_csr.subject.validate()?;
+        Ok(())
     }
 }
 
