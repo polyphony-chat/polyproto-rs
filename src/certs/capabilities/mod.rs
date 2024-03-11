@@ -2,11 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::str::FromStr;
+pub mod basic_constraints;
+pub mod key_usage;
+pub use basic_constraints::*;
+pub use key_usage::*;
 
 use der::asn1::SetOfVec;
-use der::{Any, Tag, Tagged};
-use spki::ObjectIdentifier;
+
 use x509_cert::attr::{Attribute, Attributes};
 
 use crate::{Constrained, ConstraintError, Error};
@@ -155,307 +157,10 @@ impl TryFrom<Capabilities> for Attributes {
     type Error = ConstraintError;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-/// The key usage extension defines the purpose of the key contained in the certificate. The usage
-/// restriction might be employed when a key that could be used for more than one operation is to
-/// be restricted. See <https://cryptography.io/en/latest/x509/reference/#cryptography.x509.KeyUsage>
-pub enum KeyUsage {
-    /// This purpose is set to true when the subject public key is used for verifying digital
-    /// signatures, other than signatures on certificates (`key_cert_sign`) and CRLs (`crl_sign`).
-    DigitalSignature(bool),
-    /// This purpose is set to true when the subject public key is used for verifying signatures on
-    /// certificate revocation lists.
-    CrlSign(bool),
-    /// This purpose is set to true when the subject public key is used for verifying digital
-    /// signatures, other than signatures on certificates (`key_cert_sign`) and CRLs (`crl_sign`).
-    /// It is used to provide a non-repudiation service that protects against the signing entity
-    /// falsely denying some action. In the case of later conflict, a reliable third party may
-    /// determine the authenticity of the signed data. This was called `non_repudiation` in older
-    /// revisions of the X.509 specification.
-    ContentCommitment(bool),
-    /// This purpose is set to true when the subject public key is used for enciphering private or
-    /// secret keys.
-    KeyEncipherment(bool),
-    /// This purpose is set to true when the subject public key is used for directly enciphering raw
-    /// user data without the use of an intermediate symmetric cipher.
-    DataEncipherment(bool),
-    /// This purpose is set to true when the subject public key is used for key agreement. For
-    /// example, when a Diffie-Hellman key is to be used for key management, then this purpose is
-    /// set to true.
-    KeyAgreement(bool),
-    /// This purpose is set to true when the subject public key is used for verifying signatures on
-    /// public key certificates. If this purpose is set to true then ca must be true in the
-    /// `BasicConstraints` extension.
-    KeyCertSign(bool),
-    /// When this purposes is set to true and the `key_agreement` purpose is also set, the subject
-    /// public key may be used only for enciphering data while performing key agreement. The
-    /// `KeyAgreement` capability must be set to `true` for this.
-    EncipherOnly(bool),
-    /// When this purposes is set to true and the `key_agreement` purpose is also set, the subject
-    /// public key may be used only for deciphering data while performing key agreement. The
-    /// `KeyAgreement` capability must be set to `true` for this.
-    DecipherOnly(bool),
-}
-
-impl From<KeyUsage> for bool {
-    fn from(value: KeyUsage) -> Self {
-        match value {
-            KeyUsage::DigitalSignature(val) => val,
-            KeyUsage::CrlSign(val) => val,
-            KeyUsage::ContentCommitment(val) => val,
-            KeyUsage::KeyEncipherment(val) => val,
-            KeyUsage::DataEncipherment(val) => val,
-            KeyUsage::KeyAgreement(val) => val,
-            KeyUsage::KeyCertSign(val) => val,
-            KeyUsage::EncipherOnly(val) => val,
-            KeyUsage::DecipherOnly(val) => val,
-        }
-    }
-}
-
-impl TryFrom<Attribute> for KeyUsage {
-    type Error = Error;
-
-    /// Performs the conversion.
-    ///
-    /// Fails, if the input attribute does not contain exactly one value, or if the input attribute
-    /// does not contain a boolean value. Also fails if the OID of the attribute does not match any
-    /// known KeyUsage variant.
-    fn try_from(value: Attribute) -> Result<Self, Self::Error> {
-        // PRETTYFYME: I know this is a bit of a mess, but it works. If anyone wants to make it
-        // prettier, feel free to do so.
-
-        // Check if the attribute contains exactly one value
-        if value.values.len() != 1usize {
-            return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "This attribute does not store exactly one value, as would be expected for a KeyUsage attribute".to_string() }));
-        }
-        let sov = value.values.get(0);
-
-        // The first value inside the Attribute is a SetOfVec. We need to look inside the SetOfVec to
-        // find the actual attribute we are interested in.
-        if let Some(inner_value) = sov {
-            if inner_value.tag() != Tag::Boolean {
-                return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: format!("Only Any objects with boolean tags can be converted to a KeyUsage enum variant. Expected Tag::Boolean, found {:?}", inner_value.tag()) }));
-            }
-            // This is how booleans are apparently encoded in ASN.1
-            let boolean_value = match inner_value.value() {
-                &[0x00] => false,
-                &[0xFF] | &[0x01] => true,
-                _ => {
-                    return Err(Error::InvalidInput(
-                        crate::InvalidInput::IncompatibleVariantForConversion {
-                            reason: "Encountered unexpected value for Boolean tag".to_string(),
-                        },
-                    ));
-                }
-            };
-            // Now we have to match the OID of the attribute to the known KeyUsage variants
-            return Ok(match value.oid.to_string().as_str() {
-                OID_KEY_USAGE_CONTENT_COMMITMENT => KeyUsage::ContentCommitment(boolean_value),
-                OID_KEY_USAGE_CRL_SIGN => KeyUsage::CrlSign(boolean_value),
-                OID_KEY_USAGE_DATA_ENCIPHERMENT => KeyUsage::DataEncipherment(boolean_value),
-                OID_KEY_USAGE_DECIPHER_ONLY => KeyUsage::DecipherOnly(boolean_value),
-                OID_KEY_USAGE_DIGITAL_SIGNATURE => KeyUsage::DigitalSignature(boolean_value),
-                OID_KEY_USAGE_ENCIPHER_ONLY => KeyUsage::EncipherOnly(boolean_value),
-                OID_KEY_USAGE_KEY_AGREEMENT => KeyUsage::KeyAgreement(boolean_value),
-                OID_KEY_USAGE_KEY_CERT_SIGN => KeyUsage::KeyCertSign(boolean_value),
-                OID_KEY_USAGE_KEY_ENCIPHERMENT => KeyUsage::KeyEncipherment(boolean_value),
-                // If the OID does not match any known KeyUsage variant, we return an error
-                _ => {
-                    return Err(Error::InvalidInput(
-                        crate::InvalidInput::IncompatibleVariantForConversion {
-                            reason: format!("The OID of the attribute does not match any known KeyUsage variant. Found OID \"{}\"", value.oid)
-                        },
-                    ))
-                }
-            });
-        }
-        // If the attribute does not contain a value, we return an error
-        Err(Error::InvalidInput(
-            crate::InvalidInput::IncompatibleVariantForConversion {
-                reason: "The attribute does not contain a value".to_string(),
-            },
-        ))
-    }
-}
-
-impl From<KeyUsage> for Any {
-    fn from(value: KeyUsage) -> Self {
-        Any::new(der::Tag::Boolean,match bool::from(value) {
-            true => vec![0xff],
-            false => vec![0x00],
-        },
-        ).expect("Error occurred when converting BasicConstraints bool to der::Any. Please report this crash at https://github.com/polyphony-chat/polyproto.")
-    }
-}
-
-impl From<KeyUsage> for ObjectIdentifier {
-    fn from(value: KeyUsage) -> Self {
-        let result = match value {
-            KeyUsage::DigitalSignature(_) => {
-                ObjectIdentifier::from_str(OID_KEY_USAGE_DIGITAL_SIGNATURE)
-            }
-            KeyUsage::CrlSign(_) => ObjectIdentifier::from_str(OID_KEY_USAGE_CRL_SIGN),
-            KeyUsage::ContentCommitment(_) => {
-                ObjectIdentifier::from_str(OID_KEY_USAGE_CONTENT_COMMITMENT)
-            }
-            KeyUsage::KeyEncipherment(_) => {
-                ObjectIdentifier::from_str(OID_KEY_USAGE_KEY_ENCIPHERMENT)
-            }
-            KeyUsage::DataEncipherment(_) => {
-                ObjectIdentifier::from_str(OID_KEY_USAGE_DATA_ENCIPHERMENT)
-            }
-            KeyUsage::KeyAgreement(_) => ObjectIdentifier::from_str(OID_KEY_USAGE_KEY_AGREEMENT),
-            KeyUsage::KeyCertSign(_) => ObjectIdentifier::from_str(OID_KEY_USAGE_KEY_CERT_SIGN),
-            KeyUsage::EncipherOnly(_) => ObjectIdentifier::from_str(OID_KEY_USAGE_ENCIPHER_ONLY),
-            KeyUsage::DecipherOnly(_) => ObjectIdentifier::from_str(OID_KEY_USAGE_DECIPHER_ONLY),
-        };
-        result.expect("Error occurred when converting KeyUsage enum to ObjectIdentifier. Please report this crash at https://github.com/polyphony-chat/polyproto.")
-    }
-}
-
-impl From<KeyUsage> for Attribute {
-    fn from(value: KeyUsage) -> Self {
-        // Creating a Any from a bool is really simple, so we can expect this to never fail.
-        let any_val = Any::from(value);
-        let mut sov = SetOfVec::new();
-        // .insert() only fails if the value is not unique. We are inserting a single value, so this
-        // should never fail. See tests below for verification.
-        sov.insert(any_val).expect("Error occurred when inserting KeyUsage into der::Any to SetOfVec. Please report this crash at https://github.com/polyphony-chat/polyproto");
-        Attribute {
-            oid: value.into(),
-            values: sov,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-/// Basic constraints is an X.509 extension type that defines whether a given certificate is allowed
-/// to sign additional certificates and what path length restrictions may exist.
-pub struct BasicConstraints {
-    /// Whether the certificate can sign certificates.
-    pub ca: bool,
-    /// The maximum path length for certificates subordinate to this certificate. This attribute
-    /// only has meaning if `ca` is true. If `ca` is true then a path length of None means there’s no
-    /// restriction on the number of subordinate CAs in the certificate chain. If it is zero or
-    /// greater then it defines the maximum length for a subordinate CA’s certificate chain. For
-    /// example, a `path_length` of 1 means the certificate can sign a subordinate CA, but the
-    /// subordinate CA is not allowed to create subordinates with `ca` set to true.
-    pub path_length: Option<u64>,
-}
-
-impl From<BasicConstraints> for ObjectIdentifier {
-    fn from(_value: BasicConstraints) -> Self {
-        ObjectIdentifier::from_str(OID_BASIC_CONSTRAINTS).expect("Error occurred when converting BasicConstraints to ObjectIdentifier. Please report this crash at https://github.com/polyphony-chat/polyproto")
-    }
-}
-
-impl TryFrom<Attribute> for BasicConstraints {
-    type Error = Error;
-    /// Performs the conversion.
-    ///
-    /// Fails, if the input attribute
-    /// - does not contain exactly one or two values
-    /// - contains a value that is not a boolean or integer
-    /// - does not have the OID of BasicConstraints
-    /// - contains more than one boolean or integer value
-    fn try_from(value: Attribute) -> Result<Self, Self::Error> {
-        // Basic input validation. Check OID of Attribute and length of the "values" SetOfVec provided.
-        if value.oid.to_string() != OID_BASIC_CONSTRAINTS {
-            return Err(Error::InvalidInput(
-                crate::InvalidInput::IncompatibleVariantForConversion {
-                    reason: format!(
-                        "OID of value does not match any of OID_BASIC_CONSTRAINTS. Found OID {}",
-                        value.oid
-                    ),
-                },
-            ));
-        }
-        let values = value.values;
-        if values.len() > 2usize {
-            return Err(Error::InvalidInput(
-                crate::InvalidInput::IncompatibleVariantForConversion {
-                    reason: format!(
-                        "Expected 1 or 2 values for BasicConstraints, found {}",
-                        values.len()
-                    ),
-                },
-            ));
-        }
-        let mut num_ca = 0u8;
-        let mut num_path_length = 0u8;
-        let mut ca: bool = false;
-        let mut path_length: Option<u64> = None;
-        for value in values.iter() {
-            match value.tag() {
-                Tag::Boolean => {
-                    // Keep track of how many Boolean tags we encounter
-                    if num_ca == 0 {
-                        num_ca += 1;
-                        ca = match value.value() {
-                            &[0x00] => false,
-                            &[0xFF] | &[0x01] => true,
-                            _ => {
-                                return Err(Error::InvalidInput(
-                                    crate::InvalidInput::IncompatibleVariantForConversion {
-                                        reason: "Encountered unexpected value for Boolean tag".to_string(),
-                                    },
-                                ))
-                            }
-                        }
-                    } else {
-                        return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string() }));
-                    }
-                }
-                Tag::Integer => {
-                    // Keep track of how many Integer tags we encounter
-                    if num_path_length == 0 {
-                        num_path_length += 1;
-                        // The value is given to us a a byte slice of u8. We need to convert this
-                        // into a u64.
-                        let mut buf = [0u8; 8];
-                        let len = 8.min(value.value().len());
-                        buf[..len].copy_from_slice(value.value());
-                        path_length = Some(u64::from_be_bytes(buf));
-                    } else {
-                        return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "Encountered > 1 Integer tags. Expected 0 or 1 Integer tags.".to_string() }));
-                    }
-                }
-                _ => return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: format!("Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer", value.tag()) })),
-            }
-        }
-        if num_ca == 0 {
-            return Err(Error::InvalidInput(
-                crate::InvalidInput::IncompatibleVariantForConversion {
-                    reason: "Expected 1 Boolean tag, found 0".to_string(),
-                },
-            ));
-        }
-        Ok(BasicConstraints { ca, path_length })
-    }
-}
-
-impl From<BasicConstraints> for Attribute {
-    fn from(value: BasicConstraints) -> Self {
-        let mut sov = SetOfVec::new();
-        sov.insert(Any::new(der::Tag::Boolean, match value.ca {
-                        true => vec![0xff],
-                        false => vec![0x00],
-                    },
-                ).expect("Error occurred when converting BasicConstraints bool to der::Any. Please report this crash at https://github.com/polyphony-chat/polyproto.")).expect("Error occurred when inserting into der::Any to SetOfVec. Please report this crash at https://github.com/polyphony-chat/polyproto");
-        if let Some(length) = value.path_length {
-            sov.insert(Any::new(der::Tag::Integer, length.to_be_bytes()).expect("Error occurred when converting BasicConstraints u64 to der::Any. Please report this crash at https://github.com/polyphony-chat/polyproto.")).
-            expect("Error occurred when inserting into der::Any to SetOfVec. Please report this crash at https://github.com/polyphony-chat/polyproto");
-        }
-        Attribute {
-            oid: value.into(),
-            values: sov,
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
+    use spki::ObjectIdentifier;
+
     use super::*;
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
@@ -535,7 +240,13 @@ mod test {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test_key_usage_from_attribute {
+    use std::str::FromStr;
+
+    use der::{Any, Tag};
+    use spki::ObjectIdentifier;
+
     use super::*;
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -609,8 +320,13 @@ mod test_key_usage_from_attribute {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test_basic_constraints_from_attribute {
+    use std::str::FromStr;
+
     use der::asn1::Ia5String;
+    use der::{Any, Tag};
+    use spki::ObjectIdentifier;
 
     use super::*;
 

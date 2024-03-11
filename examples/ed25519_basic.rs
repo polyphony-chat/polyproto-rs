@@ -6,6 +6,8 @@
 // This example is not complete and should not be copy-pasted into a production environment without
 // further scrutiny and consideration.
 
+#![allow(unused)]
+
 use std::str::FromStr;
 
 use der::asn1::BitString;
