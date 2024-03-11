@@ -5,14 +5,9 @@
 use std::ops::{Deref, DerefMut};
 
 use der::asn1::{BitString, Ia5String};
-use der::Any;
-use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SubjectPublicKeyInfoOwned};
-use x509_cert::attr::Attribute;
-use x509_cert::ext::Extension;
+use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 
 use crate::{Constrained, ConstraintError};
-
-use self::capabilities::Capabilities;
 
 /// Additional capabilities ([x509_cert::ext::Extensions] or [x509_cert::attr::Attributes], depending
 /// on the context) of X.509 certificates.
@@ -113,42 +108,5 @@ impl From<PublicKeyInfo> for SubjectPublicKeyInfoOwned {
             algorithm: value.algorithm,
             subject_public_key: value.public_key_bitstring,
         }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ExtensionOrAttribute {
-    oid: ObjectIdentifier,
-    critical: bool,
-    value: Any,
-}
-impl ExtensionOrAttribute {
-    pub fn build(capabilities: &Capabilities) -> Result<&[Self], crate::Error> {
-        let validated = capabilities.validate();
-        if let Err(e) = validated {
-            return Err(crate::Error::ConstraintError(e));
-        }
-        // TODO why is this todo??
-        todo!()
-    }
-
-    pub fn oid(&self) -> &ObjectIdentifier {
-        &self.oid
-    }
-
-    pub fn critical(&self) -> bool {
-        self.critical
-    }
-
-    pub fn value(&self) -> &Any {
-        &self.value
-    }
-
-    pub fn to_extension(&self) -> Extension {
-        todo!()
-    }
-
-    pub fn to_attribute(&self) -> Attribute {
-        todo!()
     }
 }
