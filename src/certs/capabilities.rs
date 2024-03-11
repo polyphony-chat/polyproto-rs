@@ -206,7 +206,11 @@ impl TryFrom<Attribute> for KeyUsage {
                 &[0x00] => false,
                 &[0xFF] | &[0x01] => true,
                 _ => {
-                    return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "The value of the attribute does not match the expected boolean value".to_string() }));
+                    return Err(Error::InvalidInput(
+                        crate::InvalidInput::IncompatibleVariantForConversion {
+                            reason: "Encountered unexpected value for Boolean tag".to_string(),
+                        },
+                    ));
                 }
             };
             // Now we have to match the OID of the attribute to the known KeyUsage variants
@@ -324,7 +328,10 @@ impl TryFrom<Attribute> for BasicConstraints {
         if value.oid.to_string() != OID_BASIC_CONSTRAINTS {
             return Err(Error::InvalidInput(
                 crate::InvalidInput::IncompatibleVariantForConversion {
-                    reason: "OID of value does not match OID_BASIC_CONSTRAINTS".to_string(),
+                    reason: format!(
+                        "OID of value does not match any of OID_BASIC_CONSTRAINTS. Found OID {}",
+                        value.oid
+                    ),
                 },
             ));
         }
@@ -548,20 +555,129 @@ mod test_key_usage_from_attribute {
         dbg!(&result);
         assert!(result.is_err());
     }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_key_usage_from_attribute_weird_bool_value() {
+        let mut sov = SetOfVec::new();
+        sov.insert(Any::new(Tag::Boolean, vec![0x02]).unwrap())
+            .unwrap();
+        let attribute = Attribute {
+            oid: ObjectIdentifier::from_str(OID_KEY_USAGE_CONTENT_COMMITMENT).unwrap(),
+            values: sov,
+        };
+        let result = KeyUsage::try_from(attribute);
+        dbg!(&result);
+        assert!(result.is_err());
+    }
 }
 
 mod test_basic_constraints_from_attribute {
+    use der::asn1::Ia5String;
+
     use super::*;
 
-    fn test_basic_constraints_from_attribute() {}
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_basic_constraints_from_attribute() {
+        let bc = BasicConstraints {
+            ca: true,
+            path_length: Some(0),
+        };
+        let attribute = Attribute::from(bc);
+        let result = BasicConstraints::try_from(attribute);
+        dbg!(&result);
+        assert!(result.is_ok());
+    }
 
-    fn test_basic_constraints_wrong_value_amount() {}
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_basic_constraints_wrong_value_amount() {
+        let bc = BasicConstraints {
+            ca: true,
+            path_length: Some(0),
+        };
+        let mut attribute = Attribute::from(bc);
+        attribute
+            .values
+            .insert(Any::from(KeyUsage::DataEncipherment(false)))
+            .unwrap();
+        let result = BasicConstraints::try_from(attribute);
+        dbg!(&result);
+        assert!(result.is_err());
+    }
 
-    fn test_basic_constraints_wrong_value_type() {}
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_basic_constraints_wrong_value_type() {
+        let mut sov = SetOfVec::new();
+        sov.insert(Any::new(Tag::Ia5String, Ia5String::new("hello").unwrap().as_bytes()).unwrap())
+            .unwrap();
+        let attribute = Attribute {
+            oid: ObjectIdentifier::from_str(OID_BASIC_CONSTRAINTS).unwrap(),
+            values: sov,
+        };
+        let result = BasicConstraints::try_from(attribute);
+        dbg!(&result);
+        assert!(result.is_err());
+    }
 
-    fn test_basic_constraints_wrong_oid() {}
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_basic_constraints_wrong_oid() {
+        let bc = BasicConstraints {
+            ca: true,
+            path_length: Some(0),
+        };
+        let mut attribute = Attribute::from(bc);
+        attribute.oid = ObjectIdentifier::from_str("0.0.161.80085").unwrap();
+        let result = BasicConstraints::try_from(attribute);
+        dbg!(&result);
+        assert!(result.is_err());
+    }
 
-    fn test_basic_constraints_from_attribute_too_many_bools_or_ints() {}
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_basic_constraints_from_attribute_too_many_bools_or_ints() {
+        let mut sov = SetOfVec::new();
+        sov.insert(Any::new(Tag::Boolean, vec![0x00]).unwrap())
+            .unwrap();
+        sov.insert(Any::new(Tag::Boolean, vec![0x01]).unwrap())
+            .unwrap();
+        let attribute = Attribute {
+            oid: ObjectIdentifier::from_str(OID_BASIC_CONSTRAINTS).unwrap(),
+            values: sov,
+        };
+        let result = BasicConstraints::try_from(attribute);
+        dbg!(&result);
+        assert!(result.is_err());
 
-    fn test_basic_constraints_from_attribute_weird_bool_value() {}
+        let mut sov = SetOfVec::new();
+        sov.insert(Any::new(Tag::Integer, vec![0x00]).unwrap())
+            .unwrap();
+        sov.insert(Any::new(Tag::Integer, vec![0x01]).unwrap())
+            .unwrap();
+        let attribute = Attribute {
+            oid: ObjectIdentifier::from_str(OID_BASIC_CONSTRAINTS).unwrap(),
+            values: sov,
+        };
+        let result = BasicConstraints::try_from(attribute);
+        dbg!(&result);
+        assert!(result.is_err());
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_basic_constraints_from_attribute_weird_bool_value() {
+        let mut sov = SetOfVec::new();
+        sov.insert(Any::new(Tag::Boolean, vec![0x02]).unwrap())
+            .unwrap();
+        let attribute = Attribute {
+            oid: ObjectIdentifier::from_str(OID_BASIC_CONSTRAINTS).unwrap(),
+            values: sov,
+        };
+        let result = BasicConstraints::try_from(attribute);
+        dbg!(&result);
+        assert!(result.is_err());
+    }
 }
