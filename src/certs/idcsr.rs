@@ -177,7 +177,7 @@ impl<S: Signature> TryFrom<CertReqInfo> for IdCsrInner<S> {
             version: PkcsVersion::V1,
             subject: rdn_sequence,
             subject_public_key_info: public_key,
-            attributes: value.attributes,
+            capabilities: todo!(), // TODO
             phantom_data: PhantomData,
         })
     }
