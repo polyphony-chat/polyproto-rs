@@ -7,7 +7,6 @@ use std::marker::PhantomData;
 use der::asn1::{BitString, SetOfVec};
 use der::{Decode, Encode};
 use spki::AlgorithmIdentifierOwned;
-use x509_cert::attr::Attributes;
 use x509_cert::name::Name;
 use x509_cert::request::{CertReq, CertReqInfo};
 
@@ -78,14 +77,44 @@ impl<S: Signature> IdCsr<S> {
         })
     }
 
+    /// Validates the well-formedness of the [IdCsr] and its contents. Fails, if the [Name] or
+    /// [Capabilities] do not meet polyprotos' validation criteria for actor CSRs.
+    ///
+    /// ## Signature Verification
+    ///
+    /// This method does not verify the signature of the [IdCsr]. To verify the signature, use the
+    /// [crate::key::PublicKey::verify_signature] method. If you do not have the public key as a
+    /// `dyn PublicKey`, you can use the [crate::key::PublicKey::from_public_key_info] method to
+    /// create a `dyn PublicKey` from the [PublicKeyInfo] in the [IdCsrInner].
     pub fn valid_actor_csr(&self) -> Result<(), Error> {
         self.inner_csr.subject.validate()?;
-        todo!()
+        self.inner_csr.capabilities.validate()?;
+        if self.inner_csr.capabilities.basic_constraints.ca {
+            return Err(Error::ConstraintError(crate::ConstraintError::Malformed(
+                Some("Actor CSR must not be a CA".to_string()),
+            )));
+        }
+        Ok(())
     }
 
+    /// Validates the well-formedness of the [IdCsr] and its contents. Fails, if the [Name] or
+    /// [Capabilities] do not meet polyprotos' validation criteria for home server CSRs.
+    ///
+    /// ## Signature Verification
+    ///
+    /// This method does not verify the signature of the [IdCsr]. To verify the signature, use the
+    /// [crate::key::PublicKey::verify_signature] method. If you do not have the public key as a
+    /// `dyn PublicKey`, you can use the [crate::key::PublicKey::from_public_key_info] method to
+    /// create a `dyn PublicKey` from the [PublicKeyInfo] in the [IdCsrInner].
     pub fn valid_home_server_csr(&self) -> Result<(), Error> {
         self.inner_csr.subject.validate()?;
-        todo!()
+        self.inner_csr.capabilities.validate()?;
+        if !self.inner_csr.capabilities.basic_constraints.ca {
+            return Err(Error::ConstraintError(crate::ConstraintError::Malformed(
+                Some("Actor CSR must be a CA".to_string()),
+            )));
+        }
+        Ok(())
     }
 }
 
@@ -109,7 +138,7 @@ pub struct IdCsrInner<S: Signature> {
     pub subject_public_key_info: PublicKeyInfo,
     /// attributes is a collection of attributes providing additional
     /// information about the subject of the certificate.
-    pub attributes: Attributes,
+    pub capabilities: Capabilities,
     phantom_data: PhantomData<S>,
 }
 
@@ -120,13 +149,14 @@ pub struct IdCsrInner<S: Signature> {
 impl<S: Signature> IdCsrInner<S> {
     /// Creates a new [IdCsrInner].
     ///
-    /// The length of `subject_session_id` MUST NOT exceed 32.
+    /// Fails, if [Name] or [Capabilities] do not meet polyproto validation criteria.
     pub fn new(
         subject: &Name,
         public_key: &impl PublicKey<S>,
         capabilities: &Capabilities,
     ) -> Result<IdCsrInner<S>, Error> {
         subject.validate()?;
+        capabilities.validate()?;
 
         let subject_public_key_info = PublicKeyInfo {
             algorithm: public_key.public_key_info().algorithm,
@@ -136,13 +166,12 @@ impl<S: Signature> IdCsrInner<S> {
         };
 
         let subject = subject.clone();
-        let attributes = Attributes::try_from(capabilities.clone())?;
 
         Ok(IdCsrInner {
             version: PkcsVersion::V1,
             subject,
             subject_public_key_info,
-            attributes,
+            capabilities: capabilities.clone(),
             phantom_data: PhantomData,
         })
     }
@@ -176,7 +205,7 @@ impl<S: Signature> TryFrom<CertReqInfo> for IdCsrInner<S> {
             version: PkcsVersion::V1,
             subject: rdn_sequence,
             subject_public_key_info: public_key,
-            attributes: value.attributes,
+            capabilities: Capabilities::try_from(value.attributes)?,
             phantom_data: PhantomData,
         })
     }

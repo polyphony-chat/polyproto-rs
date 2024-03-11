@@ -34,4 +34,6 @@ pub trait PublicKey<S: Signature>: PartialEq + Eq {
     fn algorithm_identifier(&self) -> AlgorithmIdentifierOwned {
         S::algorithm_identifier()
     }
+    /// Creates a new [Self] from a [PublicKeyInfo].
+    fn from_public_key_info(public_key_info: PublicKeyInfo) -> Self;
 }

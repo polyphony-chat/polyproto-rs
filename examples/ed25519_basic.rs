@@ -186,6 +186,19 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
             public_key_bitstring: BitString::from_bytes(&self.key.to_bytes()).unwrap(),
         }
     }
+
+    fn from_public_key_info(public_key_info: PublicKeyInfo) -> Self {
+        let mut key_vec = public_key_info.public_key_bitstring.raw_bytes().to_vec();
+        key_vec.resize(32, 0);
+        let signature_array: [u8; 32] = {
+            let mut array = [0; 32];
+            array.copy_from_slice(&key_vec[..]);
+            array
+        };
+        Self {
+            key: VerifyingKey::from_bytes(&signature_array).unwrap(),
+        }
+    }
 }
 
 #[derive(Error, Debug, Clone)]
