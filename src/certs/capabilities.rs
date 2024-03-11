@@ -82,8 +82,8 @@ impl TryFrom<Attributes> for Capabilities {
     type Error = Error;
 
     fn try_from(value: Attributes) -> Result<Self, Self::Error> {
-        let key_usage = Vec::new();
-        let basic_constraints;
+        //let key_usage = Vec::new();
+        //let basic_constraints;
         for item in value.iter() {
             // TODO: We have to convert an Attribute into a Capability.
             // First, we have to parse the OID of the item to determine which type of capability this
@@ -190,18 +190,24 @@ impl TryFrom<Attribute> for KeyUsage {
         // prettier, feel free to do so.
 
         // Check if the attribute contains exactly one value
-        if &value.values.len() != &1usize {
-            return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "This attribute does not store exactly one value, as would be expected for a value with Tag boolean".to_string() }));
+        if value.values.len() != 1usize {
+            return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "This attribute does not store exactly one value, as would be expected for a KeyUsage attribute".to_string() }));
         }
         let sov = value.values.get(0);
+
+        // The first value inside the Attribute is a SetOfVec. We need to look inside the SetOfVec to
+        // find the actual attribute we are interested in.
         if let Some(inner_value) = sov {
-            if value.tag() != Tag::Boolean {
-                return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "Only Any objects with boolean tags can be converted to a KeyUsage enum variant".to_string() }));
+            if inner_value.tag() != Tag::Boolean {
+                return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: format!("Only Any objects with boolean tags can be converted to a KeyUsage enum variant. Expected Tag::Boolean, found {:?}", inner_value.tag()) }));
             }
             // This is how booleans are apparently encoded in ASN.1
             let boolean_value = match inner_value.value() {
                 &[0x00] => false,
                 &[0xFF] | &[0x01] => true,
+                _ => {
+                    return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "The value of the attribute does not match the expected boolean value".to_string() }));
+                }
             };
             // Now we have to match the OID of the attribute to the known KeyUsage variants
             return Ok(match value.oid.to_string().as_str() {
@@ -218,9 +224,7 @@ impl TryFrom<Attribute> for KeyUsage {
                 _ => {
                     return Err(Error::InvalidInput(
                         crate::InvalidInput::IncompatibleVariantForConversion {
-                            reason:
-                                "The OID of the attribute does not match any known KeyUsage variant"
-                                    .to_string(),
+                            reason: format!("The OID of the attribute does not match any known KeyUsage variant. Found OID \"{}\"", value.oid)
                         },
                     ))
                 }
@@ -337,7 +341,7 @@ impl TryFrom<Attribute> for BasicConstraints {
         }
         let mut num_ca = 0u8;
         let mut num_path_length = 0u8;
-        let mut ca: bool;
+        let mut ca: bool = false;
         let mut path_length: Option<u64> = None;
         for value in values.iter() {
             match value.tag() {
@@ -348,6 +352,13 @@ impl TryFrom<Attribute> for BasicConstraints {
                         ca = match value.value() {
                             &[0x00] => false,
                             &[0xFF] | &[0x01] => true,
+                            _ => {
+                                return Err(Error::InvalidInput(
+                                    crate::InvalidInput::IncompatibleVariantForConversion {
+                                        reason: "Encountered unexpected value for Boolean tag".to_string(),
+                                    },
+                                ))
+                            }
                         }
                     } else {
                         return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string() }));
@@ -369,6 +380,13 @@ impl TryFrom<Attribute> for BasicConstraints {
                 }
                 _ => return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: format!("Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer", value.tag()) })),
             }
+        }
+        if num_ca == 0 {
+            return Err(Error::InvalidInput(
+                crate::InvalidInput::IncompatibleVariantForConversion {
+                    reason: "Expected 1 Boolean tag, found 0".to_string(),
+                },
+            ));
         }
         Ok(BasicConstraints { ca, path_length })
     }
@@ -462,7 +480,6 @@ mod test {
         // Why not test all sorts of values? :3
         let mut county_count = 2u64;
         while county_count != u64::MAX {
-            dbg!(county_count);
             bc.path_length = Some(county_count);
             let _ = Attribute::from(bc);
             if let Some(res) = county_count.checked_mul(2) {
@@ -472,4 +489,79 @@ mod test {
             }
         }
     }
+}
+
+#[cfg(test)]
+mod test_key_usage_from_attribute {
+    use super::*;
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_key_usage_from_attribute() {
+        let key_usage = KeyUsage::ContentCommitment(true);
+        let attribute = Attribute::from(key_usage);
+        let result = KeyUsage::try_from(attribute);
+        dbg!(&result);
+        assert!(result.is_ok());
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_key_usage_wrong_value_amount() {
+        let key_usage = KeyUsage::ContentCommitment(true);
+        let mut attribute = Attribute::from(key_usage);
+        attribute
+            .values
+            .insert(Any::from(KeyUsage::DataEncipherment(false)))
+            .unwrap();
+        let result = KeyUsage::try_from(attribute);
+        dbg!(&result);
+        assert!(result.is_err());
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_key_usage_tag_mismatch() {
+        let mut sov = SetOfVec::new();
+        sov.insert(Any::new(Tag::Integer, vec![0x00]).unwrap())
+            .unwrap();
+        let attribute = Attribute {
+            oid: ObjectIdentifier::from_str(OID_KEY_USAGE_CONTENT_COMMITMENT).unwrap(),
+            values: sov,
+        };
+        let result = KeyUsage::try_from(attribute);
+        dbg!(&result);
+        assert!(result.is_err());
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_key_usage_wrong_oid() {
+        let mut sov = SetOfVec::new();
+        sov.insert(Any::new(Tag::Boolean, vec![0x00]).unwrap())
+            .unwrap();
+        let attribute = Attribute {
+            oid: ObjectIdentifier::from_str("1.2.4.2.1.1.1.1.1.1.1.1.1.1.161.69").unwrap(),
+            values: sov,
+        };
+        let result = KeyUsage::try_from(attribute);
+        dbg!(&result);
+        assert!(result.is_err());
+    }
+}
+
+mod test_basic_constraints_from_attribute {
+    use super::*;
+
+    fn test_basic_constraints_from_attribute() {}
+
+    fn test_basic_constraints_wrong_value_amount() {}
+
+    fn test_basic_constraints_wrong_value_type() {}
+
+    fn test_basic_constraints_wrong_oid() {}
+
+    fn test_basic_constraints_from_attribute_too_many_bools_or_ints() {}
+
+    fn test_basic_constraints_from_attribute_weird_bool_value() {}
 }
