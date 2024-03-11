@@ -80,12 +80,24 @@ impl<S: Signature> IdCsr<S> {
 
     pub fn valid_actor_csr(&self) -> Result<(), Error> {
         self.inner_csr.subject.validate()?;
-        todo!()
+        self.inner_csr.capabilities.validate()?;
+        if self.inner_csr.capabilities.basic_constraints.ca {
+            return Err(Error::ConstraintError(crate::ConstraintError::Malformed(
+                Some("Actor CSR must not be a CA".to_string()),
+            )));
+        }
+        Ok(())
     }
 
     pub fn valid_home_server_csr(&self) -> Result<(), Error> {
         self.inner_csr.subject.validate()?;
-        todo!()
+        self.inner_csr.capabilities.validate()?;
+        if !self.inner_csr.capabilities.basic_constraints.ca {
+            return Err(Error::ConstraintError(crate::ConstraintError::Malformed(
+                Some("Actor CSR must be a CA".to_string()),
+            )));
+        }
+        Ok(())
     }
 }
 
@@ -137,7 +149,6 @@ impl<S: Signature> IdCsrInner<S> {
         };
 
         let subject = subject.clone();
-        let attributes = Attributes::try_from(capabilities.clone())?;
 
         Ok(IdCsrInner {
             version: PkcsVersion::V1,
@@ -177,7 +188,7 @@ impl<S: Signature> TryFrom<CertReqInfo> for IdCsrInner<S> {
             version: PkcsVersion::V1,
             subject: rdn_sequence,
             subject_public_key_info: public_key,
-            capabilities: todo!(), // TODO
+            capabilities: Capabilities::try_from(value.attributes)?,
             phantom_data: PhantomData,
         })
     }
