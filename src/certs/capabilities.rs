@@ -308,8 +308,15 @@ impl From<BasicConstraints> for ObjectIdentifier {
 
 impl TryFrom<Attribute> for BasicConstraints {
     type Error = Error;
-    // Basic input validation. Check OID of Attribute and length of the "values" SetOfVec provided.
+    /// Performs the conversion.
+    ///
+    /// Fails, if the input attribute
+    /// - does not contain exactly one or two values
+    /// - contains a value that is not a boolean or integer
+    /// - does not have the OID of BasicConstraints
+    /// - contains more than one boolean or integer value
     fn try_from(value: Attribute) -> Result<Self, Self::Error> {
+        // Basic input validation. Check OID of Attribute and length of the "values" SetOfVec provided.
         if value.oid.to_string() != OID_BASIC_CONSTRAINTS {
             return Err(Error::InvalidInput(
                 crate::InvalidInput::IncompatibleVariantForConversion {
