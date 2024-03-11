@@ -180,6 +180,12 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
             public_key_bitstring: BitString::from_bytes(&self.key.to_bytes()).unwrap(),
         }
     }
+
+    fn from_public_key_info(public_key_info: PublicKeyInfo) -> Self {
+        Self {
+            key: VerifyingKey::from_bytes(public_key_info.public_key_bitstring.raw_bytes()),
+        }
+    }
 }
 
 #[derive(Error, Debug, Clone)]
