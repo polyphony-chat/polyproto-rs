@@ -2,7 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+/// "basicConstraints" IdCert/Csr capabilities
 pub mod basic_constraints;
+/// "keyUsage" IdCert/Csr capabilities
 pub mod key_usage;
 pub use basic_constraints::*;
 pub use key_usage::*;
@@ -105,6 +107,7 @@ impl TryFrom<Attributes> for Capabilities {
         let mut num_basic_constraints = 0u8;
         for item in value.iter() {
             match item.oid.to_string().as_str() {
+                #[allow(unreachable_patterns)] // cargo thinks the below pattern is unreachable.
                 OID_KEY_USAGE_CONTENT_COMMITMENT
                 | OID_KEY_USAGE_CRL_SIGN
                 | OID_KEY_USAGE_DATA_ENCIPHERMENT

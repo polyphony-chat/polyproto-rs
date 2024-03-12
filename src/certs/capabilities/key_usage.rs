@@ -114,6 +114,7 @@ impl TryFrom<Attribute> for KeyUsage {
                 super::OID_KEY_USAGE_DIGITAL_SIGNATURE => KeyUsage::DigitalSignature(boolean_value),
                 super::OID_KEY_USAGE_ENCIPHER_ONLY => KeyUsage::EncipherOnly(boolean_value),
                 super::OID_KEY_USAGE_KEY_AGREEMENT => KeyUsage::KeyAgreement(boolean_value),
+                #[allow(unreachable_patterns)] // cargo thinks the below pattern is unreachable.
                 super::OID_KEY_USAGE_KEY_CERT_SIGN => KeyUsage::KeyCertSign(boolean_value),
                 super::OID_KEY_USAGE_KEY_ENCIPHERMENT => KeyUsage::KeyEncipherment(boolean_value),
                 // If the OID does not match any known KeyUsage variant, we return an error
