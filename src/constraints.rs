@@ -5,7 +5,7 @@
 use der::Length;
 use x509_cert::name::Name;
 
-use crate::certs::capabilities::{Capabilities, KeyUsage};
+use crate::certs::capabilities::{Capabilities, KeyUsageFlag};
 use crate::certs::idcsr::IdCsr;
 use crate::certs::SessionId;
 use crate::errors::base::ConstraintError;
@@ -140,22 +140,22 @@ impl Constrained for Capabilities {
 
         // Iterate over all the entries in the KeyUsage vector, check if they exist/are true
         for item in self.key_usage.iter() {
-            if !has_only_encipher && item == &KeyUsage::EncipherOnly(true) {
+            if !has_only_encipher && item == &KeyUsageFlag::EncipherOnly(true) {
                 has_only_encipher = true;
             }
-            if !has_only_decipher && item == &KeyUsage::DecipherOnly(true) {
+            if !has_only_decipher && item == &KeyUsageFlag::DecipherOnly(true) {
                 has_only_decipher = true;
             }
-            if !has_key_agreement && item == &KeyUsage::KeyAgreement(true) {
+            if !has_key_agreement && item == &KeyUsageFlag::KeyAgreement(true) {
                 has_key_agreement = true;
             }
-            if !has_key_agreement && item == &KeyUsage::ContentCommitment(true) {
+            if !has_key_agreement && item == &KeyUsageFlag::ContentCommitment(true) {
                 can_commit_content = true;
             }
-            if !has_key_agreement && item == &KeyUsage::DigitalSignature(true) {
+            if !has_key_agreement && item == &KeyUsageFlag::DigitalSignature(true) {
                 can_sign = true;
             }
-            if !has_key_agreement && item == &KeyUsage::KeyCertSign(true) {
+            if !has_key_agreement && item == &KeyUsageFlag::KeyCertSign(true) {
                 key_cert_sign = true;
             }
         }
