@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use spki::ObjectIdentifier;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Clone)]
@@ -28,6 +29,8 @@ pub enum InvalidInput {
         "Cannot perform conversion, as input variant can not be converted to output. {reason:}"
     )]
     IncompatibleVariantForConversion { reason: String },
+    #[error("Critical extension cannot be converted")]
+    UnknownCriticalExtension { oid: ObjectIdentifier },
 }
 
 #[derive(Error, Debug, PartialEq, Clone)]

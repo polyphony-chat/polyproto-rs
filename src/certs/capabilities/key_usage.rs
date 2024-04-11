@@ -11,6 +11,8 @@ use x509_cert::attr::Attribute;
 
 use crate::errors::base::InvalidInput;
 
+use super::*;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// The key usage extension defines the purpose of the key contained in the certificate. The usage
 /// restriction might be employed when a key that could be used for more than one operation is to
@@ -128,6 +130,65 @@ impl TryFrom<Attribute> for KeyUsage {
         Err(InvalidInput::IncompatibleVariantForConversion {
             reason: "The attribute does not contain a value".to_string(),
         })
+    }
+}
+
+impl TryFrom<Extension> for KeyUsage {
+    type Error = InvalidInput;
+
+    /// Performs the conversion.
+    ///
+    /// Fails, if the input attribute does not contain a boolean value. Also fails if the OID of
+    /// the attribute does not match any known KeyUsage variant, especially when the unknown OID is
+    /// marked as "critical"
+    fn try_from(value: Extension) -> Result<Self, Self::Error> {
+        if value.critical
+            && match value.extn_id.to_string().as_str() {
+                OID_KEY_USAGE_CONTENT_COMMITMENT
+                | OID_KEY_USAGE_CRL_SIGN
+                | OID_KEY_USAGE_DATA_ENCIPHERMENT
+                | OID_KEY_USAGE_DATA_ENCIPHERMENT
+                | OID_KEY_USAGE_DECIPHER_ONLY
+                | OID_KEY_USAGE_DIGITAL_SIGNATURE
+                | OID_KEY_USAGE_ENCIPHER_ONLY
+                | OID_KEY_USAGE_KEY_AGREEMENT
+                | OID_KEY_USAGE_KEY_CERT_SIGN
+                | OID_KEY_USAGE_KEY_ENCIPHERMENT => false,
+                _ => true,
+            }
+        {
+            // Error if we encounter a "critical" X.509 extension which we do not know of
+            return Err(InvalidInput::UnknownCriticalExtension { oid: value.extn_id });
+        }
+
+        let boolean_value = match value.extn_value.as_bytes() {
+            &[0x00] => false,
+            &[0xFF] | &[0x01] => true,
+            _ => {
+                return Err(InvalidInput::IncompatibleVariantForConversion {
+                    reason: "Encountered unexpected value for Boolean tag".to_string(),
+                });
+            }
+        };
+        // Now we have to match the OID of the attribute to the known KeyUsage variants
+        return Ok(match value.extn_id.to_string().as_str() {
+            super::OID_KEY_USAGE_CONTENT_COMMITMENT => KeyUsage::ContentCommitment(boolean_value),
+            super::OID_KEY_USAGE_CRL_SIGN => KeyUsage::CrlSign(boolean_value),
+            super::OID_KEY_USAGE_DATA_ENCIPHERMENT => KeyUsage::DataEncipherment(boolean_value),
+            super::OID_KEY_USAGE_DECIPHER_ONLY => KeyUsage::DecipherOnly(boolean_value),
+            super::OID_KEY_USAGE_DIGITAL_SIGNATURE => KeyUsage::DigitalSignature(boolean_value),
+            super::OID_KEY_USAGE_ENCIPHER_ONLY => KeyUsage::EncipherOnly(boolean_value),
+            super::OID_KEY_USAGE_KEY_AGREEMENT => KeyUsage::KeyAgreement(boolean_value),
+            super::OID_KEY_USAGE_KEY_CERT_SIGN => KeyUsage::KeyCertSign(boolean_value),
+            super::OID_KEY_USAGE_KEY_ENCIPHERMENT => KeyUsage::KeyEncipherment(boolean_value),
+            // If the OID does not match any known KeyUsage variant, we return an error
+            _ => {
+                return Err(InvalidInput::IncompatibleVariantForConversion {
+                        reason: format!("The OID of the attribute does not match any known KeyUsage variant. Found OID \"{}\"", value.extn_id)
+                    },
+                )
+            }
+        });
     }
 }
 
