@@ -12,6 +12,7 @@ pub use key_usage::*;
 use der::asn1::SetOfVec;
 
 use x509_cert::attr::{Attribute, Attributes};
+use x509_cert::ext::{Extension, Extensions};
 
 use crate::errors::base::InvalidInput;
 use crate::{Constrained, ConstraintError};
@@ -159,6 +160,23 @@ impl TryFrom<Capabilities> for Attributes {
     }
 
     type Error = ConstraintError;
+}
+
+impl TryFrom<Capabilities> for Extensions {
+    type Error = ConstraintError;
+
+    /// Performs the conversion.
+    ///
+    /// Fails, if `Capabilities::verify()` using the `Constrained` trait fails.
+    fn try_from(value: Capabilities) -> Result<Self, Self::Error> {
+        value.validate()?;
+        let mut vec = Vec::new();
+        vec.push(Extension::from(value.basic_constraints));
+        for item in value.key_usage.iter() {
+            vec.push(Extension::from(*item));
+        }
+        Ok(vec)
+    }
 }
 
 #[cfg(test)]
