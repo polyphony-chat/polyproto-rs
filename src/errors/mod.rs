@@ -6,3 +6,8 @@
 pub mod base;
 /// "Composite" error types which consist of one or more "base" error types
 pub mod composite;
+
+// TODO
+// PRETTYFYME
+// This module can be restructured to be a reflection of the src/ file tree. It would then be very
+// easy to tell, which file covers error types of which data types
