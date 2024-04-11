@@ -11,20 +11,11 @@ use x509_cert::attr::Attribute;
 
 use crate::errors::base::InvalidInput;
 
-// TODO: Replace usages of KeyUsageFlag with KeyUsage
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct KeyUsage {
-    pub oid: ObjectIdentifier,
-    pub flag: KeyUsageFlag,
-    pub critical: bool,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// The key usage extension defines the purpose of the key contained in the certificate. The usage
 /// restriction might be employed when a key that could be used for more than one operation is to
 /// be restricted. See <https://cryptography.io/en/latest/x509/reference/#cryptography.x509.KeyUsage>
-pub enum KeyUsageFlag {
+pub enum KeyUsage {
     /// This purpose is set to true when the subject public key is used for verifying digital
     /// signatures, other than signatures on certificates (`key_cert_sign`) and CRLs (`crl_sign`).
     DigitalSignature(bool),
@@ -62,23 +53,23 @@ pub enum KeyUsageFlag {
     DecipherOnly(bool),
 }
 
-impl From<KeyUsageFlag> for bool {
-    fn from(value: KeyUsageFlag) -> Self {
+impl From<KeyUsage> for bool {
+    fn from(value: KeyUsage) -> Self {
         match value {
-            KeyUsageFlag::DigitalSignature(val) => val,
-            KeyUsageFlag::CrlSign(val) => val,
-            KeyUsageFlag::ContentCommitment(val) => val,
-            KeyUsageFlag::KeyEncipherment(val) => val,
-            KeyUsageFlag::DataEncipherment(val) => val,
-            KeyUsageFlag::KeyAgreement(val) => val,
-            KeyUsageFlag::KeyCertSign(val) => val,
-            KeyUsageFlag::EncipherOnly(val) => val,
-            KeyUsageFlag::DecipherOnly(val) => val,
+            KeyUsage::DigitalSignature(val) => val,
+            KeyUsage::CrlSign(val) => val,
+            KeyUsage::ContentCommitment(val) => val,
+            KeyUsage::KeyEncipherment(val) => val,
+            KeyUsage::DataEncipherment(val) => val,
+            KeyUsage::KeyAgreement(val) => val,
+            KeyUsage::KeyCertSign(val) => val,
+            KeyUsage::EncipherOnly(val) => val,
+            KeyUsage::DecipherOnly(val) => val,
         }
     }
 }
 
-impl TryFrom<Attribute> for KeyUsageFlag {
+impl TryFrom<Attribute> for KeyUsage {
     type Error = InvalidInput;
 
     /// Performs the conversion.
@@ -114,16 +105,16 @@ impl TryFrom<Attribute> for KeyUsageFlag {
             };
             // Now we have to match the OID of the attribute to the known KeyUsage variants
             return Ok(match value.oid.to_string().as_str() {
-                super::OID_KEY_USAGE_CONTENT_COMMITMENT => KeyUsageFlag::ContentCommitment(boolean_value),
-                super::OID_KEY_USAGE_CRL_SIGN => KeyUsageFlag::CrlSign(boolean_value),
-                super::OID_KEY_USAGE_DATA_ENCIPHERMENT => KeyUsageFlag::DataEncipherment(boolean_value),
-                super::OID_KEY_USAGE_DECIPHER_ONLY => KeyUsageFlag::DecipherOnly(boolean_value),
-                super::OID_KEY_USAGE_DIGITAL_SIGNATURE => KeyUsageFlag::DigitalSignature(boolean_value),
-                super::OID_KEY_USAGE_ENCIPHER_ONLY => KeyUsageFlag::EncipherOnly(boolean_value),
-                super::OID_KEY_USAGE_KEY_AGREEMENT => KeyUsageFlag::KeyAgreement(boolean_value),
+                super::OID_KEY_USAGE_CONTENT_COMMITMENT => KeyUsage::ContentCommitment(boolean_value),
+                super::OID_KEY_USAGE_CRL_SIGN => KeyUsage::CrlSign(boolean_value),
+                super::OID_KEY_USAGE_DATA_ENCIPHERMENT => KeyUsage::DataEncipherment(boolean_value),
+                super::OID_KEY_USAGE_DECIPHER_ONLY => KeyUsage::DecipherOnly(boolean_value),
+                super::OID_KEY_USAGE_DIGITAL_SIGNATURE => KeyUsage::DigitalSignature(boolean_value),
+                super::OID_KEY_USAGE_ENCIPHER_ONLY => KeyUsage::EncipherOnly(boolean_value),
+                super::OID_KEY_USAGE_KEY_AGREEMENT => KeyUsage::KeyAgreement(boolean_value),
                 #[allow(unreachable_patterns)] // cargo thinks the below pattern is unreachable.
-                super::OID_KEY_USAGE_KEY_CERT_SIGN => KeyUsageFlag::KeyCertSign(boolean_value),
-                super::OID_KEY_USAGE_KEY_ENCIPHERMENT => KeyUsageFlag::KeyEncipherment(boolean_value),
+                super::OID_KEY_USAGE_KEY_CERT_SIGN => KeyUsage::KeyCertSign(boolean_value),
+                super::OID_KEY_USAGE_KEY_ENCIPHERMENT => KeyUsage::KeyEncipherment(boolean_value),
                 // If the OID does not match any known KeyUsage variant, we return an error
                 _ => {
                     return Err(InvalidInput::IncompatibleVariantForConversion {
@@ -140,8 +131,8 @@ impl TryFrom<Attribute> for KeyUsageFlag {
     }
 }
 
-impl From<KeyUsageFlag> for Any {
-    fn from(value: KeyUsageFlag) -> Self {
+impl From<KeyUsage> for Any {
+    fn from(value: KeyUsage) -> Self {
         Any::new(der::Tag::Boolean,match bool::from(value) {
             true => vec![0xff],
             false => vec![0x00],
@@ -150,33 +141,32 @@ impl From<KeyUsageFlag> for Any {
     }
 }
 
-// TODO: This should be deleted -> move into `KeyUsage`
-impl From<KeyUsageFlag> for ObjectIdentifier {
-    fn from(value: KeyUsageFlag) -> Self {
+impl From<KeyUsage> for ObjectIdentifier {
+    fn from(value: KeyUsage) -> Self {
         let result = match value {
-            KeyUsageFlag::DigitalSignature(_) => {
+            KeyUsage::DigitalSignature(_) => {
                 ObjectIdentifier::from_str(super::OID_KEY_USAGE_DIGITAL_SIGNATURE)
             }
-            KeyUsageFlag::CrlSign(_) => ObjectIdentifier::from_str(super::OID_KEY_USAGE_CRL_SIGN),
-            KeyUsageFlag::ContentCommitment(_) => {
+            KeyUsage::CrlSign(_) => ObjectIdentifier::from_str(super::OID_KEY_USAGE_CRL_SIGN),
+            KeyUsage::ContentCommitment(_) => {
                 ObjectIdentifier::from_str(super::OID_KEY_USAGE_CONTENT_COMMITMENT)
             }
-            KeyUsageFlag::KeyEncipherment(_) => {
+            KeyUsage::KeyEncipherment(_) => {
                 ObjectIdentifier::from_str(super::OID_KEY_USAGE_KEY_ENCIPHERMENT)
             }
-            KeyUsageFlag::DataEncipherment(_) => {
+            KeyUsage::DataEncipherment(_) => {
                 ObjectIdentifier::from_str(super::OID_KEY_USAGE_DATA_ENCIPHERMENT)
             }
-            KeyUsageFlag::KeyAgreement(_) => {
+            KeyUsage::KeyAgreement(_) => {
                 ObjectIdentifier::from_str(super::OID_KEY_USAGE_KEY_AGREEMENT)
             }
-            KeyUsageFlag::KeyCertSign(_) => {
+            KeyUsage::KeyCertSign(_) => {
                 ObjectIdentifier::from_str(super::OID_KEY_USAGE_KEY_CERT_SIGN)
             }
-            KeyUsageFlag::EncipherOnly(_) => {
+            KeyUsage::EncipherOnly(_) => {
                 ObjectIdentifier::from_str(super::OID_KEY_USAGE_ENCIPHER_ONLY)
             }
-            KeyUsageFlag::DecipherOnly(_) => {
+            KeyUsage::DecipherOnly(_) => {
                 ObjectIdentifier::from_str(super::OID_KEY_USAGE_DECIPHER_ONLY)
             }
         };
@@ -184,8 +174,8 @@ impl From<KeyUsageFlag> for ObjectIdentifier {
     }
 }
 
-impl From<KeyUsageFlag> for Attribute {
-    fn from(value: KeyUsageFlag) -> Self {
+impl From<KeyUsage> for Attribute {
+    fn from(value: KeyUsage) -> Self {
         // Creating a Any from a bool is really simple, so we can expect this to never fail.
         let any_val = Any::from(value);
         let mut sov = SetOfVec::new();
