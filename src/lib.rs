@@ -37,6 +37,8 @@ well-defined yet adaptable Rust types.
 
 */
 
+use errors::base::ConstraintError;
+
 #[warn(
     missing_docs,
     missing_debug_implementations,
@@ -53,116 +55,10 @@ pub mod key;
 /// Generic polyproto signature traits.
 pub mod signature;
 
+/// Error types used in this crate
+pub mod errors;
+
 pub(crate) mod constraints;
-
-use std::fmt::Debug;
-
-use thiserror::Error;
-
-#[derive(Error, Debug, Clone)]
-pub enum Error {
-    #[error("Conversion from TbsCertificate to IdCertTbs failed")]
-    TbsCertToIdCert(#[from] TbsCertToIdCert),
-    #[error("Conversion from IdCertTbs to TbsCertificate failed")]
-    IdCertToTbsCert(#[from] IdCertToTbsCert),
-    #[error("Invalid input cannot be handled")]
-    InvalidInput(#[from] InvalidInput),
-    #[error("Value failed to meet constraints")]
-    ConstraintError(ConstraintError),
-    #[error("Conversion failed")]
-    UnsuccessfulConversion(#[from] UnsuccessfulConversion),
-    #[error("Invalid certificate")]
-    InvalidCert(InvalidCert),
-}
-
-/// Error type covering possible failures when converting a [x509_cert::TbsCertificate]
-/// to a [crate::cert::IdCertTbs]
-#[derive(Error, Debug, PartialEq, Clone, Copy)]
-pub enum TbsCertToIdCert {
-    #[error("field 'subject_unique_id' was None. Expected: Some(der::asn1::BitString)")]
-    SubjectUid,
-    #[error("field 'extensions' was None. Expected: Some(x509_cert::ext::Extensions)")]
-    Extensions,
-    #[error("Supplied integer too long")]
-    Signature(der::Error),
-}
-
-/// Error type covering possible failures when converting a [crate::cert::IdCertTbs]
-/// to a [x509_cert::TbsCertificate]
-#[derive(Error, Debug, PartialEq, Clone, Copy)]
-pub enum IdCertToTbsCert {
-    #[error("Serial number could not be converted")]
-    SerialNumber(der::Error),
-}
-
-/// Represents errors for invalid input in IdCsr or IdCert generation.
-#[derive(Error, Debug, PartialEq, Clone)]
-pub enum InvalidInput {
-    #[error("The der library has reported the following error with the input")]
-    DerError(der::Error),
-    #[error("subject_session_id MUST NOT exceed length limit of 32 characters")]
-    SessionIdTooLong,
-    #[error(
-        "Cannot perform conversion, as input variant can not be converted to output. {reason:}"
-    )]
-    IncompatibleVariantForConversion { reason: String },
-}
-
-#[derive(Error, Debug, PartialEq, Clone)]
-// TODO: Replace usages of InvalidInput::IncompatibleVariantForConversion with this Enum
-pub enum UnsuccessfulConversion {
-    #[error(
-        "Cannot perform conversion, as input variant can not be converted to output. {reason:}"
-    )]
-    IncompatibleVariant { reason: String },
-    #[error("Conversion failed due to invalid input")]
-    InvalidInput(String),
-}
-
-#[derive(Error, Debug, PartialEq, Clone)]
-pub enum InvalidCert {
-    #[error("The signature does not match the contents of the certificate")]
-    InvalidSignature,
-    #[error("The subject presented on the certificate is malformed or otherwise invalid")]
-    InvalidSubject(ConstraintError),
-    #[error("The issuer presented on the certificate is malformed or otherwise invalid")]
-    InvalidIssuer(ConstraintError),
-    #[error("The validity period of the certificate is invalid, or the certificate is expired")]
-    InvalidValidity,
-    #[error("The capabilities presented on the certificate are invalid or otherwise malformed")]
-    InvalidCapabilities(ConstraintError),
-}
-
-impl From<der::Error> for InvalidInput {
-    fn from(value: der::Error) -> Self {
-        Self::DerError(value)
-    }
-}
-
-impl From<der::Error> for Error {
-    fn from(value: der::Error) -> Self {
-        Self::InvalidInput(value.into())
-    }
-}
-
-#[derive(Error, Debug, PartialEq, Clone)]
-pub enum ConstraintError {
-    #[error("The value did not meet the set validation criteria and is considered malformed")]
-    Malformed(Option<String>),
-    #[error("The value was expected to be between {lower:?} and {upper:?} but was {actual:?}")]
-    OutOfBounds {
-        lower: i32,
-        upper: i32,
-        actual: String,
-        reason: Option<String>,
-    },
-}
-
-impl From<ConstraintError> for Error {
-    fn from(value: ConstraintError) -> Self {
-        Error::ConstraintError(value)
-    }
-}
 
 /// Traits implementing [Constrained] can be validated to be well-formed. This does not guarantee
 /// that a validated type will always be *correct* in the context it is in.

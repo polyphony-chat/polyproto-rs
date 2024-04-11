@@ -9,7 +9,7 @@ use der::{Any, Tag, Tagged};
 use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 
-use crate::Error;
+use crate::errors::composite::InvalidInput;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// The key usage extension defines the purpose of the key contained in the certificate. The usage
@@ -70,7 +70,7 @@ impl From<KeyUsage> for bool {
 }
 
 impl TryFrom<Attribute> for KeyUsage {
-    type Error = Error;
+    type Error = InvalidInput;
 
     /// Performs the conversion.
     ///
@@ -83,7 +83,7 @@ impl TryFrom<Attribute> for KeyUsage {
 
         // Check if the attribute contains exactly one value
         if value.values.len() != 1usize {
-            return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "This attribute does not store exactly one value, as would be expected for a KeyUsage attribute".to_string() }));
+            return Err(InvalidInput::IncompatibleVariantForConversion { reason: "This attribute does not store exactly one value, as would be expected for a KeyUsage attribute".to_string() });
         }
         let sov = value.values.get(0);
 
@@ -91,18 +91,16 @@ impl TryFrom<Attribute> for KeyUsage {
         // find the actual attribute we are interested in.
         if let Some(inner_value) = sov {
             if inner_value.tag() != Tag::Boolean {
-                return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: format!("Only Any objects with boolean tags can be converted to a KeyUsage enum variant. Expected Tag::Boolean, found {:?}", inner_value.tag()) }));
+                return Err(InvalidInput::IncompatibleVariantForConversion { reason: format!("Only Any objects with boolean tags can be converted to a KeyUsage enum variant. Expected Tag::Boolean, found {:?}", inner_value.tag()) });
             }
             // This is how booleans are apparently encoded in ASN.1
             let boolean_value = match inner_value.value() {
                 &[0x00] => false,
                 &[0xFF] | &[0x01] => true,
                 _ => {
-                    return Err(Error::InvalidInput(
-                        crate::InvalidInput::IncompatibleVariantForConversion {
-                            reason: "Encountered unexpected value for Boolean tag".to_string(),
-                        },
-                    ));
+                    return Err(InvalidInput::IncompatibleVariantForConversion {
+                        reason: "Encountered unexpected value for Boolean tag".to_string(),
+                    });
                 }
             };
             // Now we have to match the OID of the attribute to the known KeyUsage variants
@@ -119,20 +117,17 @@ impl TryFrom<Attribute> for KeyUsage {
                 super::OID_KEY_USAGE_KEY_ENCIPHERMENT => KeyUsage::KeyEncipherment(boolean_value),
                 // If the OID does not match any known KeyUsage variant, we return an error
                 _ => {
-                    return Err(Error::InvalidInput(
-                        crate::InvalidInput::IncompatibleVariantForConversion {
+                    return Err(InvalidInput::IncompatibleVariantForConversion {
                             reason: format!("The OID of the attribute does not match any known KeyUsage variant. Found OID \"{}\"", value.oid)
                         },
-                    ))
+                    )
                 }
             });
         }
         // If the attribute does not contain a value, we return an error
-        Err(Error::InvalidInput(
-            crate::InvalidInput::IncompatibleVariantForConversion {
-                reason: "The attribute does not contain a value".to_string(),
-            },
-        ))
+        Err(InvalidInput::IncompatibleVariantForConversion {
+            reason: "The attribute does not contain a value".to_string(),
+        })
     }
 }
 

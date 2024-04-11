@@ -13,7 +13,7 @@ use x509_cert::request::{CertReq, CertReqInfo};
 
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
-use crate::{Constrained, Error};
+use crate::{Constrained, ConstraintError};
 
 use super::capabilities::Capabilities;
 use super::{PkcsVersion, PublicKeyInfo};
@@ -62,7 +62,7 @@ impl<S: Signature> IdCsr<S> {
         subject: &Name,
         signing_key: &impl PrivateKey<S>,
         capabilities: &Capabilities,
-    ) -> Result<IdCsr<S>, Error> {
+    ) -> Result<IdCsr<S>, ConstraintError> {
         subject.validate()?;
         let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey(), capabilities)?;
         let cert_req_info = CertReqInfo::try_from(inner_csr)?;
@@ -87,12 +87,12 @@ impl<S: Signature> IdCsr<S> {
     /// [crate::key::PublicKey::verify_signature] method. If you do not have the public key as a
     /// `dyn PublicKey`, you can use the [crate::key::PublicKey::from_public_key_info] method to
     /// create a `dyn PublicKey` from the [PublicKeyInfo] in the [IdCsrInner].
-    pub fn valid_actor_csr(&self) -> Result<(), Error> {
+    pub fn valid_actor_csr(&self) -> Result<(), ConstraintError> {
         self.inner_csr.subject.validate()?;
         self.inner_csr.capabilities.validate()?;
         if self.inner_csr.capabilities.basic_constraints.ca {
-            return Err(Error::ConstraintError(crate::ConstraintError::Malformed(
-                Some("Actor CSR must not be a CA".to_string()),
+            return Err(ConstraintError::Malformed(Some(
+                "Actor CSR must not be a CA".to_string(),
             )));
         }
         Ok(())
@@ -107,12 +107,12 @@ impl<S: Signature> IdCsr<S> {
     /// [crate::key::PublicKey::verify_signature] method. If you do not have the public key as a
     /// `dyn PublicKey`, you can use the [crate::key::PublicKey::from_public_key_info] method to
     /// create a `dyn PublicKey` from the [PublicKeyInfo] in the [IdCsrInner].
-    pub fn valid_home_server_csr(&self) -> Result<(), Error> {
+    pub fn valid_home_server_csr(&self) -> Result<(), ConstraintError> {
         self.inner_csr.subject.validate()?;
         self.inner_csr.capabilities.validate()?;
         if !self.inner_csr.capabilities.basic_constraints.ca {
-            return Err(Error::ConstraintError(crate::ConstraintError::Malformed(
-                Some("Actor CSR must be a CA".to_string()),
+            return Err(ConstraintError::Malformed(Some(
+                "Actor CSR must be a CA".to_string(),
             )));
         }
         Ok(())
