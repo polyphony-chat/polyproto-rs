@@ -5,12 +5,14 @@
 use std::str::FromStr;
 
 use der::asn1::{OctetString, SetOfVec};
-use der::{Any, Encode, Tag, Tagged};
+use der::{Any, Decode, Encode, Tag, Tagged};
 use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
 
 use crate::errors::base::InvalidInput;
+
+use super::OID_BASIC_CONSTRAINTS;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 /// Basic constraints is an X.509 extension type that defines whether a given certificate is allowed
@@ -143,6 +145,26 @@ impl From<BasicConstraints> for Extension {
     }
 }
 
+impl TryFrom<Extension> for BasicConstraints {
+    type Error = InvalidInput;
+
+    fn try_from(value: Extension) -> Result<Self, Self::Error> {
+        #[allow(unreachable_patterns)]
+        if value.critical && !matches!(value.extn_id.to_string().as_str(), OID_BASIC_CONSTRAINTS) {
+            // Error if we encounter a "critical" X.509 extension which we do not know of
+            return Err(InvalidInput::UnknownCriticalExtension { oid: value.extn_id });
+        }
+        // If the Extension is a valid BasicConstraint, the octet string will contain DER ANY values
+        // in a DER SET OF type
+        let sov: SetOfVec<Any> = match SetOfVec::from_der(value.extn_value.as_bytes()) {
+            Ok(sov) => sov,
+            Err(e) => return Err(InvalidInput::DerError(e)),
+        };
+        dbg!(sov);
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -156,5 +178,16 @@ mod test {
         };
         let extension = Extension::from(basic_constraints);
         dbg!(extension);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn extension_to_basic_constraints() {
+        let basic_constraints = BasicConstraints {
+            ca: true,
+            path_length: Some(0u64),
+        };
+        let extension = Extension::from(basic_constraints);
+        let from_extension = BasicConstraints::try_from(extension).unwrap();
     }
 }
