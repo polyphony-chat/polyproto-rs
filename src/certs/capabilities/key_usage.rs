@@ -4,10 +4,11 @@
 
 use std::str::FromStr;
 
-use der::asn1::SetOfVec;
-use der::{Any, Tag, Tagged};
+use der::asn1::{OctetString, SetOfVec};
+use der::{Any, Encode, Tag, Tagged};
 use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
+use x509_cert::ext::Extension;
 
 use crate::errors::base::InvalidInput;
 
@@ -247,5 +248,28 @@ impl From<KeyUsage> for Attribute {
             oid: value.into(),
             values: sov,
         }
+    }
+}
+
+impl From<KeyUsage> for Extension {
+    fn from(value: KeyUsage) -> Self {
+        Extension {
+            extn_id: value.into(),
+            critical: true,
+            extn_value: OctetString::new(bool::from(value).to_der().expect("Error occured when trying to convert bool to DER. Please report this crash at https://github.com/polyphony-chat/polyproto")).expect("Error occured when trying to convert bool to an OctetString. Please report this crash at https://github.com/polyphony-chat/polyproto"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn key_usage_to_extension() {
+        let key_usage = KeyUsage::KeyCertSign(true);
+        let extension = Extension::from(key_usage);
+        dbg!(extension);
     }
 }

@@ -31,3 +31,4 @@ AlgorithmIdentifier
 signatureAlgorithm
 SignatureAlgorithms
 PKCS
+DigitalSignature

@@ -4,10 +4,11 @@
 
 use std::str::FromStr;
 
-use der::asn1::SetOfVec;
-use der::{Any, Tag, Tagged};
+use der::asn1::{OctetString, SetOfVec};
+use der::{Any, Encode, Tag, Tagged};
 use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
+use x509_cert::ext::Extension;
 
 use crate::errors::base::InvalidInput;
 
@@ -127,5 +128,33 @@ impl From<BasicConstraints> for Attribute {
             oid: value.into(),
             values: sov,
         }
+    }
+}
+
+impl From<BasicConstraints> for Extension {
+    fn from(value: BasicConstraints) -> Self {
+        let attribute = Attribute::from(value);
+        Extension {
+            extn_id: value.into(),
+            critical: true,
+            // This should be infallible. We are converting a boolean and a 64bit integer into DER and creating an OctetString from it.
+            extn_value: OctetString::new(attribute.values.to_der().expect("Error occurred when converting BasicConstraints u64 to DER. Please report this crash at https://github.com/polyphony-chat/polyproto.")).expect("Error occurred when converting BasicConstraints u64 to OctetString. Please report this crash at https://github.com/polyphony-chat/polyproto."),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn basic_constraints_to_extension() {
+        let basic_constraints = BasicConstraints {
+            ca: true,
+            path_length: Some(0u64),
+        };
+        let extension = Extension::from(basic_constraints);
+        dbg!(extension);
     }
 }

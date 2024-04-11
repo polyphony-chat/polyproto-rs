@@ -13,6 +13,7 @@ use der::asn1::SetOfVec;
 
 use x509_cert::attr::{Attribute, Attributes};
 use x509_cert::ext::{Extension, Extensions};
+use x509_cert::ext::{Extension, Extensions};
 
 use crate::errors::base::InvalidInput;
 use crate::{Constrained, ConstraintError};
