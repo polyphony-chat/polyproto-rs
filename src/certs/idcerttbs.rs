@@ -11,7 +11,8 @@ use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 
-use crate::{Constrained, Error, IdCertToTbsCert, TbsCertToIdCert};
+use crate::errors::composite::{IdCertToTbsCert, TbsCertToIdCert};
+use crate::Constrained;
 
 use super::PublicKeyInfo;
 
@@ -57,25 +58,25 @@ pub struct IdCertTbs {
 }
 
 impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
-    type Error = Error;
+    type Error = TbsCertToIdCert;
 
     fn try_from(value: TbsCertificateInner<P>) -> Result<Self, Self::Error> {
         value.subject.validate()?;
         let subject_unique_id = match value.subject_unique_id {
             Some(suid) => suid,
-            None => return Err(TbsCertToIdCert::SubjectUid.into()),
+            None => return Err(TbsCertToIdCert::SubjectUid),
         };
 
         let extensions = match value.extensions {
             Some(ext) => ext,
-            None => return Err(TbsCertToIdCert::Extensions.into()),
+            None => return Err(TbsCertToIdCert::Extensions),
         };
 
         let subject_public_key_info = PublicKeyInfo::from(value.subject_public_key_info);
 
         let serial_number = match Uint::new(value.serial_number.as_bytes()) {
             Ok(snum) => snum,
-            Err(e) => return Err(TbsCertToIdCert::Signature(e).into()),
+            Err(e) => return Err(TbsCertToIdCert::Signature(e)),
         };
 
         Ok(IdCertTbs {

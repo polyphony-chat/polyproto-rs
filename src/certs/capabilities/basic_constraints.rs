@@ -9,7 +9,7 @@ use der::{Any, Tag, Tagged};
 use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 
-use crate::Error;
+use crate::errors::base::InvalidInput;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 /// Basic constraints is an X.509 extension type that defines whether a given certificate is allowed
@@ -33,7 +33,7 @@ impl From<BasicConstraints> for ObjectIdentifier {
 }
 
 impl TryFrom<Attribute> for BasicConstraints {
-    type Error = Error;
+    type Error = InvalidInput;
     /// Performs the conversion.
     ///
     /// Fails, if the input attribute
@@ -44,25 +44,21 @@ impl TryFrom<Attribute> for BasicConstraints {
     fn try_from(value: Attribute) -> Result<Self, Self::Error> {
         // Basic input validation. Check OID of Attribute and length of the "values" SetOfVec provided.
         if value.oid.to_string() != super::OID_BASIC_CONSTRAINTS {
-            return Err(Error::InvalidInput(
-                crate::InvalidInput::IncompatibleVariantForConversion {
-                    reason: format!(
-                        "OID of value does not match any of OID_BASIC_CONSTRAINTS. Found OID {}",
-                        value.oid
-                    ),
-                },
-            ));
+            return Err(Self::Error::IncompatibleVariantForConversion {
+                reason: format!(
+                    "OID of value does not match any of OID_BASIC_CONSTRAINTS. Found OID {}",
+                    value.oid
+                ),
+            });
         }
         let values = value.values;
         if values.len() > 2usize {
-            return Err(Error::InvalidInput(
-                crate::InvalidInput::IncompatibleVariantForConversion {
-                    reason: format!(
-                        "Expected 1 or 2 values for BasicConstraints, found {}",
-                        values.len()
-                    ),
-                },
-            ));
+            return Err(InvalidInput::IncompatibleVariantForConversion {
+                reason: format!(
+                    "Expected 1 or 2 values for BasicConstraints, found {}",
+                    values.len()
+                ),
+            });
         }
         let mut num_ca = 0u8;
         let mut num_path_length = 0u8;
@@ -78,15 +74,15 @@ impl TryFrom<Attribute> for BasicConstraints {
                             &[0x00] => false,
                             &[0xFF] | &[0x01] => true,
                             _ => {
-                                return Err(Error::InvalidInput(
-                                    crate::InvalidInput::IncompatibleVariantForConversion {
+                                return Err(
+                                    InvalidInput::IncompatibleVariantForConversion {
                                         reason: "Encountered unexpected value for Boolean tag".to_string(),
                                     },
-                                ))
+                                )
                             }
                         }
                     } else {
-                        return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string() }));
+                        return Err(InvalidInput::IncompatibleVariantForConversion { reason: "Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string() });
                     }
                 }
                 Tag::Integer => {
@@ -100,18 +96,16 @@ impl TryFrom<Attribute> for BasicConstraints {
                         buf[..len].copy_from_slice(value.value());
                         path_length = Some(u64::from_be_bytes(buf));
                     } else {
-                        return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "Encountered > 1 Integer tags. Expected 0 or 1 Integer tags.".to_string() }));
+                        return Err(InvalidInput::IncompatibleVariantForConversion { reason: "Encountered > 1 Integer tags. Expected 0 or 1 Integer tags.".to_string() });
                     }
                 }
-                _ => return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: format!("Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer", value.tag()) })),
+                _ => return Err(InvalidInput::IncompatibleVariantForConversion { reason: format!("Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer", value.tag()) }),
             }
         }
         if num_ca == 0 {
-            return Err(Error::InvalidInput(
-                crate::InvalidInput::IncompatibleVariantForConversion {
-                    reason: "Expected 1 Boolean tag, found 0".to_string(),
-                },
-            ));
+            return Err(InvalidInput::IncompatibleVariantForConversion {
+                reason: "Expected 1 Boolean tag, found 0".to_string(),
+            });
         }
         Ok(BasicConstraints { ca, path_length })
     }

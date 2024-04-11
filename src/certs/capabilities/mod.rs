@@ -13,7 +13,8 @@ use der::asn1::SetOfVec;
 
 use x509_cert::attr::{Attribute, Attributes};
 
-use crate::{Constrained, ConstraintError, Error};
+use crate::errors::base::InvalidInput;
+use crate::{Constrained, ConstraintError};
 
 /// Object Identifier for the KeyUsage::DigitalSignature variant.
 pub const OID_KEY_USAGE_DIGITAL_SIGNATURE: &str = "1.3.6.1.5.5.7.3.3";
@@ -93,7 +94,7 @@ impl Capabilities {
 }
 
 impl TryFrom<Attributes> for Capabilities {
-    type Error = Error;
+    type Error = InvalidInput;
 
     /// Performs the conversion.
     ///
@@ -122,7 +123,7 @@ impl TryFrom<Attributes> for Capabilities {
                 OID_BASIC_CONSTRAINTS => {
                     num_basic_constraints += 1;
                     if num_basic_constraints > 1 {
-                        return Err(Error::InvalidInput(crate::InvalidInput::IncompatibleVariantForConversion { reason: "Tried inserting > 1 BasicConstraints into Capabilities. Expected 1 BasicConstraints".to_string() }));
+                        return Err(InvalidInput::IncompatibleVariantForConversion { reason: "Tried inserting > 1 BasicConstraints into Capabilities. Expected 1 BasicConstraints".to_string() });
                     } else {
                         basic_constraints = BasicConstraints::try_from(item.clone())?;
                     }
