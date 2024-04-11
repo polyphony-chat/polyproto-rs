@@ -71,3 +71,59 @@ impl From<der::Error> for InvalidInput {
         Self::DerError(value)
     }
 }
+
+#[derive(Error, Debug, PartialEq, Clone)]
+pub enum CertReqToIdCsr {
+    #[error(transparent)]
+    CertReqInfoToIdCsrInner(#[from] CertReqInfoError),
+}
+
+#[derive(Error, Debug, PartialEq, Clone)]
+pub enum CertReqInfoError {
+    #[error(transparent)]
+    ConstraintError(#[from] ConstraintError),
+    #[error(transparent)]
+    InvalidInput(#[from] InvalidInput),
+    #[error("Couldn't parse CertReqInfo from provided DER bytes")]
+    DerError(der::Error),
+    #[error(transparent)]
+    MalformedIdCsrInner(#[from] IdCsrInnerError),
+}
+
+impl From<der::Error> for CertReqInfoError {
+    fn from(value: der::Error) -> Self {
+        Self::DerError(value)
+    }
+}
+
+#[derive(Error, Debug, PartialEq, Clone)]
+pub enum IdCsrError {
+    #[error("The Bitstring is invalid")]
+    InvalidBitstring(der::Error),
+    #[error(transparent)]
+    IdCsrInnerToCertReqInfo(#[from] IdCsrInnerError),
+    #[error(transparent)]
+    ConstraintError(#[from] ConstraintError),
+}
+
+impl From<der::Error> for IdCsrError {
+    fn from(value: der::Error) -> Self {
+        Self::InvalidBitstring(value)
+    }
+}
+
+#[derive(Error, Debug, PartialEq, Clone)]
+pub enum IdCsrInnerError {
+    #[error(transparent)]
+    ConstraintError(#[from] ConstraintError),
+    #[error("Encountered DER encoding error")]
+    DerError(der::Error),
+    #[error(transparent)]
+    InvalidInput(#[from] InvalidInput),
+}
+
+impl From<der::Error> for IdCsrInnerError {
+    fn from(value: der::Error) -> Self {
+        Self::DerError(value)
+    }
+}
