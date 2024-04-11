@@ -4,7 +4,7 @@
 
 use thiserror::Error;
 
-use super::base::ConstraintError;
+use super::base::{ConstraintError, InvalidInput};
 
 /// Error type covering possible failures when converting a [x509_cert::TbsCertificate]
 /// to a [crate::cert::IdCertTbs]
@@ -26,30 +26,6 @@ pub enum TbsCertToIdCert {
 pub enum IdCertToTbsCert {
     #[error("Serial number could not be converted")]
     SerialNumber(der::Error),
-}
-
-/// Represents errors for invalid input in IdCsr or IdCert generation.
-#[derive(Error, Debug, PartialEq, Clone)]
-pub enum InvalidInput {
-    #[error("The der library has reported the following error with the input")]
-    DerError(der::Error),
-    #[error("subject_session_id MUST NOT exceed length limit of 32 characters")]
-    SessionIdTooLong,
-    #[error(
-        "Cannot perform conversion, as input variant can not be converted to output. {reason:}"
-    )]
-    IncompatibleVariantForConversion { reason: String },
-}
-
-#[derive(Error, Debug, PartialEq, Clone)]
-// TODO: Replace usages of InvalidInput::IncompatibleVariantForConversion with this Enum
-pub enum UnsuccessfulConversion {
-    #[error(
-        "Cannot perform conversion, as input variant can not be converted to output. {reason:}"
-    )]
-    IncompatibleVariant { reason: String },
-    #[error("Conversion failed due to invalid input")]
-    InvalidInput(String),
 }
 
 #[derive(Error, Debug, PartialEq, Clone)]

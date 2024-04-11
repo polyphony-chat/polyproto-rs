@@ -9,7 +9,7 @@ use der::{Any, Tag, Tagged};
 use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 
-use crate::errors::composite::InvalidInput;
+use crate::errors::base::InvalidInput;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// The key usage extension defines the purpose of the key contained in the certificate. The usage
