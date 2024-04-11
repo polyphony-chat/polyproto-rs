@@ -60,6 +60,10 @@ fn main() {
     )
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(test))]
+fn main() {}
+
 // As mentioned in the README, we start by implementing the signature trait.
 
 // Here, we start by defining the signature type, which is a wrapper around the signature type from
