@@ -143,20 +143,21 @@ impl TryFrom<Extension> for KeyUsage {
     /// the attribute does not match any known KeyUsage variant, especially when the unknown OID is
     /// marked as "critical"
     fn try_from(value: Extension) -> Result<Self, Self::Error> {
+        #[allow(unreachable_patterns)]
         if value.critical
-            && match value.extn_id.to_string().as_str() {
+            && !matches!(
+                value.extn_id.to_string().as_str(),
                 OID_KEY_USAGE_CONTENT_COMMITMENT
-                | OID_KEY_USAGE_CRL_SIGN
-                | OID_KEY_USAGE_DATA_ENCIPHERMENT
-                | OID_KEY_USAGE_DATA_ENCIPHERMENT
-                | OID_KEY_USAGE_DECIPHER_ONLY
-                | OID_KEY_USAGE_DIGITAL_SIGNATURE
-                | OID_KEY_USAGE_ENCIPHER_ONLY
-                | OID_KEY_USAGE_KEY_AGREEMENT
-                | OID_KEY_USAGE_KEY_CERT_SIGN
-                | OID_KEY_USAGE_KEY_ENCIPHERMENT => false,
-                _ => true,
-            }
+                    | OID_KEY_USAGE_CRL_SIGN
+                    | OID_KEY_USAGE_DATA_ENCIPHERMENT
+                    | OID_KEY_USAGE_DATA_ENCIPHERMENT
+                    | OID_KEY_USAGE_DECIPHER_ONLY
+                    | OID_KEY_USAGE_DIGITAL_SIGNATURE
+                    | OID_KEY_USAGE_ENCIPHER_ONLY
+                    | OID_KEY_USAGE_KEY_AGREEMENT
+                    | OID_KEY_USAGE_KEY_CERT_SIGN
+                    | OID_KEY_USAGE_KEY_ENCIPHERMENT
+            )
         {
             // Error if we encounter a "critical" X.509 extension which we do not know of
             return Err(InvalidInput::UnknownCriticalExtension { oid: value.extn_id });
@@ -172,6 +173,7 @@ impl TryFrom<Extension> for KeyUsage {
             }
         };
         // Now we have to match the OID of the attribute to the known KeyUsage variants
+        #[allow(unreachable_patterns)]
         return Ok(match value.extn_id.to_string().as_str() {
             super::OID_KEY_USAGE_CONTENT_COMMITMENT => KeyUsage::ContentCommitment(boolean_value),
             super::OID_KEY_USAGE_CRL_SIGN => KeyUsage::CrlSign(boolean_value),

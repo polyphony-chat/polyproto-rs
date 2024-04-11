@@ -13,7 +13,6 @@ use der::asn1::SetOfVec;
 
 use x509_cert::attr::{Attribute, Attributes};
 use x509_cert::ext::{Extension, Extensions};
-use x509_cert::ext::{Extension, Extensions};
 
 use crate::errors::base::InvalidInput;
 use crate::{Constrained, ConstraintError};
@@ -177,45 +176,6 @@ impl TryFrom<Capabilities> for Extensions {
             vec.push(Extension::from(*item));
         }
         Ok(vec)
-    }
-}
-
-impl TryFrom<Extensions> for Capabilities {
-    type Error;
-
-    fn try_from(value: Extensions) -> Result<Self, Self::Error> {
-        let mut key_usages: Vec<KeyUsage> = Vec::new();
-        let mut basic_constraints = BasicConstraints::default();
-        let mut num_basic_constraints = 0u8;
-        for item in value.iter() {
-            match item.extn_id.to_string().as_str() {
-                #[allow(unreachable_patterns)] // cargo thinks the below pattern is unreachable.
-                OID_KEY_USAGE_CONTENT_COMMITMENT
-                | OID_KEY_USAGE_CRL_SIGN
-                | OID_KEY_USAGE_DATA_ENCIPHERMENT
-                | OID_KEY_USAGE_DECIPHER_ONLY
-                | OID_KEY_USAGE_DIGITAL_SIGNATURE
-                | OID_KEY_USAGE_ENCIPHER_ONLY
-                | OID_KEY_USAGE_KEY_AGREEMENT
-                | OID_KEY_USAGE_KEY_CERT_SIGN
-                | OID_KEY_USAGE_KEY_ENCIPHERMENT => {
-                    key_usages.push(KeyUsage::try_from(item.clone())?);
-                }
-                OID_BASIC_CONSTRAINTS => {
-                    num_basic_constraints += 1;
-                    if num_basic_constraints > 1 {
-                        return Err(InvalidInput::IncompatibleVariantForConversion { reason: "Tried inserting > 1 BasicConstraints into Capabilities. Expected 1 BasicConstraints".to_string() });
-                    } else {
-                        basic_constraints = BasicConstraints::try_from(item.clone())?;
-                    }
-                }
-                _ => (),
-            }
-        }
-        Ok(Capabilities {
-            key_usage: key_usages,
-            basic_constraints,
-        })
     }
 }
 
