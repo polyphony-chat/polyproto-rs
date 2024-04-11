@@ -15,7 +15,6 @@ use x509_cert::attr::{Attribute, Attributes};
 use x509_cert::ext::{Extension, Extensions};
 
 use crate::errors::base::InvalidInput;
-use crate::errors::composite::CapabilitiesError;
 use crate::{Constrained, ConstraintError};
 
 /// Object Identifier for the KeyUsage::DigitalSignature variant.
