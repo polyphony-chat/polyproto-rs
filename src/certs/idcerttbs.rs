@@ -10,10 +10,13 @@ use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 
+use crate::errors::base::{ConstraintError, InvalidInput};
 use crate::errors::composite::{IdCertToTbsCert, TbsCertToIdCert};
+use crate::signature::Signature;
 use crate::Constrained;
 
 use super::capabilities::Capabilities;
+use super::idcsr::IdCsr;
 use super::PublicKeyInfo;
 
 /// An unsigned polyproto ID-Cert.
@@ -41,7 +44,6 @@ pub struct IdCertTbs {
     /// The certificates' serial number, as issued by the Certificate Authority.
     pub serial_number: Uint,
     /// The signature algorithm used by the Certificate Authority to sign this certificate.
-    /// Must be equal to `T` in `IdCert<S: Signature, T: SignatureAlgorithm>`.
     pub signature_algorithm: AlgorithmIdentifierOwned,
     /// X.501 name, identifying the issuer of the certificate.
     pub issuer: Name,
@@ -53,6 +55,12 @@ pub struct IdCertTbs {
     pub subject_public_key_info: PublicKeyInfo,
     /// X.509 Extensions matching what is described in the polyproto specification document.
     pub capabilities: Capabilities,
+}
+
+impl IdCertTbs {
+    pub fn new_actor<S: Signature>(id_csr: IdCsr<S>) -> Result<Self, ConstraintError> {
+        todo!()
+    }
 }
 
 impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
@@ -109,7 +117,7 @@ impl<P: Profile> TryFrom<IdCertTbs> for TbsCertificateInner<P> {
             subject_public_key_info: value.subject_public_key_info.into(),
             issuer_unique_id: None,
             subject_unique_id: None,
-            extensions: Some(Extensions::try_from(value.capabilities)?),
+            extensions: Some(Extensions::from(value.capabilities)),
         })
     }
 }

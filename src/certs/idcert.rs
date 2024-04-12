@@ -16,7 +16,6 @@ use super::idcerttbs::IdCertTbs;
 ///
 /// - **S**: The [Signature] and - by extension - [SignatureAlgorithm] this certificate was
 ///   signed with.
-/// - **T**: The [SignatureAlgorithm] of the subjects' public key within the [IdCertTbs]
 #[derive(Debug, PartialEq, Eq)]
 pub struct IdCert<S: Signature> {
     /// Inner TBS (To be signed) certificate
