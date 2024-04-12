@@ -162,20 +162,17 @@ impl TryFrom<Capabilities> for Attributes {
     type Error = ConstraintError;
 }
 
-impl TryFrom<Capabilities> for Extensions {
-    type Error = ConstraintError;
-
+impl From<Capabilities> for Extensions {
     /// Performs the conversion.
     ///
-    /// Fails, if `Capabilities::verify()` using the `Constrained` trait fails.
-    fn try_from(value: Capabilities) -> Result<Self, Self::Error> {
-        value.validate()?;
+    /// try_from does **not** check whether the resulting [Extensions] are well-formed.
+    fn from(value: Capabilities) -> Self {
         let mut vec = Vec::new();
         vec.push(Extension::from(value.basic_constraints));
         for item in value.key_usage.iter() {
             vec.push(Extension::from(*item));
         }
-        Ok(vec)
+        vec
     }
 }
 
