@@ -35,5 +35,5 @@ pub trait PublicKey<S: Signature>: PartialEq + Eq {
         S::algorithm_identifier()
     }
     /// Creates a new [Self] from a [PublicKeyInfo].
-    fn from_public_key_info(public_key_info: PublicKeyInfo) -> Self;
+    fn from_public_key_info(public_key_info: PublicKeyInfo) -> Self; // TODO: Return Result instead? This could fail
 }
