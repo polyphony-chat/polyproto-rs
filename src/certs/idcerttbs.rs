@@ -2,8 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use der::asn1::{BitString, Uint};
-
+use der::asn1::Uint;
 use spki::AlgorithmIdentifierOwned;
 use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
@@ -11,13 +10,10 @@ use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 
-use crate::errors::base::InvalidInput;
 use crate::errors::composite::{IdCertToTbsCert, TbsCertToIdCert};
-use crate::signature::Signature;
 use crate::Constrained;
 
 use super::capabilities::Capabilities;
-use super::idcsr::IdCsr;
 use super::PublicKeyInfo;
 
 /// An unsigned polyproto ID-Cert.
