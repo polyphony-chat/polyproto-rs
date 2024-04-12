@@ -165,20 +165,16 @@ struct Ed25519PublicKey {
 }
 
 impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
-    // We have to define an error type. The error type is used to signal that the signature
-    // verification failed. We define it as a simple enum using the `thiserror` crate.
-    type Error = Error;
-
     // Verifies a signature. We use the `verify_strict` method from the ed25519-dalek crate.
     // This method is used to mitigate weak key forgery.
     fn verify_signature(
         &self,
         signature: &Ed25519Signature,
         data: &[u8],
-    ) -> Result<(), Self::Error> {
+    ) -> Result<(), polyproto::errors::composite::PublicKeyError> {
         match self.key.verify_strict(data, signature.as_signature()) {
             Ok(_) => Ok(()),
-            Err(_) => Err(Error::SignatureVerification),
+            Err(_) => Err(polyproto::errors::composite::PublicKeyError::BadSignature),
         }
     }
 
@@ -205,10 +201,4 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
             key: VerifyingKey::from_bytes(&signature_array).unwrap(),
         }
     }
-}
-
-#[derive(Error, Debug, Clone)]
-enum Error {
-    #[error("The signature failed to verify")]
-    SignatureVerification,
 }
