@@ -10,8 +10,7 @@ use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 
-use crate::errors::base::ConstraintError;
-use crate::errors::composite::{IdCertToTbsCert, TbsCertToIdCert};
+use crate::errors::composite::{IdCertTbsError, IdCertToTbsCert, TbsCertToIdCert};
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::Constrained;
@@ -61,8 +60,81 @@ pub struct IdCertTbs<S: Signature, P: PublicKey<S>> {
 }
 
 impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
-    pub fn new_actor(id_csr: IdCsr<S, P>) -> Result<Self, ConstraintError> {
-        Err(ConstraintError::Malformed(None))
+    /// Create a new [IdCertTbs] by passing an [IdCsr] and other supplementary information. Returns
+    /// an error, if the provided IdCsr or issuer [Name] do not pass [Constrained] verification,
+    /// i.e. if they are not up to polyproto specification. Also fails if the provided IdCsr has
+    /// the [BasicConstraints] "ca" flag set to `true`.
+    ///
+    /// See [IdCertTbs::new_ca()] when trying to create a new CA certificate for home servers.
+    pub fn new_actor(
+        id_csr: IdCsr<S, P>,
+        serial_number: Uint,
+        signature_algorithm: AlgorithmIdentifierOwned,
+        issuer: Name,
+        validity: Validity,
+    ) -> Result<Self, IdCertTbsError> {
+        if id_csr.inner_csr.capabilities.basic_constraints.ca {
+            return Err(IdCertTbsError::ConstraintError(
+                crate::errors::base::ConstraintError::Malformed(Some(
+                    "Actor ID-Cert cannot have \"CA\" BasicConstraint set to true".to_string(),
+                )),
+            ));
+        }
+        id_csr.validate()?;
+        issuer.validate()?;
+        // Verify if signature of IdCsr matches contents
+        id_csr.inner_csr.subject_public_key_info.verify_signature(
+            &id_csr.signature,
+            id_csr.inner_csr.clone().to_der()?.as_slice(),
+        )?;
+        Ok(IdCertTbs {
+            serial_number,
+            signature_algorithm,
+            issuer,
+            validity,
+            subject: id_csr.inner_csr.subject,
+            subject_public_key_info: id_csr.inner_csr.subject_public_key_info,
+            capabilities: id_csr.inner_csr.capabilities,
+            s: std::marker::PhantomData,
+        })
+    }
+
+    /// Create a new [IdCertTbs] by passing an [IdCsr] and other supplementary information. Returns
+    /// an error, if the provided IdCsr or issuer [Name] do not pass [Constrained] verification,
+    /// i.e. if they are not up to polyproto specification. Also fails if the provided IdCsr has
+    /// the [BasicConstraints] "ca" flag set to `false`.
+    ///
+    /// See [IdCertTbs::new_actor()] when trying to create a new actor certificate.
+    pub fn new_ca(
+        id_csr: IdCsr<S, P>,
+        serial_number: Uint,
+        signature_algorithm: AlgorithmIdentifierOwned,
+        issuer: Name,
+        validity: Validity,
+    ) -> Result<Self, IdCertTbsError> {
+        if !id_csr.inner_csr.capabilities.basic_constraints.ca {
+            return Err(IdCertTbsError::ConstraintError(
+                crate::errors::base::ConstraintError::Malformed(Some(
+                    "CA ID-Cert must have \"CA\" BasicConstraint set to true".to_string(),
+                )),
+            ));
+        }
+        id_csr.validate()?;
+        // Verify if signature of IdCsr matches contents
+        id_csr.inner_csr.subject_public_key_info.verify_signature(
+            &id_csr.signature,
+            id_csr.inner_csr.clone().to_der()?.as_slice(),
+        )?;
+        Ok(IdCertTbs {
+            serial_number,
+            signature_algorithm,
+            issuer,
+            validity,
+            subject: id_csr.inner_csr.subject,
+            subject_public_key_info: id_csr.inner_csr.subject_public_key_info,
+            capabilities: id_csr.inner_csr.capabilities,
+            s: std::marker::PhantomData,
+        })
     }
 }
 
