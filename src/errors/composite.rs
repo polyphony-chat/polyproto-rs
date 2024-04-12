@@ -107,3 +107,21 @@ impl From<der::Error> for IdCsrInnerError {
         Self::DerError(value)
     }
 }
+
+#[derive(Error, Debug, PartialEq, Hash, Clone)]
+pub enum PublicKeyError {
+    #[error("The signature does not match the data")]
+    BadSignature,
+    #[error("The provided PublicKeyInfo could not be made into a PublicKey")]
+    BadPublicKeyInfo,
+}
+
+#[derive(Error, Debug, PartialEq, Clone)]
+pub enum IdCertTbsError {
+    #[error(transparent)]
+    PublicKeyError(#[from] PublicKeyError),
+    #[error(transparent)]
+    ConstraintError(#[from] ConstraintError),
+    #[error(transparent)]
+    IdCsrInnerError(#[from] IdCsrInnerError),
+}
