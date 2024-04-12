@@ -3,12 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use der::asn1::Uint;
+use der::{Decode, Encode};
 use spki::AlgorithmIdentifierOwned;
 use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
 use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
+use x509_cert::TbsCertificate;
 
 use crate::errors::composite::{IdCertTbsError, IdCertToTbsCert, TbsCertToIdCert};
 use crate::key::PublicKey;
@@ -135,6 +137,16 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
             capabilities: id_csr.inner_csr.capabilities,
             s: std::marker::PhantomData,
         })
+    }
+
+    /// Encode this type as DER, returning a byte vector.
+    pub fn to_der(self) -> Result<Vec<u8>, IdCertTbsError> {
+        Ok(TbsCertificate::try_from(self)?.to_der()?)
+    }
+
+    /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
+    pub fn from_der(bytes: &[u8]) -> Result<Self, TbsCertToIdCert> {
+        IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)
     }
 }
 

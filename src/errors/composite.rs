@@ -20,6 +20,14 @@ pub enum TbsCertToIdCert {
     ConstraintError(#[from] ConstraintError),
     #[error(transparent)]
     InvalidInput(#[from] InvalidInput),
+    #[error("Encounter DER encoding error")]
+    DerError(der::Error),
+}
+
+impl From<der::Error> for TbsCertToIdCert {
+    fn from(value: der::Error) -> Self {
+        Self::DerError(value)
+    }
 }
 
 /// Error type covering possible failures when converting a [crate::cert::IdCertTbs]
@@ -124,4 +132,14 @@ pub enum IdCertTbsError {
     ConstraintError(#[from] ConstraintError),
     #[error(transparent)]
     IdCsrInnerError(#[from] IdCsrInnerError),
+    #[error(transparent)]
+    IdCertToTbsCert(#[from] IdCertToTbsCert),
+    #[error("Encountered DER encoding error")]
+    DerError(der::Error),
+}
+
+impl From<der::Error> for IdCertTbsError {
+    fn from(value: der::Error) -> Self {
+        Self::DerError(value)
+    }
 }
