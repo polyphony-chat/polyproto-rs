@@ -14,7 +14,7 @@ pub enum ConstraintError {
         lower: i32,
         upper: i32,
         actual: String,
-        reason: Option<String>,
+        reason: Option<String>, // TODO: Remove the Option<> here.
     },
 }
 
@@ -31,6 +31,8 @@ pub enum InvalidInput {
     IncompatibleVariantForConversion { reason: String },
     #[error("Critical extension cannot be converted")]
     UnknownCriticalExtension { oid: ObjectIdentifier },
+    #[error(transparent)]
+    ConstraintError(#[from] ConstraintError),
 }
 
 #[derive(Error, Debug, PartialEq, Clone)]
