@@ -17,15 +17,19 @@ pub enum TbsCertToIdCert {
     #[error("Supplied integer too long")]
     Signature(der::Error),
     #[error(transparent)]
-    Constraint(#[from] ConstraintError),
+    ConstraintError(#[from] ConstraintError),
+    #[error(transparent)]
+    InvalidInput(#[from] InvalidInput),
 }
 
 /// Error type covering possible failures when converting a [crate::cert::IdCertTbs]
 /// to a [x509_cert::TbsCertificate]
-#[derive(Error, Debug, PartialEq, Clone, Copy)]
+#[derive(Error, Debug, PartialEq, Clone)]
 pub enum IdCertToTbsCert {
     #[error("Serial number could not be converted")]
     SerialNumber(der::Error),
+    #[error(transparent)]
+    ConstraintError(#[from] ConstraintError),
 }
 
 #[derive(Error, Debug, PartialEq, Clone)]

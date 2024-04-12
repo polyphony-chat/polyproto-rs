@@ -14,6 +14,7 @@ use x509_cert::time::Validity;
 use crate::errors::composite::{IdCertToTbsCert, TbsCertToIdCert};
 use crate::Constrained;
 
+use super::capabilities::Capabilities;
 use super::PublicKeyInfo;
 
 /// An unsigned polyproto ID-Cert.
@@ -54,7 +55,7 @@ pub struct IdCertTbs {
     /// The session ID of the client. No two valid certificates may exist for one session ID.
     pub subject_session_id: BitString,
     /// X.509 Extensions matching what is described in the polyproto specification document.
-    pub extensions: Extensions,
+    pub capabilities: Capabilities,
 }
 
 impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
@@ -67,8 +68,8 @@ impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
             None => return Err(TbsCertToIdCert::SubjectUid),
         };
 
-        let extensions = match value.extensions {
-            Some(ext) => ext,
+        let capabilities = match value.extensions {
+            Some(ext) => Capabilities::try_from(ext)?,
             None => return Err(TbsCertToIdCert::Extensions),
         };
 
@@ -87,7 +88,7 @@ impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
             subject: value.subject,
             subject_public_key_info,
             subject_session_id: subject_unique_id,
-            extensions,
+            capabilities,
         })
     }
 }
@@ -116,7 +117,7 @@ impl<P: Profile> TryFrom<IdCertTbs> for TbsCertificateInner<P> {
             subject_public_key_info: value.subject_public_key_info.into(),
             issuer_unique_id: None,
             subject_unique_id: Some(value.subject_session_id),
-            extensions: Some(value.extensions),
+            extensions: Some(Extensions::try_from(value.capabilities)?),
         })
     }
 }
