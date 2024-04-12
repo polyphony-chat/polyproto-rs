@@ -99,7 +99,7 @@ impl TryFrom<Attributes> for Capabilities {
 
     /// Performs the conversion.
     ///
-    /// Fails if the BasicConstraints or KeyUsages are malformed. The constraints returned by
+    /// Fails if the [BasicConstraints] or [KeyUsage]s are malformed. The constraints returned by
     /// this method are not guaranteed to be valid. You should call `validate()` on the result
     /// to ensure that the constraints are valid according to the X.509 standard and the polyproto
     /// specification.
@@ -176,6 +176,44 @@ impl TryFrom<Capabilities> for Extensions {
             vec.push(Extension::from(*item));
         }
         Ok(vec)
+    }
+}
+
+impl TryFrom<Extensions> for Capabilities {
+    type Error = InvalidInput;
+
+    /// Performs the conversion.
+    ///
+    /// try_from does **not** check whether the resulting [Capabilities] are well-formed. If
+    /// this property is critical, use the [Constrained] trait to verify the well-formedness of
+    /// these resulting [Capabilities].
+    fn try_from(value: Extensions) -> Result<Self, Self::Error> {
+        let mut basic_constraints: BasicConstraints = BasicConstraints::default();
+        let mut key_usage: Vec<KeyUsage> = Vec::new();
+        for item in value.iter() {
+            #[allow(unreachable_patterns)] // cargo thinks that we have an unreachable pattern here
+            match item.extn_id.to_string().as_str() {
+                OID_BASIC_CONSTRAINTS => {
+                    basic_constraints = BasicConstraints::try_from(item.clone())?
+                }
+                OID_KEY_USAGE_CONTENT_COMMITMENT
+                | OID_KEY_USAGE_CRL_SIGN
+                | OID_KEY_USAGE_DATA_ENCIPHERMENT
+                | OID_KEY_USAGE_DECIPHER_ONLY
+                | OID_KEY_USAGE_DIGITAL_SIGNATURE
+                | OID_KEY_USAGE_ENCIPHER_ONLY
+                | OID_KEY_USAGE_KEY_AGREEMENT
+                | OID_KEY_USAGE_KEY_CERT_SIGN
+                | OID_KEY_USAGE_KEY_ENCIPHERMENT => {
+                    key_usage.push(KeyUsage::try_from(item.clone())?)
+                },
+                _ => return Err(InvalidInput::ConstraintError(ConstraintError::Malformed(Some(format!("Invalid OID found for converting this set of Extensions to Capabilities: {} is not a valid OID for BasicConstraints or KeyUsages", item.extn_id)))))
+            };
+        }
+        Ok(Capabilities {
+            key_usage,
+            basic_constraints,
+        })
     }
 }
 
