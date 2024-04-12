@@ -12,6 +12,7 @@ use x509_cert::time::Validity;
 
 use crate::errors::base::ConstraintError;
 use crate::errors::composite::{IdCertToTbsCert, TbsCertToIdCert};
+use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::Constrained;
 
@@ -40,7 +41,7 @@ use super::PublicKeyInfo;
 /// [x509_cert::certificate::TbsCertificateInner]. This crate also provides an implementation for
 /// `TryFrom<IdCertTbs<T>> for TbsCertificateInner<P>`.
 #[derive(Debug, PartialEq, Eq)]
-pub struct IdCertTbs<S: Signature> {
+pub struct IdCertTbs<S: Signature, P: PublicKey<S>> {
     /// The certificates' serial number, as issued by the Certificate Authority.
     pub serial_number: Uint,
     /// The signature algorithm used by the Certificate Authority to sign this certificate.
@@ -52,20 +53,22 @@ pub struct IdCertTbs<S: Signature> {
     /// X.501 name, identifying the subject (actor) of the certificate.
     pub subject: Name,
     /// Information regarding the subjects' public key.
-    pub subject_public_key_info: PublicKeyInfo,
+    pub subject_public_key_info: P,
     /// X.509 Extensions matching what is described in the polyproto specification document.
     pub capabilities: Capabilities,
     /// PhantomData
     s: std::marker::PhantomData<S>,
 }
 
-impl<S: Signature> IdCertTbs<S> {
-    pub fn new_actor(id_csr: IdCsr<S>) -> Result<Self, ConstraintError> {
-        todo!()
+impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
+    pub fn new_actor(id_csr: IdCsr<S, P>) -> Result<Self, ConstraintError> {
+        Err(ConstraintError::Malformed(None))
     }
 }
 
-impl<P: Profile, S: Signature> TryFrom<TbsCertificateInner<P>> for IdCertTbs<S> {
+impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
+    for IdCertTbs<S, Q>
+{
     type Error = TbsCertToIdCert;
 
     fn try_from(value: TbsCertificateInner<P>) -> Result<Self, Self::Error> {
@@ -75,8 +78,8 @@ impl<P: Profile, S: Signature> TryFrom<TbsCertificateInner<P>> for IdCertTbs<S> 
             Some(ext) => Capabilities::try_from(ext)?,
             None => return Err(TbsCertToIdCert::Extensions),
         };
-
-        let subject_public_key_info = PublicKeyInfo::from(value.subject_public_key_info);
+        let subject_public_key_info =
+            PublicKey::from_public_key_info(PublicKeyInfo::from(value.subject_public_key_info));
 
         let serial_number = match Uint::new(value.serial_number.as_bytes()) {
             Ok(snum) => snum,
@@ -96,10 +99,12 @@ impl<P: Profile, S: Signature> TryFrom<TbsCertificateInner<P>> for IdCertTbs<S> 
     }
 }
 
-impl<P: Profile, S: Signature> TryFrom<IdCertTbs<S>> for TbsCertificateInner<P> {
+impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<IdCertTbs<S, Q>>
+    for TbsCertificateInner<P>
+{
     type Error = IdCertToTbsCert;
 
-    fn try_from(value: IdCertTbs<S>) -> Result<Self, Self::Error> {
+    fn try_from(value: IdCertTbs<S, Q>) -> Result<Self, Self::Error> {
         let serial_number = match SerialNumber::<P>::new(value.serial_number.as_bytes()) {
             Ok(sernum) => sernum,
             Err(e) => return Err(IdCertToTbsCert::SerialNumber(e)),
@@ -117,7 +122,7 @@ impl<P: Profile, S: Signature> TryFrom<IdCertTbs<S>> for TbsCertificateInner<P> 
             issuer: value.issuer,
             validity: value.validity,
             subject: value.subject,
-            subject_public_key_info: value.subject_public_key_info.into(),
+            subject_public_key_info: value.subject_public_key_info.public_key_info().into(),
             issuer_unique_id: None,
             subject_unique_id: None,
             extensions: Some(Extensions::from(value.capabilities)),
