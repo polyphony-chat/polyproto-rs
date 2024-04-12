@@ -11,10 +11,13 @@ use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 
+use crate::errors::base::InvalidInput;
 use crate::errors::composite::{IdCertToTbsCert, TbsCertToIdCert};
+use crate::signature::Signature;
 use crate::Constrained;
 
 use super::capabilities::Capabilities;
+use super::idcsr::IdCsr;
 use super::PublicKeyInfo;
 
 /// An unsigned polyproto ID-Cert.
@@ -52,8 +55,6 @@ pub struct IdCertTbs {
     pub subject: Name,
     /// Information regarding the subjects' public key.
     pub subject_public_key_info: PublicKeyInfo,
-    /// The session ID of the client. No two valid certificates may exist for one session ID.
-    pub subject_session_id: BitString,
     /// X.509 Extensions matching what is described in the polyproto specification document.
     pub capabilities: Capabilities,
 }
@@ -63,10 +64,6 @@ impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
 
     fn try_from(value: TbsCertificateInner<P>) -> Result<Self, Self::Error> {
         value.subject.validate()?;
-        let subject_unique_id = match value.subject_unique_id {
-            Some(suid) => suid,
-            None => return Err(TbsCertToIdCert::SubjectUid),
-        };
 
         let capabilities = match value.extensions {
             Some(ext) => Capabilities::try_from(ext)?,
@@ -87,7 +84,6 @@ impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
             validity: value.validity,
             subject: value.subject,
             subject_public_key_info,
-            subject_session_id: subject_unique_id,
             capabilities,
         })
     }
@@ -116,7 +112,7 @@ impl<P: Profile> TryFrom<IdCertTbs> for TbsCertificateInner<P> {
             subject: value.subject,
             subject_public_key_info: value.subject_public_key_info.into(),
             issuer_unique_id: None,
-            subject_unique_id: Some(value.subject_session_id),
+            subject_unique_id: None,
             extensions: Some(Extensions::try_from(value.capabilities)?),
         })
     }
