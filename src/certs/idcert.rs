@@ -19,7 +19,7 @@ use super::idcerttbs::IdCertTbs;
 #[derive(Debug, PartialEq, Eq)]
 pub struct IdCert<S: Signature> {
     /// Inner TBS (To be signed) certificate
-    pub tbs_certificate: IdCertTbs,
+    pub tbs_certificate: IdCertTbs<S>,
     /// Signature for the TBS certificate
     pub signature: S,
 }

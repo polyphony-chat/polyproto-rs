@@ -10,7 +10,7 @@ use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 
-use crate::errors::base::{ConstraintError, InvalidInput};
+use crate::errors::base::ConstraintError;
 use crate::errors::composite::{IdCertToTbsCert, TbsCertToIdCert};
 use crate::signature::Signature;
 use crate::Constrained;
@@ -40,7 +40,7 @@ use super::PublicKeyInfo;
 /// [x509_cert::certificate::TbsCertificateInner]. This crate also provides an implementation for
 /// `TryFrom<IdCertTbs<T>> for TbsCertificateInner<P>`.
 #[derive(Debug, PartialEq, Eq)]
-pub struct IdCertTbs {
+pub struct IdCertTbs<S: Signature> {
     /// The certificates' serial number, as issued by the Certificate Authority.
     pub serial_number: Uint,
     /// The signature algorithm used by the Certificate Authority to sign this certificate.
@@ -55,15 +55,17 @@ pub struct IdCertTbs {
     pub subject_public_key_info: PublicKeyInfo,
     /// X.509 Extensions matching what is described in the polyproto specification document.
     pub capabilities: Capabilities,
+    /// PhantomData
+    s: std::marker::PhantomData<S>,
 }
 
-impl IdCertTbs {
-    pub fn new_actor<S: Signature>(id_csr: IdCsr<S>) -> Result<Self, ConstraintError> {
+impl<S: Signature> IdCertTbs<S> {
+    pub fn new_actor(id_csr: IdCsr<S>) -> Result<Self, ConstraintError> {
         todo!()
     }
 }
 
-impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
+impl<P: Profile, S: Signature> TryFrom<TbsCertificateInner<P>> for IdCertTbs<S> {
     type Error = TbsCertToIdCert;
 
     fn try_from(value: TbsCertificateInner<P>) -> Result<Self, Self::Error> {
@@ -81,7 +83,7 @@ impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
             Err(e) => return Err(TbsCertToIdCert::Signature(e)),
         };
 
-        Ok(IdCertTbs {
+        Ok(Self {
             serial_number,
             signature_algorithm: value.signature,
             issuer: value.issuer,
@@ -89,14 +91,15 @@ impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
             subject: value.subject,
             subject_public_key_info,
             capabilities,
+            s: std::marker::PhantomData,
         })
     }
 }
 
-impl<P: Profile> TryFrom<IdCertTbs> for TbsCertificateInner<P> {
+impl<P: Profile, S: Signature> TryFrom<IdCertTbs<S>> for TbsCertificateInner<P> {
     type Error = IdCertToTbsCert;
 
-    fn try_from(value: IdCertTbs) -> Result<Self, Self::Error> {
+    fn try_from(value: IdCertTbs<S>) -> Result<Self, Self::Error> {
         let serial_number = match SerialNumber::<P>::new(value.serial_number.as_bytes()) {
             Ok(sernum) => sernum,
             Err(e) => return Err(IdCertToTbsCert::SerialNumber(e)),
