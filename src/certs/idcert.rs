@@ -6,6 +6,7 @@ use der::asn1::Uint;
 use spki::AlgorithmIdentifierOwned;
 use x509_cert::name::Name;
 use x509_cert::time::Validity;
+use x509_cert::Certificate;
 
 use crate::errors::composite::IdCertError;
 use crate::key::{PrivateKey, PublicKey};
@@ -34,6 +35,12 @@ pub struct IdCert<S: Signature, P: PublicKey<S>> {
 }
 
 impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
+    /// Create a new [IdCert] by passing an [IdCsr] and other supplementary information. Returns
+    /// an error, if the provided IdCsr or issuer [Name] do not pass [Constrained] verification,
+    /// i.e. if they are not up to polyproto specification. Also fails if the provided IdCsr has
+    /// the [BasicConstraints] "ca" flag set to `false`.
+    ///
+    /// See [IdCert::from_actor_csr()] when trying to create a new actor certificate.
     pub fn from_ca_csr(
         id_csr: IdCsr<S, P>,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
@@ -51,6 +58,12 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         })
     }
 
+    /// Create a new [IdCert] by passing an [IdCsr] and other supplementary information. Returns
+    /// an error, if the provided IdCsr or issuer [Name] do not pass [Constrained] verification,
+    /// i.e. if they are not up to polyproto specification. Also fails if the provided IdCsr has
+    /// the [BasicConstraints] "ca" flag set to `false`.
+    ///
+    /// See [IdCert::from_ca_csr()] when trying to create a new ca certificate.
     pub fn from_actor_csr(
         id_csr: IdCsr<S, P>,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
@@ -67,6 +80,30 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             validity,
         )?;
         let signature = signing_key.sign(&id_cert_tbs.clone().to_der()?);
+        Ok(IdCert {
+            id_cert_tbs,
+            signature,
+        })
+    }
+}
+
+impl<S: Signature, P: PublicKey<S>> TryFrom<IdCert<S, P>> for Certificate {
+    type Error = IdCertError;
+    fn try_from(value: IdCert<S, P>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            tbs_certificate: value.id_cert_tbs.clone().try_into()?,
+            signature_algorithm: value.id_cert_tbs.signature_algorithm,
+            signature: value.signature.to_bitstring()?,
+        })
+    }
+}
+
+impl<S: Signature, P: PublicKey<S>> TryFrom<Certificate> for IdCert<S, P> {
+    type Error = IdCertError;
+
+    fn try_from(value: Certificate) -> Result<Self, Self::Error> {
+        let id_cert_tbs = value.tbs_certificate.try_into()?;
+        let signature = S::from_bitstring(value.signature.raw_bytes());
         Ok(IdCert {
             id_cert_tbs,
             signature,

@@ -152,6 +152,10 @@ pub enum IdCertError {
     DerError(der::Error),
     #[error(transparent)]
     IdCertTbsError(#[from] IdCertTbsError),
+    #[error(transparent)]
+    IdCertToTbsCert(#[from] IdCertToTbsCert),
+    #[error(transparent)]
+    TbsCertToIdCert(#[from] TbsCertToIdCert),
 }
 
 impl From<der::Error> for IdCertError {
