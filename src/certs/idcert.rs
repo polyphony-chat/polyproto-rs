@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use der::asn1::Uint;
+use der::{Decode, Encode};
 use spki::AlgorithmIdentifierOwned;
 use x509_cert::name::Name;
 use x509_cert::time::Validity;
@@ -28,7 +29,7 @@ use super::idcsr::IdCsr;
 /// - **S**: The [Signature] and - by extension - [SignatureAlgorithm] this certificate was
 ///   signed with.
 /// - **P**: A [PublicKey] type P which can be used to verify [Signature]s of type S.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdCert<S: Signature, P: PublicKey<S>> {
     /// Inner TBS (To be signed) certificate
     pub id_cert_tbs: IdCertTbs<S, P>,
@@ -50,6 +51,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, IdCertError> {
+        // IdCsr gets validated in IdCertTbs::from_..._csr
         let signature_algorithm = signing_key.algorithm_identifier();
         issuer.validate()?; // TODO: Maybe this and the below validation should be done in IdCertTbs?
         if !equal_domain_components(&id_csr.inner_csr.subject, &issuer) {
@@ -62,10 +64,12 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         let id_cert_tbs =
             IdCertTbs::from_ca_csr(id_csr, serial_number, signature_algorithm, issuer, validity)?;
         let signature = signing_key.sign(&id_cert_tbs.clone().to_der()?);
-        Ok(IdCert {
+        let cert = IdCert {
             id_cert_tbs,
             signature,
-        })
+        };
+        cert.validate()?;
+        Ok(cert)
     }
 
     /// Create a new [IdCert] by passing an [IdCsr] and other supplementary information. Returns
@@ -81,6 +85,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, IdCertError> {
+        // IdCsr gets validated in IdCertTbs::from_..._csr
         let signature_algorithm = signing_key.algorithm_identifier();
         issuer.validate()?;
         if !equal_domain_components(&id_csr.inner_csr.subject, &issuer) {
@@ -98,10 +103,24 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             validity,
         )?;
         let signature = signing_key.sign(&id_cert_tbs.clone().to_der()?);
-        Ok(IdCert {
+        let cert = IdCert {
             id_cert_tbs,
             signature,
-        })
+        };
+        cert.validate()?;
+        Ok(cert)
+    }
+
+    /// Create an IdCsr from a byte slice containing a DER encoded X.509 Certificate.
+    pub fn from_der(value: Vec<u8>) -> Result<Self, IdCertError> {
+        let cert = IdCert::try_from(Certificate::from_der(&value)?)?;
+        cert.validate()?;
+        Ok(cert)
+    }
+
+    /// Encode this type as DER, returning a byte vector.
+    pub fn to_der(self) -> Result<Vec<u8>, IdCertError> {
+        Ok(Certificate::try_from(self)?.to_der()?)
     }
 }
 
