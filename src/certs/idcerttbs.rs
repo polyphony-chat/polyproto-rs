@@ -41,7 +41,7 @@ use super::PublicKeyInfo;
 /// `IdCertTbs` implements `TryFrom<[TbsCertificateInner]<P>>`, where `TbsCertificateInner` is
 /// [x509_cert::certificate::TbsCertificateInner]. This crate also provides an implementation for
 /// `TryFrom<IdCertTbs<T>> for TbsCertificateInner<P>`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdCertTbs<S: Signature, P: PublicKey<S>> {
     /// The certificates' serial number, as issued by the Certificate Authority.
     pub serial_number: Uint,
@@ -68,7 +68,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     /// the [BasicConstraints] "ca" flag set to `true`.
     ///
     /// See [IdCertTbs::new_ca()] when trying to create a new CA certificate for home servers.
-    pub fn new_actor(
+    pub fn from_actor_csr(
         id_csr: IdCsr<S, P>,
         serial_number: Uint,
         signature_algorithm: AlgorithmIdentifierOwned,
@@ -107,7 +107,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     /// the [BasicConstraints] "ca" flag set to `false`.
     ///
     /// See [IdCertTbs::new_actor()] when trying to create a new actor certificate.
-    pub fn new_ca(
+    pub fn from_ca_csr(
         id_csr: IdCsr<S, P>,
         serial_number: Uint,
         signature_algorithm: AlgorithmIdentifierOwned,
