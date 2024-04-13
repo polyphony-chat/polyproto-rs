@@ -83,7 +83,26 @@ impl TryFrom<Attribute> for KeyUsages {
     type Error = InvalidInput;
 
     fn try_from(value: Attribute) -> Result<Self, Self::Error> {
-        todo!()
+        if value.tag() != Tag::BitString {
+            return Err(InvalidInput::IncompatibleVariantForConversion {
+                reason: format!("Expected BitString, found {}", value.tag()),
+            });
+        }
+        match value.values.len() {
+            0 => return Ok(KeyUsages::new(&[])),
+            1 => (),
+            _ => {
+                return Err(InvalidInput::ConstraintError(
+                    ConstraintError::OutOfBounds {
+                        lower: 0,
+                        upper: 1,
+                        actual: value.values.len().to_string(),
+                        reason: Some("Too many values to be a valid KeyUsages value".to_string()),
+                    },
+                ))
+            }
+        };
+        let inner_value = value.values.get(0).expect("Illegal state. Please report this error to https://github.com/polyphony-chat/polyproto");
     }
 }
 
