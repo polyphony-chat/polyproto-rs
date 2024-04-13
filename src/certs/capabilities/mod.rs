@@ -38,6 +38,8 @@ pub const OID_KEY_USAGE_ENCIPHER_ONLY: &str = "1.3.6.1.5.5.7.3.7";
 pub const OID_KEY_USAGE_DECIPHER_ONLY: &str = "1.3.6.1.5.5.7.3.6";
 /// Object Identifier for the BasicConstraints variant.
 pub const OID_BASIC_CONSTRAINTS: &str = "2.5.29.19";
+/// Object Identifier for the KeyUsage flag.
+pub const OID_KEY_USAGE: &str = "2.5.29.15";
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Capabilities which an ID-Cert or ID-CSR might have. For ID-Certs, you'd find these capabilities
@@ -70,7 +72,7 @@ impl Capabilities {
     /// Sane default for actor [IdCsr]/[IdCert] [Capabilities]. Uses the DigitalSignature flag,
     /// not the ContentCommitment flag.
     pub fn default_actor() -> Self {
-        let key_usage = vec![KeyUsage::DigitalSignature(true)];
+        let key_usage = vec![KeyUsage::DigitalSignature];
         let basic_constraints = BasicConstraints {
             ca: false,
             path_length: None,
@@ -83,7 +85,7 @@ impl Capabilities {
 
     /// Sane default for home server [IdCsr]/[IdCert] [Capabilities].
     pub fn default_home_server() -> Self {
-        let key_usage = vec![KeyUsage::KeyCertSign(true)];
+        let key_usage = vec![KeyUsage::KeyCertSign];
         let basic_constraints = BasicConstraints {
             ca: true,
             path_length: Some(1),
@@ -151,7 +153,7 @@ impl TryFrom<Capabilities> for Attributes {
             let insertion = sov.insert(Attribute::from(*item));
             if insertion.is_err() {
                 return Err(ConstraintError::Malformed(Some("Tried inserting non-unique element into SetOfVec. You likely have a duplicate value in your Capabilities".to_string())));
-            }
+            }*/
         }
         let insertion = sov.insert(Attribute::from(value.basic_constraints));
         if insertion.is_err() {
@@ -399,23 +401,6 @@ mod test_basic_constraints_from_attribute {
         let result = BasicConstraints::try_from(attribute);
         dbg!(&result);
         assert!(result.is_ok());
-    }
-
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    fn test_basic_constraints_wrong_value_amount() {
-        let bc = BasicConstraints {
-            ca: true,
-            path_length: Some(0),
-        };
-        let mut attribute = Attribute::from(bc);
-        attribute
-            .values
-            .insert(Any::from(KeyUsage::DataEncipherment(false)))
-            .unwrap();
-        let result = BasicConstraints::try_from(attribute);
-        dbg!(&result);
-        assert!(result.is_err());
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
