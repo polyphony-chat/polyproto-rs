@@ -6,8 +6,10 @@ use der::Length;
 use x509_cert::name::Name;
 
 use crate::certs::capabilities::{Capabilities, KeyUsage};
+use crate::certs::idcert::IdCert;
+use crate::certs::idcerttbs::IdCertTbs;
 use crate::certs::idcsr::IdCsr;
-use crate::certs::SessionId;
+use crate::certs::{equal_domain_components, SessionId};
 use crate::errors::base::ConstraintError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
@@ -210,6 +212,45 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
     fn validate(&self) -> Result<(), ConstraintError> {
         self.inner_csr.capabilities.validate()?;
         self.inner_csr.subject.validate()?;
+        Ok(())
+    }
+}
+
+impl<S: Signature, P: PublicKey<S>> Constrained for IdCert<S, P> {
+    fn validate(&self) -> Result<(), ConstraintError> {
+        self.id_cert_tbs.validate()?;
+        match self.id_cert_tbs.subject_public_key_info.verify_signature(
+            &self.signature,
+            match &self.id_cert_tbs.clone().to_der() {
+                Ok(data) => data,
+                Err(_) => {
+                    return Err(ConstraintError::Malformed(Some(
+                        "DER conversion failure when converting inner IdCertTbs to DER".to_string(),
+                    )));
+                }
+            },
+        ) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(ConstraintError::Malformed(Some(
+                "Provided signature does not match computed signature".to_string(),
+            ))),
+        }
+    }
+}
+
+impl<S: Signature, P: PublicKey<S>> Constrained for IdCertTbs<S, P> {
+    fn validate(&self) -> Result<(), ConstraintError> {
+        self.capabilities.validate()?;
+        self.issuer.validate()?;
+        self.subject.validate()?;
+        match equal_domain_components(&self.issuer, &self.subject) {
+            true => (),
+            false => {
+                return Err(ConstraintError::Malformed(Some(
+                    "Domain components of issuer and subject are not equal".to_string(),
+                )))
+            }
+        }
         Ok(())
     }
 }
