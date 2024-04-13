@@ -45,10 +45,10 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         id_csr: IdCsr<S, P>,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
         serial_number: Uint,
-        signature_algorithm: AlgorithmIdentifierOwned,
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, IdCertError> {
+        let signature_algorithm = signing_key.algorithm_identifier();
         let id_cert_tbs =
             IdCertTbs::from_ca_csr(id_csr, serial_number, signature_algorithm, issuer, validity)?;
         let signature = signing_key.sign(&id_cert_tbs.clone().to_der()?);
@@ -68,10 +68,10 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         id_csr: IdCsr<S, P>,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
         serial_number: Uint,
-        signature_algorithm: AlgorithmIdentifierOwned,
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, IdCertError> {
+        let signature_algorithm = signing_key.algorithm_identifier();
         let id_cert_tbs = IdCertTbs::from_actor_csr(
             id_csr,
             serial_number,
