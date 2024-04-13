@@ -153,7 +153,7 @@ impl TryFrom<Capabilities> for Attributes {
             let insertion = sov.insert(Attribute::from(*item));
             if insertion.is_err() {
                 return Err(ConstraintError::Malformed(Some("Tried inserting non-unique element into SetOfVec. You likely have a duplicate value in your Capabilities".to_string())));
-            }*/
+            }
         }
         let insertion = sov.insert(Attribute::from(value.basic_constraints));
         if insertion.is_err() {
