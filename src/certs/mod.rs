@@ -6,8 +6,9 @@ use std::ops::{Deref, DerefMut};
 
 use der::asn1::{BitString, Ia5String};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
+use x509_cert::name::Name;
 
-use crate::{Constrained, ConstraintError};
+use crate::{Constrained, ConstraintError, OID_RDN_DOMAIN_COMPONENT};
 
 /// Additional capabilities ([x509_cert::ext::Extensions] or [x509_cert::attr::Attributes], depending
 /// on the context) of X.509 certificates.
@@ -108,5 +109,65 @@ impl From<PublicKeyInfo> for SubjectPublicKeyInfoOwned {
             algorithm: value.algorithm,
             subject_public_key: value.public_key_bitstring,
         }
+    }
+}
+
+pub fn equal_domain_components(name_1: &Name, name_2: &Name) -> bool {
+    let mut domain_components_1 = Vec::new();
+    let mut domain_components_2 = Vec::new();
+    for (component_1, component_2) in name_1.0.iter().zip(name_2.0.iter()) {
+        for subcomponent_1 in component_1.0.iter() {
+            if subcomponent_1.oid.to_string().as_str() == OID_RDN_DOMAIN_COMPONENT {
+                domain_components_1.push(subcomponent_1);
+            }
+        }
+        for subcomponent_2 in component_2.0.iter() {
+            if subcomponent_2.oid.to_string().as_str() == OID_RDN_DOMAIN_COMPONENT {
+                domain_components_2.push(subcomponent_2);
+            }
+        }
+    }
+    domain_components_1 == domain_components_2
+}
+
+#[cfg(test)]
+mod test {
+    use std::str::FromStr;
+
+    use x509_cert::name::RdnSequence;
+
+    use super::*;
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_equal_domain_components_eq() {
+        #[allow(clippy::unwrap_used)]
+        let rdn_1 = RdnSequence::from_str(
+            "CN=root,OU=programmer,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
+        )
+        .unwrap();
+
+        #[allow(clippy::unwrap_used)]
+        let rdn_2 = RdnSequence::from_str(
+            "CN=user1,DC=www,DC=polyphony,DC=chat,UID=user1@polyphony.chat,uniqueIdentifier=user1",
+        )
+        .unwrap();
+        assert!(equal_domain_components(&rdn_1, &rdn_2));
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_equal_domain_components_ne() {
+        #[allow(clippy::unwrap_used)]
+        let rdn_1 = RdnSequence::from_str(
+            "CN=root,OU=programmer,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
+        )
+        .unwrap();
+
+        #[allow(clippy::unwrap_used)]
+        let rdn_2 = RdnSequence::from_str(
+            "CN=user1,DC=proto,DC=polyphony,DC=chat,UID=user1@polyphony.chat,uniqueIdentifier=user1",
+        )
+        .unwrap();
+        assert!(!equal_domain_components(&rdn_1, &rdn_2));
     }
 }
