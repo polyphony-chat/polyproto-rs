@@ -65,10 +65,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     ) -> Result<IdCsr<S, P>, IdCsrError> {
         subject.validate()?;
         let inner_csr = IdCsrInner::<S, P>::new(subject, signing_key.pubkey(), capabilities)?;
-        let cert_req_info = CertReqInfo::try_from(inner_csr)?;
-        let signature = signing_key.sign(&cert_req_info.to_der()?);
-        let inner_csr = IdCsrInner::<S, P>::try_from(cert_req_info)?;
-
+        let signature = signing_key.sign(&inner_csr.clone().to_der()?);
         let signature_algorithm = S::algorithm_identifier();
 
         Ok(IdCsr {
