@@ -36,6 +36,7 @@ impl Constrained for Name {
         for rdn in rdns.iter() {
             for item in rdn.0.iter() {
                 match item.oid.to_string().as_str() {
+                    // TODO: Replace OID strs with consts from lib.rs
                     "0.9.2342.19200300.100.1.1" => num_uid += 1,
                     "0.9.2342.19200300.100.1.44" => {
                         num_unique_identifier += 1;
