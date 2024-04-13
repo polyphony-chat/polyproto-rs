@@ -51,7 +51,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         validity: Validity,
     ) -> Result<Self, IdCertError> {
         let signature_algorithm = signing_key.algorithm_identifier();
-        issuer.validate()?;
+        issuer.validate()?; // TODO: Maybe this and the below validation should be done in IdCertTbs?
         if !equal_domain_components(&id_csr.inner_csr.subject, &issuer) {
             return Err(IdCertError::ConstraintError(
                 crate::errors::base::ConstraintError::Malformed(Some(
