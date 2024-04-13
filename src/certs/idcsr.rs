@@ -4,7 +4,6 @@
 
 use std::marker::PhantomData;
 
-use der::asn1::BitString;
 use der::{Decode, Encode};
 use spki::AlgorithmIdentifierOwned;
 use x509_cert::attr::Attributes;
@@ -33,16 +32,16 @@ use super::{PkcsVersion, PublicKeyInfo};
 ///     signature          BIT STRING
 /// }
 /// ```
-pub struct IdCsr<S: Signature> {
+pub struct IdCsr<S: Signature, P: PublicKey<S>> {
     /// The CSRs main contents.
-    pub inner_csr: IdCsrInner<S>,
+    pub inner_csr: IdCsrInner<S, P>,
     /// The signature algorithm, with which the [Signature] was created.
     pub signature_algorithm: AlgorithmIdentifierOwned,
     /// [Signature] value for the `inner_csr`
     pub signature: S,
 }
 
-impl<S: Signature> IdCsr<S> {
+impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// Performs basic input validation and creates a new polyproto ID-Cert CSR, according to
     /// PKCS#10. The CSR is being signed using the subjects' supplied signing key ([PrivateKey])
     ///
@@ -61,15 +60,12 @@ impl<S: Signature> IdCsr<S> {
     ///                          in length.
     pub fn new(
         subject: &Name,
-        signing_key: &impl PrivateKey<S>,
+        signing_key: &impl PrivateKey<S, PublicKey = P>,
         capabilities: &Capabilities,
-    ) -> Result<IdCsr<S>, IdCsrError> {
+    ) -> Result<IdCsr<S, P>, IdCsrError> {
         subject.validate()?;
-        let inner_csr = IdCsrInner::<S>::new(subject, signing_key.pubkey(), capabilities)?;
-        let cert_req_info = CertReqInfo::try_from(inner_csr)?;
-        let signature = signing_key.sign(&cert_req_info.to_der()?);
-        let inner_csr = IdCsrInner::<S>::try_from(cert_req_info)?;
-
+        let inner_csr = IdCsrInner::<S, P>::new(subject, signing_key.pubkey(), capabilities)?;
+        let signature = signing_key.sign(&inner_csr.clone().to_der()?);
         let signature_algorithm = S::algorithm_identifier();
 
         Ok(IdCsr {
@@ -88,6 +84,7 @@ impl<S: Signature> IdCsr<S> {
     /// [crate::key::PublicKey::verify_signature] method. If you do not have the public key as a
     /// `dyn PublicKey`, you can use the [crate::key::PublicKey::from_public_key_info] method to
     /// create a `dyn PublicKey` from the [PublicKeyInfo] in the [IdCsrInner].
+    /// TODO: We can change this now
     pub fn valid_actor_csr(&self) -> Result<(), ConstraintError> {
         self.inner_csr.subject.validate()?;
         self.inner_csr.capabilities.validate()?;
@@ -108,6 +105,7 @@ impl<S: Signature> IdCsr<S> {
     /// [crate::key::PublicKey::verify_signature] method. If you do not have the public key as a
     /// `dyn PublicKey`, you can use the [crate::key::PublicKey::from_public_key_info] method to
     /// create a `dyn PublicKey` from the [PublicKeyInfo] in the [IdCsrInner].
+    /// TODO: We can change this now
     pub fn valid_home_server_csr(&self) -> Result<(), ConstraintError> {
         self.inner_csr.subject.validate()?;
         self.inner_csr.capabilities.validate()?;
@@ -141,39 +139,33 @@ impl<S: Signature> IdCsr<S> {
 /// }
 /// ```
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct IdCsrInner<S: Signature> {
+pub struct IdCsrInner<S: Signature, P: PublicKey<S>> {
     /// `PKCS#10` version. Default: 0 for `PKCS#10` v1
     pub version: PkcsVersion,
     /// Information about the subject (actor).
     pub subject: Name,
     /// The subjects' public key and related metadata.
-    pub subject_public_key_info: PublicKeyInfo,
+    pub subject_public_key_info: P,
     /// attributes is a collection of attributes providing additional
     /// information about the subject of the certificate.
     pub capabilities: Capabilities,
     phantom_data: PhantomData<S>,
 }
 
-impl<S: Signature> IdCsrInner<S> {
+impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
     /// Creates a new [IdCsrInner].
     ///
     /// Fails, if [Name] or [Capabilities] do not meet polyproto validation criteria.
     pub fn new(
         subject: &Name,
-        public_key: &impl PublicKey<S>,
+        public_key: &P,
         capabilities: &Capabilities,
-    ) -> Result<IdCsrInner<S>, IdCsrInnerError> {
+    ) -> Result<IdCsrInner<S, P>, IdCsrInnerError> {
         subject.validate()?;
         capabilities.validate()?;
 
-        let subject_public_key_info = PublicKeyInfo {
-            algorithm: public_key.public_key_info().algorithm,
-            public_key_bitstring: BitString::from_der(
-                &public_key.public_key_info().public_key_bitstring.to_der()?,
-            )?,
-        };
-
         let subject = subject.clone();
+        let subject_public_key_info = public_key.clone();
 
         Ok(IdCsrInner {
             version: PkcsVersion::V1,
@@ -195,7 +187,7 @@ impl<S: Signature> IdCsrInner<S> {
     }
 }
 
-impl<S: Signature> TryFrom<CertReq> for IdCsr<S> {
+impl<S: Signature, P: PublicKey<S>> TryFrom<CertReq> for IdCsr<S, P> {
     type Error = IdCsrError;
 
     fn try_from(value: CertReq) -> Result<Self, Self::Error> {
@@ -208,13 +200,13 @@ impl<S: Signature> TryFrom<CertReq> for IdCsr<S> {
     }
 }
 
-impl<S: Signature> TryFrom<CertReqInfo> for IdCsrInner<S> {
+impl<S: Signature, P: PublicKey<S>> TryFrom<CertReqInfo> for IdCsrInner<S, P> {
     type Error = IdCsrInnerError;
 
     fn try_from(value: CertReqInfo) -> Result<Self, Self::Error> {
         let rdn_sequence = value.subject;
         rdn_sequence.validate()?;
-        let public_key = PublicKeyInfo {
+        let public_key_info = PublicKeyInfo {
             algorithm: value.public_key.algorithm,
             public_key_bitstring: value.public_key.subject_public_key,
         };
@@ -222,17 +214,17 @@ impl<S: Signature> TryFrom<CertReqInfo> for IdCsrInner<S> {
         Ok(IdCsrInner {
             version: PkcsVersion::V1,
             subject: rdn_sequence,
-            subject_public_key_info: public_key,
+            subject_public_key_info: PublicKey::from_public_key_info(public_key_info),
             capabilities: Capabilities::try_from(value.attributes)?,
             phantom_data: PhantomData,
         })
     }
 }
 
-impl<S: Signature> TryFrom<IdCsr<S>> for CertReq {
+impl<S: Signature, P: PublicKey<S>> TryFrom<IdCsr<S, P>> for CertReq {
     type Error = IdCsrError;
 
-    fn try_from(value: IdCsr<S>) -> Result<Self, Self::Error> {
+    fn try_from(value: IdCsr<S, P>) -> Result<Self, Self::Error> {
         Ok(CertReq {
             info: value.inner_csr.try_into()?,
             algorithm: value.signature_algorithm,
@@ -241,13 +233,13 @@ impl<S: Signature> TryFrom<IdCsr<S>> for CertReq {
     }
 }
 
-impl<S: Signature> TryFrom<IdCsrInner<S>> for CertReqInfo {
+impl<S: Signature, P: PublicKey<S>> TryFrom<IdCsrInner<S, P>> for CertReqInfo {
     type Error = IdCsrInnerError;
-    fn try_from(value: IdCsrInner<S>) -> Result<Self, Self::Error> {
+    fn try_from(value: IdCsrInner<S, P>) -> Result<Self, Self::Error> {
         Ok(CertReqInfo {
             version: x509_cert::request::Version::V1,
             subject: value.subject,
-            public_key: value.subject_public_key_info.into(),
+            public_key: value.subject_public_key_info.public_key_info().into(),
             attributes: Attributes::try_from(value.capabilities)?,
         })
     }

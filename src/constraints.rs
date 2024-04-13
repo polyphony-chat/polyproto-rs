@@ -9,6 +9,7 @@ use crate::certs::capabilities::{Capabilities, KeyUsage};
 use crate::certs::idcsr::IdCsr;
 use crate::certs::SessionId;
 use crate::errors::base::ConstraintError;
+use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::Constrained;
 
@@ -204,7 +205,7 @@ impl Constrained for Capabilities {
     }
 }
 
-impl<S: Signature> Constrained for IdCsr<S> {
+impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
     fn validate(&self) -> Result<(), ConstraintError> {
         self.inner_csr.capabilities.validate()?;
         self.inner_csr.subject.validate()?;

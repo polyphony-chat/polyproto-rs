@@ -27,7 +27,7 @@ use x509_cert::request::CertReq;
 /// If you have openssl installed, you can inspect the CSR by running:
 ///
 /// ```sh
-/// openssl req -in cert.csr -verify
+/// openssl req -in cert.csr -verify -inform der
 /// ```
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -39,16 +39,15 @@ fn main() {
     println!("Public Key is: {:?}", priv_key.public_key.key.to_bytes());
     println!();
 
-    let _csr = polyproto::certs::idcsr::IdCsr::new(
+    let csr = polyproto::certs::idcsr::IdCsr::new(
         &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
         &priv_key,
         &Capabilities::default_actor(),
     )
     .unwrap();
 
-    let certrequest = CertReq::from(_csr.try_into().unwrap());
-    println!("Certrequest der bytes: {:?}", certrequest.to_der().unwrap());
-    let data = certrequest.to_der().unwrap();
+    let data = csr.to_der().unwrap();
+    dbg!(&data);
     let file_name_with_extension = "cert.csr";
     #[cfg(not(target_arch = "wasm32"))]
     std::fs::write(file_name_with_extension, &data).unwrap();
@@ -159,20 +158,16 @@ struct Ed25519PublicKey {
 }
 
 impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
-    // We have to define an error type. The error type is used to signal that the signature
-    // verification failed. We define it as a simple enum using the `thiserror` crate.
-    type Error = Error;
-
     // Verifies a signature. We use the `verify_strict` method from the ed25519-dalek crate.
     // This method is used to mitigate weak key forgery.
     fn verify_signature(
         &self,
         signature: &Ed25519Signature,
         data: &[u8],
-    ) -> Result<(), Self::Error> {
+    ) -> Result<(), polyproto::errors::composite::PublicKeyError> {
         match self.key.verify_strict(data, signature.as_signature()) {
             Ok(_) => Ok(()),
-            Err(_) => Err(Error::SignatureVerification),
+            Err(_) => Err(polyproto::errors::composite::PublicKeyError::BadSignature),
         }
     }
 
@@ -199,10 +194,4 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
             key: VerifyingKey::from_bytes(&signature_array).unwrap(),
         }
     }
-}
-
-#[derive(Error, Debug, Clone)]
-enum Error {
-    #[error("The signature failed to verify")]
-    SignatureVerification,
 }

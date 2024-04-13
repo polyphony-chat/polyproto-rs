@@ -3,17 +3,22 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use der::asn1::Uint;
+use der::{Decode, Encode};
 use spki::AlgorithmIdentifierOwned;
 use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
 use x509_cert::name::Name;
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
+use x509_cert::TbsCertificate;
 
-use crate::errors::composite::{IdCertToTbsCert, TbsCertToIdCert};
+use crate::errors::composite::{IdCertTbsError, IdCertToTbsCert, TbsCertToIdCert};
+use crate::key::PublicKey;
+use crate::signature::Signature;
 use crate::Constrained;
 
 use super::capabilities::Capabilities;
+use super::idcsr::IdCsr;
 use super::PublicKeyInfo;
 
 /// An unsigned polyproto ID-Cert.
@@ -36,12 +41,11 @@ use super::PublicKeyInfo;
 /// `IdCertTbs` implements `TryFrom<[TbsCertificateInner]<P>>`, where `TbsCertificateInner` is
 /// [x509_cert::certificate::TbsCertificateInner]. This crate also provides an implementation for
 /// `TryFrom<IdCertTbs<T>> for TbsCertificateInner<P>`.
-#[derive(Debug, PartialEq, Eq)]
-pub struct IdCertTbs {
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct IdCertTbs<S: Signature, P: PublicKey<S>> {
     /// The certificates' serial number, as issued by the Certificate Authority.
     pub serial_number: Uint,
     /// The signature algorithm used by the Certificate Authority to sign this certificate.
-    /// Must be equal to `T` in `IdCert<S: Signature, T: SignatureAlgorithm>`.
     pub signature_algorithm: AlgorithmIdentifierOwned,
     /// X.501 name, identifying the issuer of the certificate.
     pub issuer: Name,
@@ -50,12 +54,105 @@ pub struct IdCertTbs {
     /// X.501 name, identifying the subject (actor) of the certificate.
     pub subject: Name,
     /// Information regarding the subjects' public key.
-    pub subject_public_key_info: PublicKeyInfo,
+    pub subject_public_key_info: P,
     /// X.509 Extensions matching what is described in the polyproto specification document.
     pub capabilities: Capabilities,
+    /// PhantomData
+    s: std::marker::PhantomData<S>,
 }
 
-impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
+impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
+    /// Create a new [IdCertTbs] by passing an [IdCsr] and other supplementary information. Returns
+    /// an error, if the provided IdCsr or issuer [Name] do not pass [Constrained] verification,
+    /// i.e. if they are not up to polyproto specification. Also fails if the provided IdCsr has
+    /// the [BasicConstraints] "ca" flag set to `true`.
+    ///
+    /// See [IdCertTbs::from_ca_csr()] when trying to create a new CA certificate for home servers.
+    pub fn from_actor_csr(
+        id_csr: IdCsr<S, P>,
+        serial_number: Uint,
+        signature_algorithm: AlgorithmIdentifierOwned,
+        issuer: Name,
+        validity: Validity,
+    ) -> Result<Self, IdCertTbsError> {
+        if id_csr.inner_csr.capabilities.basic_constraints.ca {
+            return Err(IdCertTbsError::ConstraintError(
+                crate::errors::base::ConstraintError::Malformed(Some(
+                    "Actor ID-Cert cannot have \"CA\" BasicConstraint set to true".to_string(),
+                )),
+            ));
+        }
+        id_csr.validate()?;
+        issuer.validate()?;
+        // Verify if signature of IdCsr matches contents
+        id_csr.inner_csr.subject_public_key_info.verify_signature(
+            &id_csr.signature,
+            id_csr.inner_csr.clone().to_der()?.as_slice(),
+        )?;
+        Ok(IdCertTbs {
+            serial_number,
+            signature_algorithm,
+            issuer,
+            validity,
+            subject: id_csr.inner_csr.subject,
+            subject_public_key_info: id_csr.inner_csr.subject_public_key_info,
+            capabilities: id_csr.inner_csr.capabilities,
+            s: std::marker::PhantomData,
+        })
+    }
+
+    /// Create a new [IdCertTbs] by passing an [IdCsr] and other supplementary information. Returns
+    /// an error, if the provided IdCsr or issuer [Name] do not pass [Constrained] verification,
+    /// i.e. if they are not up to polyproto specification. Also fails if the provided IdCsr has
+    /// the [BasicConstraints] "ca" flag set to `false`.
+    ///
+    /// See [IdCertTbs::from_actor_csr()] when trying to create a new actor certificate.
+    pub fn from_ca_csr(
+        id_csr: IdCsr<S, P>,
+        serial_number: Uint,
+        signature_algorithm: AlgorithmIdentifierOwned,
+        issuer: Name,
+        validity: Validity,
+    ) -> Result<Self, IdCertTbsError> {
+        if !id_csr.inner_csr.capabilities.basic_constraints.ca {
+            return Err(IdCertTbsError::ConstraintError(
+                crate::errors::base::ConstraintError::Malformed(Some(
+                    "CA ID-Cert must have \"CA\" BasicConstraint set to true".to_string(),
+                )),
+            ));
+        }
+        id_csr.validate()?;
+        // Verify if signature of IdCsr matches contents
+        id_csr.inner_csr.subject_public_key_info.verify_signature(
+            &id_csr.signature,
+            id_csr.inner_csr.clone().to_der()?.as_slice(),
+        )?;
+        Ok(IdCertTbs {
+            serial_number,
+            signature_algorithm,
+            issuer,
+            validity,
+            subject: id_csr.inner_csr.subject,
+            subject_public_key_info: id_csr.inner_csr.subject_public_key_info,
+            capabilities: id_csr.inner_csr.capabilities,
+            s: std::marker::PhantomData,
+        })
+    }
+
+    /// Encode this type as DER, returning a byte vector.
+    pub fn to_der(self) -> Result<Vec<u8>, IdCertTbsError> {
+        Ok(TbsCertificate::try_from(self)?.to_der()?)
+    }
+
+    /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
+    pub fn from_der(bytes: &[u8]) -> Result<Self, TbsCertToIdCert> {
+        IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)
+    }
+}
+
+impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
+    for IdCertTbs<S, Q>
+{
     type Error = TbsCertToIdCert;
 
     fn try_from(value: TbsCertificateInner<P>) -> Result<Self, Self::Error> {
@@ -65,15 +162,15 @@ impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
             Some(ext) => Capabilities::try_from(ext)?,
             None => return Err(TbsCertToIdCert::Extensions),
         };
-
-        let subject_public_key_info = PublicKeyInfo::from(value.subject_public_key_info);
+        let subject_public_key_info =
+            PublicKey::from_public_key_info(PublicKeyInfo::from(value.subject_public_key_info));
 
         let serial_number = match Uint::new(value.serial_number.as_bytes()) {
             Ok(snum) => snum,
             Err(e) => return Err(TbsCertToIdCert::Signature(e)),
         };
 
-        Ok(IdCertTbs {
+        Ok(Self {
             serial_number,
             signature_algorithm: value.signature,
             issuer: value.issuer,
@@ -81,14 +178,17 @@ impl<P: Profile> TryFrom<TbsCertificateInner<P>> for IdCertTbs {
             subject: value.subject,
             subject_public_key_info,
             capabilities,
+            s: std::marker::PhantomData,
         })
     }
 }
 
-impl<P: Profile> TryFrom<IdCertTbs> for TbsCertificateInner<P> {
+impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<IdCertTbs<S, Q>>
+    for TbsCertificateInner<P>
+{
     type Error = IdCertToTbsCert;
 
-    fn try_from(value: IdCertTbs) -> Result<Self, Self::Error> {
+    fn try_from(value: IdCertTbs<S, Q>) -> Result<Self, Self::Error> {
         let serial_number = match SerialNumber::<P>::new(value.serial_number.as_bytes()) {
             Ok(sernum) => sernum,
             Err(e) => return Err(IdCertToTbsCert::SerialNumber(e)),
@@ -106,10 +206,10 @@ impl<P: Profile> TryFrom<IdCertTbs> for TbsCertificateInner<P> {
             issuer: value.issuer,
             validity: value.validity,
             subject: value.subject,
-            subject_public_key_info: value.subject_public_key_info.into(),
+            subject_public_key_info: value.subject_public_key_info.public_key_info().into(),
             issuer_unique_id: None,
             subject_unique_id: None,
-            extensions: Some(Extensions::try_from(value.capabilities)?),
+            extensions: Some(Extensions::from(value.capabilities)),
         })
     }
 }

@@ -20,6 +20,14 @@ pub enum TbsCertToIdCert {
     ConstraintError(#[from] ConstraintError),
     #[error(transparent)]
     InvalidInput(#[from] InvalidInput),
+    #[error("Encounter DER encoding error")]
+    DerError(der::Error),
+}
+
+impl From<der::Error> for TbsCertToIdCert {
+    fn from(value: der::Error) -> Self {
+        Self::DerError(value)
+    }
 }
 
 /// Error type covering possible failures when converting a [crate::cert::IdCertTbs]
@@ -103,6 +111,54 @@ pub enum IdCsrInnerError {
 }
 
 impl From<der::Error> for IdCsrInnerError {
+    fn from(value: der::Error) -> Self {
+        Self::DerError(value)
+    }
+}
+
+#[derive(Error, Debug, PartialEq, Hash, Clone)]
+pub enum PublicKeyError {
+    #[error("The signature does not match the data")]
+    BadSignature,
+    #[error("The provided PublicKeyInfo could not be made into a PublicKey")]
+    BadPublicKeyInfo,
+}
+
+#[derive(Error, Debug, PartialEq, Clone)]
+pub enum IdCertTbsError {
+    #[error(transparent)]
+    PublicKeyError(#[from] PublicKeyError),
+    #[error(transparent)]
+    ConstraintError(#[from] ConstraintError),
+    #[error(transparent)]
+    IdCsrInnerError(#[from] IdCsrInnerError),
+    #[error(transparent)]
+    IdCertToTbsCert(#[from] IdCertToTbsCert),
+    #[error("Encountered DER encoding error")]
+    DerError(der::Error),
+}
+
+impl From<der::Error> for IdCertTbsError {
+    fn from(value: der::Error) -> Self {
+        Self::DerError(value)
+    }
+}
+
+#[derive(Error, Debug, PartialEq, Clone)]
+pub enum IdCertError {
+    #[error(transparent)]
+    PublicKeyError(#[from] PublicKeyError),
+    #[error("Encountered DER encoding error")]
+    DerError(der::Error),
+    #[error(transparent)]
+    IdCertTbsError(#[from] IdCertTbsError),
+    #[error(transparent)]
+    IdCertToTbsCert(#[from] IdCertToTbsCert),
+    #[error(transparent)]
+    TbsCertToIdCert(#[from] TbsCertToIdCert),
+}
+
+impl From<der::Error> for IdCertError {
     fn from(value: der::Error) -> Self {
         Self::DerError(value)
     }
