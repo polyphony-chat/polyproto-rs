@@ -67,7 +67,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     /// i.e. if they are not up to polyproto specification. Also fails if the provided IdCsr has
     /// the [BasicConstraints] "ca" flag set to `true`.
     ///
-    /// See [IdCertTbs::new_ca()] when trying to create a new CA certificate for home servers.
+    /// See [IdCertTbs::from_ca_csr()] when trying to create a new CA certificate for home servers.
     pub fn from_actor_csr(
         id_csr: IdCsr<S, P>,
         serial_number: Uint,
@@ -106,7 +106,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     /// i.e. if they are not up to polyproto specification. Also fails if the provided IdCsr has
     /// the [BasicConstraints] "ca" flag set to `false`.
     ///
-    /// See [IdCertTbs::new_actor()] when trying to create a new actor certificate.
+    /// See [IdCertTbs::from_actor_csr()] when trying to create a new actor certificate.
     pub fn from_ca_csr(
         id_csr: IdCsr<S, P>,
         serial_number: Uint,
