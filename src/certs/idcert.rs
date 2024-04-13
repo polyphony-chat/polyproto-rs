@@ -11,7 +11,9 @@ use x509_cert::Certificate;
 use crate::errors::composite::IdCertError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
+use crate::Constrained;
 
+use super::equal_domain_components;
 use super::idcerttbs::IdCertTbs;
 use super::idcsr::IdCsr;
 
@@ -49,6 +51,14 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         validity: Validity,
     ) -> Result<Self, IdCertError> {
         let signature_algorithm = signing_key.algorithm_identifier();
+        issuer.validate()?;
+        if !equal_domain_components(&id_csr.inner_csr.subject, &issuer) {
+            return Err(IdCertError::ConstraintError(
+                crate::errors::base::ConstraintError::Malformed(Some(
+                    "Domain components of the issuer and the subject do not match".to_string(),
+                )),
+            ));
+        }
         let id_cert_tbs =
             IdCertTbs::from_ca_csr(id_csr, serial_number, signature_algorithm, issuer, validity)?;
         let signature = signing_key.sign(&id_cert_tbs.clone().to_der()?);
@@ -72,6 +82,14 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         validity: Validity,
     ) -> Result<Self, IdCertError> {
         let signature_algorithm = signing_key.algorithm_identifier();
+        issuer.validate()?;
+        if !equal_domain_components(&id_csr.inner_csr.subject, &issuer) {
+            return Err(IdCertError::ConstraintError(
+                crate::errors::base::ConstraintError::Malformed(Some(
+                    "Domain components of the issuer and the subject do not match".to_string(),
+                )),
+            ));
+        }
         let id_cert_tbs = IdCertTbs::from_actor_csr(
             id_csr,
             serial_number,

@@ -156,6 +156,8 @@ pub enum IdCertError {
     IdCertToTbsCert(#[from] IdCertToTbsCert),
     #[error(transparent)]
     TbsCertToIdCert(#[from] TbsCertToIdCert),
+    #[error(transparent)]
+    ConstraintError(#[from] ConstraintError),
 }
 
 impl From<der::Error> for IdCertError {
