@@ -67,7 +67,6 @@ fn main() {
         csr,
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
-        priv_key.algorithm_identifier(),
         RdnSequence::from_str(
             "CN=root,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
         )
