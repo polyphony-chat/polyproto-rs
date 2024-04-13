@@ -5,7 +5,7 @@
 use der::Length;
 use x509_cert::name::Name;
 
-use crate::certs::capabilities::{Capabilities, KeyUsage};
+use crate::certs::capabilities::{Capabilities, KeyUsage, KeyUsages};
 use crate::certs::idcert::IdCert;
 use crate::certs::idcerttbs::IdCertTbs;
 use crate::certs::idcsr::IdCsr;

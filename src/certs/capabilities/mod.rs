@@ -50,7 +50,7 @@ pub const OID_KEY_USAGE: &str = "2.5.29.15";
 /// are relevant to polyproto certificates.
 pub struct Capabilities {
     /// The key usage extension defines the purpose of the key contained in the certificate.
-    pub key_usage: Vec<KeyUsage>,
+    pub key_usage: Vec<KeyUsages>,
     /// Extension type that defines whether a given certificate is allowed
     /// to sign additional certificates and what path length restrictions may exist.
     pub basic_constraints: BasicConstraints,
@@ -107,7 +107,7 @@ impl TryFrom<Attributes> for Capabilities {
     /// to ensure that the constraints are valid according to the X.509 standard and the polyproto
     /// specification.
     fn try_from(value: Attributes) -> Result<Self, Self::Error> {
-        let mut key_usages: Vec<KeyUsage> = Vec::new();
+        let mut key_usages: Vec<KeyUsages> = Vec::new();
         let mut basic_constraints = BasicConstraints::default();
         let mut num_basic_constraints = 0u8;
         for item in value.iter() {
@@ -122,7 +122,7 @@ impl TryFrom<Attributes> for Capabilities {
                 | OID_KEY_USAGE_KEY_AGREEMENT
                 | OID_KEY_USAGE_KEY_CERT_SIGN
                 | OID_KEY_USAGE_KEY_ENCIPHERMENT => {
-                    key_usages.push(KeyUsage::try_from(item.clone())?);
+                    key_usages.push(KeyUsages::try_from(item.clone())?);
                 }
                 OID_BASIC_CONSTRAINTS => {
                     num_basic_constraints += 1;
@@ -189,7 +189,7 @@ impl TryFrom<Extensions> for Capabilities {
     /// these resulting [Capabilities].
     fn try_from(value: Extensions) -> Result<Self, Self::Error> {
         let mut basic_constraints: BasicConstraints = BasicConstraints::default();
-        let mut key_usage: Vec<KeyUsage> = Vec::new();
+        let mut key_usage: Vec<KeyUsages> = Vec::new();
         for item in value.iter() {
             #[allow(unreachable_patterns)] // cargo thinks that we have an unreachable pattern here
             match item.extn_id.to_string().as_str() {
@@ -205,7 +205,7 @@ impl TryFrom<Extensions> for Capabilities {
                 | OID_KEY_USAGE_KEY_AGREEMENT
                 | OID_KEY_USAGE_KEY_CERT_SIGN
                 | OID_KEY_USAGE_KEY_ENCIPHERMENT => {
-                    key_usage.push(KeyUsage::try_from(item.clone())?)
+                    key_usage.push(KeyUsages::try_from(item.clone())?)
                 },
                 _ => return Err(InvalidInput::ConstraintError(ConstraintError::Malformed(Some(format!("Invalid OID found for converting this set of Extensions to Capabilities: {} is not a valid OID for BasicConstraints or KeyUsages", item.extn_id)))))
             };
@@ -225,27 +225,27 @@ mod test {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn test_key_usage_to_object_identifier() {
-        let _ = ObjectIdentifier::from(KeyUsage::DigitalSignature(true));
-        let _ = ObjectIdentifier::from(KeyUsage::CrlSign(true));
-        let _ = ObjectIdentifier::from(KeyUsage::ContentCommitment(true));
-        let _ = ObjectIdentifier::from(KeyUsage::KeyEncipherment(true));
-        let _ = ObjectIdentifier::from(KeyUsage::DataEncipherment(true));
-        let _ = ObjectIdentifier::from(KeyUsage::KeyAgreement(true));
-        let _ = ObjectIdentifier::from(KeyUsage::KeyCertSign(true));
-        let _ = ObjectIdentifier::from(KeyUsage::EncipherOnly(true));
-        let _ = ObjectIdentifier::from(KeyUsage::DecipherOnly(true));
+        let _ = ObjectIdentifier::from(KeyUsages::DigitalSignature(true));
+        let _ = ObjectIdentifier::from(KeyUsages::CrlSign(true));
+        let _ = ObjectIdentifier::from(KeyUsages::ContentCommitment(true));
+        let _ = ObjectIdentifier::from(KeyUsages::KeyEncipherment(true));
+        let _ = ObjectIdentifier::from(KeyUsages::DataEncipherment(true));
+        let _ = ObjectIdentifier::from(KeyUsages::KeyAgreement(true));
+        let _ = ObjectIdentifier::from(KeyUsages::KeyCertSign(true));
+        let _ = ObjectIdentifier::from(KeyUsages::EncipherOnly(true));
+        let _ = ObjectIdentifier::from(KeyUsages::DecipherOnly(true));
     }
 
     fn test_key_usage_to_attribute(val: bool) {
-        let _ = Attribute::from(KeyUsage::DigitalSignature(val));
-        let _ = Attribute::from(KeyUsage::CrlSign(val));
-        let _ = Attribute::from(KeyUsage::ContentCommitment(val));
-        let _ = Attribute::from(KeyUsage::KeyEncipherment(val));
-        let _ = Attribute::from(KeyUsage::DataEncipherment(val));
-        let _ = Attribute::from(KeyUsage::KeyAgreement(val));
-        let _ = Attribute::from(KeyUsage::KeyCertSign(val));
-        let _ = Attribute::from(KeyUsage::EncipherOnly(val));
-        let _ = Attribute::from(KeyUsage::DecipherOnly(val));
+        let _ = Attribute::from(KeyUsages::DigitalSignature(val));
+        let _ = Attribute::from(KeyUsages::CrlSign(val));
+        let _ = Attribute::from(KeyUsages::ContentCommitment(val));
+        let _ = Attribute::from(KeyUsages::KeyEncipherment(val));
+        let _ = Attribute::from(KeyUsages::DataEncipherment(val));
+        let _ = Attribute::from(KeyUsages::KeyAgreement(val));
+        let _ = Attribute::from(KeyUsages::KeyCertSign(val));
+        let _ = Attribute::from(KeyUsages::EncipherOnly(val));
+        let _ = Attribute::from(KeyUsages::DecipherOnly(val));
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -312,9 +312,9 @@ mod test_key_usage_from_attribute {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn test_key_usage_from_attribute() {
-        let key_usage = KeyUsage::ContentCommitment(true);
+        let key_usage = KeyUsages::ContentCommitment(true);
         let attribute = Attribute::from(key_usage);
-        let result = KeyUsage::try_from(attribute);
+        let result = KeyUsages::try_from(attribute);
         dbg!(&result);
         assert!(result.is_ok());
     }
@@ -322,13 +322,13 @@ mod test_key_usage_from_attribute {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn test_key_usage_wrong_value_amount() {
-        let key_usage = KeyUsage::ContentCommitment(true);
+        let key_usage = KeyUsages::ContentCommitment(true);
         let mut attribute = Attribute::from(key_usage);
         attribute
             .values
-            .insert(Any::from(KeyUsage::DataEncipherment(false)))
+            .insert(Any::from(KeyUsages::DataEncipherment(false)))
             .unwrap();
-        let result = KeyUsage::try_from(attribute);
+        let result = KeyUsages::try_from(attribute);
         dbg!(&result);
         assert!(result.is_err());
     }
@@ -343,7 +343,7 @@ mod test_key_usage_from_attribute {
             oid: ObjectIdentifier::from_str(OID_KEY_USAGE_CONTENT_COMMITMENT).unwrap(),
             values: sov,
         };
-        let result = KeyUsage::try_from(attribute);
+        let result = KeyUsages::try_from(attribute);
         dbg!(&result);
         assert!(result.is_err());
     }
@@ -358,7 +358,7 @@ mod test_key_usage_from_attribute {
             oid: ObjectIdentifier::from_str("1.2.4.2.1.1.1.1.1.1.1.1.1.1.161.69").unwrap(),
             values: sov,
         };
-        let result = KeyUsage::try_from(attribute);
+        let result = KeyUsages::try_from(attribute);
         dbg!(&result);
         assert!(result.is_err());
     }
@@ -373,7 +373,7 @@ mod test_key_usage_from_attribute {
             oid: ObjectIdentifier::from_str(OID_KEY_USAGE_CONTENT_COMMITMENT).unwrap(),
             values: sov,
         };
-        let result = KeyUsage::try_from(attribute);
+        let result = KeyUsages::try_from(attribute);
         dbg!(&result);
         assert!(result.is_err());
     }
