@@ -143,3 +143,19 @@ impl From<der::Error> for IdCertTbsError {
         Self::DerError(value)
     }
 }
+
+#[derive(Error, Debug, PartialEq, Clone)]
+pub enum IdCertError {
+    #[error(transparent)]
+    PublicKeyError(#[from] PublicKeyError),
+    #[error("Encountered DER encoding error")]
+    DerError(der::Error),
+    #[error(transparent)]
+    IdCertTbsError(#[from] IdCertTbsError),
+}
+
+impl From<der::Error> for IdCertError {
+    fn from(value: der::Error) -> Self {
+        Self::DerError(value)
+    }
+}
