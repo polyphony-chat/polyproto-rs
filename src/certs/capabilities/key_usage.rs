@@ -79,6 +79,34 @@ impl From<KeyUsages> for BitString {
     }
 }
 
+impl TryFrom<Attribute> for KeyUsages {
+    type Error = InvalidInput;
+
+    fn try_from(value: Attribute) -> Result<Self, Self::Error> {
+        todo!()
+    }
+}
+
+impl TryFrom<Extension> for KeyUsages {
+    type Error = InvalidInput;
+
+    fn try_from(value: Extension) -> Result<Self, Self::Error> {
+        todo!()
+    }
+}
+
+impl From<KeyUsages> for Attribute {
+    fn from(value: KeyUsages) -> Self {
+        todo!()
+    }
+}
+
+impl From<KeyUsages> for Extension {
+    fn from(value: KeyUsages) -> Self {
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
