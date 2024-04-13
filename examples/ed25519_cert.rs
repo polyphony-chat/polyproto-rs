@@ -5,11 +5,13 @@
 #![allow(unused)]
 
 use std::str::FromStr;
+use std::time::Duration;
 
-use der::asn1::{BitString, Ia5String};
+use der::asn1::{BitString, Ia5String, Uint, UtcTime};
 use der::Encode;
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::Capabilities;
+use polyproto::certs::idcert::IdCert;
 use polyproto::certs::PublicKeyInfo;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
@@ -19,6 +21,8 @@ use thiserror::Error;
 use x509_cert::attr::Attributes;
 use x509_cert::name::RdnSequence;
 use x509_cert::request::CertReq;
+use x509_cert::time::{Time, Validity};
+use x509_cert::Certificate;
 
 /// The following example uses the same setup as in ed25519_basic.rs, but in its main method, it
 /// creates a certificate signing request (CSR) and writes it to a file. The CSR is created from a
@@ -28,6 +32,13 @@ use x509_cert::request::CertReq;
 ///
 /// ```sh
 /// openssl req -in cert.csr -verify -inform der
+/// ```
+///
+/// After that, the program creates an ID-Cert from the given ID-CSR. The `cert.der` file can also
+/// be validated using openssl:
+///
+/// ```sh
+/// openssl x509 -in cert.der -text -noout -inform der
 /// ```
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -46,9 +57,33 @@ fn main() {
     )
     .unwrap();
 
-    let data = csr.to_der().unwrap();
+    let data = csr.clone().to_der().unwrap();
     dbg!(&data);
     let file_name_with_extension = "cert.csr";
+    #[cfg(not(target_arch = "wasm32"))]
+    std::fs::write(file_name_with_extension, &data).unwrap();
+
+    let cert = IdCert::from_actor_csr(
+        csr,
+        &priv_key,
+        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        priv_key.algorithm_identifier(),
+        RdnSequence::from_str(
+            "CN=root,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
+        )
+        .unwrap(),
+        Validity {
+            not_before: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
+            ),
+            not_after: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
+            ),
+        },
+    )
+    .unwrap();
+    let data = Certificate::try_from(cert).unwrap().to_der().unwrap();
+    let file_name_with_extension = "cert.der";
     #[cfg(not(target_arch = "wasm32"))]
     std::fs::write(file_name_with_extension, &data).unwrap();
 }

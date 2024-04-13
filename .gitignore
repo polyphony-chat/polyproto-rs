@@ -5,3 +5,4 @@
 .VSCodeCounter
 .coverage
 cert.csr
+cert.der
