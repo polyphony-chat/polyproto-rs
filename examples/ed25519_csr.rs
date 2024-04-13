@@ -47,7 +47,7 @@ fn main() {
     .unwrap();
 
     let data = csr.to_der().unwrap();
-    dbg!(data);
+    dbg!(&data);
     let file_name_with_extension = "cert.csr";
     #[cfg(not(target_arch = "wasm32"))]
     std::fs::write(file_name_with_extension, &data).unwrap();
