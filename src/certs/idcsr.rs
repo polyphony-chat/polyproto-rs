@@ -84,6 +84,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// [crate::key::PublicKey::verify_signature] method. If you do not have the public key as a
     /// `dyn PublicKey`, you can use the [crate::key::PublicKey::from_public_key_info] method to
     /// create a `dyn PublicKey` from the [PublicKeyInfo] in the [IdCsrInner].
+    /// TODO: We can change this now
     pub fn valid_actor_csr(&self) -> Result<(), ConstraintError> {
         self.inner_csr.subject.validate()?;
         self.inner_csr.capabilities.validate()?;
@@ -104,6 +105,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// [crate::key::PublicKey::verify_signature] method. If you do not have the public key as a
     /// `dyn PublicKey`, you can use the [crate::key::PublicKey::from_public_key_info] method to
     /// create a `dyn PublicKey` from the [PublicKeyInfo] in the [IdCsrInner].
+    /// TODO: We can change this now
     pub fn valid_home_server_csr(&self) -> Result<(), ConstraintError> {
         self.inner_csr.subject.validate()?;
         self.inner_csr.capabilities.validate()?;
