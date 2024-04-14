@@ -4,13 +4,14 @@
 
 use std::str::FromStr;
 
-use der::asn1::{OctetString, SetOfVec};
-use der::{Any, Encode, Tag, Tagged};
+use der::asn1::{BitString, OctetString, SetOfVec};
+use der::{Any, Decode, Encode, Tag, Tagged};
 use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
 
 use crate::errors::base::InvalidInput;
+use crate::errors::composite::ConversionError;
 
 use super::*;
 
@@ -19,259 +20,309 @@ use super::*;
 /// restriction might be employed when a key that could be used for more than one operation is to
 /// be restricted. See <https://cryptography.io/en/latest/x509/reference/#cryptography.x509.KeyUsage>
 pub enum KeyUsage {
-    /// This purpose is set to true when the subject public key is used for verifying digital
+    /// This purpose is set when the subject public key is used for verifying digital
     /// signatures, other than signatures on certificates (`key_cert_sign`) and CRLs (`crl_sign`).
-    DigitalSignature(bool),
-    /// This purpose is set to true when the subject public key is used for verifying signatures on
-    /// certificate revocation lists.
-    CrlSign(bool),
-    /// This purpose is set to true when the subject public key is used for verifying digital
+    DigitalSignature = 1,
+    /// This purpose is set when the subject public key is used for verifying digital
     /// signatures, other than signatures on certificates (`key_cert_sign`) and CRLs (`crl_sign`).
     /// It is used to provide a non-repudiation service that protects against the signing entity
     /// falsely denying some action. In the case of later conflict, a reliable third party may
     /// determine the authenticity of the signed data. This was called `non_repudiation` in older
     /// revisions of the X.509 specification.
-    ContentCommitment(bool),
-    /// This purpose is set to true when the subject public key is used for enciphering private or
+    ContentCommitment = 2,
+    /// This purpose is set when the subject public key is used for enciphering private or
     /// secret keys.
-    KeyEncipherment(bool),
-    /// This purpose is set to true when the subject public key is used for directly enciphering raw
+    KeyEncipherment = 4,
+    /// This purpose is set when the subject public key is used for directly enciphering raw
     /// user data without the use of an intermediate symmetric cipher.
-    DataEncipherment(bool),
-    /// This purpose is set to true when the subject public key is used for key agreement. For
+    DataEncipherment = 8,
+    /// This purpose is set when the subject public key is used for key agreement. For
     /// example, when a Diffie-Hellman key is to be used for key management, then this purpose is
-    /// set to true.
-    KeyAgreement(bool),
-    /// This purpose is set to true when the subject public key is used for verifying signatures on
+    /// set.
+    KeyAgreement = 16,
+    /// This purpose is set when the subject public key is used for verifying signatures on
     /// public key certificates. If this purpose is set to true then ca must be true in the
     /// `BasicConstraints` extension.
-    KeyCertSign(bool),
-    /// When this purposes is set to true and the `key_agreement` purpose is also set, the subject
+    KeyCertSign = 32,
+    /// This purpose is set when the subject public key is used for verifying signatures on
+    /// certificate revocation lists.
+    CrlSign = 64,
+    /// When this purpose is set and the `key_agreement` purpose is also set, the subject
     /// public key may be used only for enciphering data while performing key agreement. The
-    /// `KeyAgreement` capability must be set to `true` for this.
-    EncipherOnly(bool),
-    /// When this purposes is set to true and the `key_agreement` purpose is also set, the subject
+    /// `KeyAgreement` capability must be set for this.
+    EncipherOnly = 128,
+    /// When this purpose is set and the `key_agreement` purpose is also set, the subject
     /// public key may be used only for deciphering data while performing key agreement. The
-    /// `KeyAgreement` capability must be set to `true` for this.
-    DecipherOnly(bool),
+    /// `KeyAgreement` capability must be set for this.
+    DecipherOnly = 256,
 }
 
-impl From<KeyUsage> for bool {
-    fn from(value: KeyUsage) -> Self {
+impl TryFrom<u32> for KeyUsage {
+    type Error = ConversionError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        if value > 256 {
+            return Err(ConversionError::InvalidInput(InvalidInput::Length {
+                min_length: 0,
+                max_length: 256,
+                actual_length: value.to_string(),
+            }));
+        }
         match value {
-            KeyUsage::DigitalSignature(val) => val,
-            KeyUsage::CrlSign(val) => val,
-            KeyUsage::ContentCommitment(val) => val,
-            KeyUsage::KeyEncipherment(val) => val,
-            KeyUsage::DataEncipherment(val) => val,
-            KeyUsage::KeyAgreement(val) => val,
-            KeyUsage::KeyCertSign(val) => val,
-            KeyUsage::EncipherOnly(val) => val,
-            KeyUsage::DecipherOnly(val) => val,
+            x if x == KeyUsage::DigitalSignature as u32 => Ok(KeyUsage::DigitalSignature),
+            x if x == KeyUsage::ContentCommitment as u32 => Ok(KeyUsage::ContentCommitment),
+            x if x == KeyUsage::KeyEncipherment as u32 => Ok(KeyUsage::KeyEncipherment),
+            x if x == KeyUsage::DataEncipherment as u32 => Ok(KeyUsage::DataEncipherment),
+            x if x == KeyUsage::KeyAgreement as u32 => Ok(KeyUsage::KeyAgreement),
+            x if x == KeyUsage::KeyCertSign as u32 => Ok(KeyUsage::KeyCertSign),
+            x if x == KeyUsage::CrlSign as u32 => Ok(KeyUsage::CrlSign),
+            x if x == KeyUsage::EncipherOnly as u32 => Ok(KeyUsage::EncipherOnly),
+            x if x == KeyUsage::DecipherOnly as u32 => Ok(KeyUsage::DecipherOnly),
+            _ => Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                "Input cannot be matched to any of the KeyUsage variants".to_string(),
+            ))),
         }
     }
 }
 
-impl TryFrom<Attribute> for KeyUsage {
-    type Error = InvalidInput;
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+/// The KeyUsages struct is a collection of KeyUsage variants.
+pub struct KeyUsages {
+    /// Vector of KeyUsage variants.
+    pub key_usages: Vec<KeyUsage>,
+}
 
-    /// Performs the conversion.
+impl KeyUsages {
+    /// Creates a new KeyUsages struct from a slice of KeyUsage variants.
+    pub fn new(key_usages: &[KeyUsage]) -> Self {
+        KeyUsages {
+            key_usages: key_usages.to_vec(),
+        }
+    }
+
+    /// Converts a byte slice to a KeyUsages struct, given that the byte slice is a bitstring
+    /// representing the KeyUsages.
     ///
-    /// Fails, if the input attribute does not contain exactly one value, or if the input attribute
-    /// does not contain a boolean value. Also fails if the OID of the attribute does not match any
-    /// known KeyUsage variant.
-    fn try_from(value: Attribute) -> Result<Self, Self::Error> {
-        // PRETTYFYME: I know this is a bit of a mess, but it works. If anyone wants to make it
-        // prettier, feel free to do so.
+    /// RFC 5280 says:
+    /// ```text
+    /// KeyUsage ::= BIT STRING {
+    ///     digitalSignature        (0),
+    ///     nonRepudiation          (1), -- recent editions of X.509 have
+    ///                                  -- renamed this bit to contentCommitment
+    ///     keyEncipherment         (2),
+    ///     dataEncipherment        (3),
+    ///     keyAgreement            (4),
+    ///     keyCertSign             (5),
+    ///     cRLSign                 (6),
+    ///     encipherOnly            (7),
+    ///     decipherOnly            (8) }
+    /// ```
+    pub fn from_bitstring(bitstring: BitString) -> Result<Self, ConversionError> {
+        /* Below, we are doing some operations on bits. RFC 5280 says:
+        KeyUsage ::= BIT STRING {
+            digitalSignature        (0),
+            nonRepudiation          (1), -- recent editions of X.509 have
+                                -- renamed this bit to contentCommitment
+            keyEncipherment         (2),
+            dataEncipherment        (3),
+            keyAgreement            (4),
+            keyCertSign             (5),
+            cRLSign                 (6),
+            encipherOnly            (7),
+            decipherOnly            (8) }
 
-        // Check if the attribute contains exactly one value
-        if value.values.len() != 1usize {
-            return Err(InvalidInput::IncompatibleVariantForConversion { reason: "This attribute does not store exactly one value, as would be expected for a KeyUsage attribute".to_string() });
-        }
-        let sov = value.values.get(0);
-
-        // The first value inside the Attribute is a SetOfVec. We need to look inside the SetOfVec to
-        // find the actual attribute we are interested in.
-        if let Some(inner_value) = sov {
-            if inner_value.tag() != Tag::Boolean {
-                return Err(InvalidInput::IncompatibleVariantForConversion { reason: format!("Only Any objects with boolean tags can be converted to a KeyUsage enum variant. Expected Tag::Boolean, found {:?}", inner_value.tag()) });
+        It is now our task to check, which bits (0 - 8) are set, and to construct KeyUsage variants
+        from this information.
+        Note, that BitStrings represent the bits they store in big endian order, meaning that the
+        most significant bit (MSB) is the first bit in the BitString.
+        */
+        let mut starting_number = 1;
+        let mut key_usages = Vec::new();
+        // We iterate over all bits, check if the current bit is set and try to convert the
+        // current value of starting_number to a KeyUsage variant. On every iteration, we divide
+        // starting_number by two, until it equals 1 and thus cannot be divided any further.
+        for bit in bitstring.raw_bytes().iter() {
+            if *bit == 0 {
+                // If the bit is 0, we can skip the current iteration, increment the starting_number
+                // and continue with the next iteration.
+                multiply_starting_number(&mut starting_number);
+                continue;
             }
-            // This is how booleans are apparently encoded in ASN.1
-            let boolean_value = match inner_value.value() {
-                &[0x00] => false,
-                &[0xFF] | &[0x01] => true,
-                _ => {
-                    return Err(InvalidInput::IncompatibleVariantForConversion {
-                        reason: "Encountered unexpected value for Boolean tag".to_string(),
-                    });
-                }
-            };
-            // Now we have to match the OID of the attribute to the known KeyUsage variants
-            return Ok(match value.oid.to_string().as_str() {
-                super::OID_KEY_USAGE_CONTENT_COMMITMENT => KeyUsage::ContentCommitment(boolean_value),
-                super::OID_KEY_USAGE_CRL_SIGN => KeyUsage::CrlSign(boolean_value),
-                super::OID_KEY_USAGE_DATA_ENCIPHERMENT => KeyUsage::DataEncipherment(boolean_value),
-                super::OID_KEY_USAGE_DECIPHER_ONLY => KeyUsage::DecipherOnly(boolean_value),
-                super::OID_KEY_USAGE_DIGITAL_SIGNATURE => KeyUsage::DigitalSignature(boolean_value),
-                super::OID_KEY_USAGE_ENCIPHER_ONLY => KeyUsage::EncipherOnly(boolean_value),
-                super::OID_KEY_USAGE_KEY_AGREEMENT => KeyUsage::KeyAgreement(boolean_value),
-                #[allow(unreachable_patterns)] // cargo thinks the below pattern is unreachable.
-                super::OID_KEY_USAGE_KEY_CERT_SIGN => KeyUsage::KeyCertSign(boolean_value),
-                super::OID_KEY_USAGE_KEY_ENCIPHERMENT => KeyUsage::KeyEncipherment(boolean_value),
-                // If the OID does not match any known KeyUsage variant, we return an error
-                _ => {
-                    return Err(InvalidInput::IncompatibleVariantForConversion {
-                            reason: format!("The OID of the attribute does not match any known KeyUsage variant. Found OID \"{}\"", value.oid)
-                        },
-                    )
-                }
-            });
+            if *bit != 1 {
+                // If the bit is not 0 or 1, we are likely looking at the "unused bits" byte of the
+                // BitString. We can safely ignore this byte.
+                continue;
+            }
+            key_usages.push(KeyUsage::try_from(starting_number)?);
+            if starting_number == 256 {
+                // Stop the loop if starting_number is already 256.
+                break;
+            }
+            multiply_starting_number(&mut starting_number);
         }
-        // If the attribute does not contain a value, we return an error
-        Err(InvalidInput::IncompatibleVariantForConversion {
-            reason: "The attribute does not contain a value".to_string(),
+        Ok(KeyUsages::new(&key_usages))
+    }
+
+    /// Converts the KeyUsages to a bitstring in little endian order.
+    pub fn to_le_bits(mut self) -> [bool; 9] {
+        self.key_usages.sort();
+        self.key_usages.dedup();
+        let mut bit_vec = [false; 9];
+        for item in self.key_usages.into_iter() {
+            match item {
+                KeyUsage::DigitalSignature => bit_vec[0] = true,
+                KeyUsage::ContentCommitment => bit_vec[1] = true,
+                KeyUsage::KeyEncipherment => bit_vec[2] = true,
+                KeyUsage::DataEncipherment => bit_vec[3] = true,
+                KeyUsage::KeyAgreement => bit_vec[4] = true,
+                KeyUsage::KeyCertSign => bit_vec[5] = true,
+                KeyUsage::CrlSign => bit_vec[6] = true,
+                KeyUsage::EncipherOnly => bit_vec[7] = true,
+                KeyUsage::DecipherOnly => bit_vec[8] = true,
+            }
+        }
+        bit_vec
+    }
+
+    /// Converts the KeyUsages to a bitstring in big endian order.
+    pub fn to_be_bits(self) -> [bool; 9] {
+        let mut bit_vec = self.to_le_bits();
+        bit_vec.reverse();
+        bit_vec
+    }
+
+    /// Converts the KeyUsages to a [BitString].
+    pub fn to_bitstring(self) -> BitString {
+        let bits = self.to_be_bits();
+        let mut bytes = bits
+            .iter()
+            .map(|x| if *x { 1 } else { 0 })
+            .collect::<Vec<u8>>();
+        while bytes[0] == 0 {
+            bytes.remove(0);
+        }
+        let mut unused_bits: u8 = 0;
+        while bytes.len() % 8 != 0 {
+            bytes.push(0);
+            unused_bits += 1;
+        }
+        BitString::new(unused_bits, bytes)
+            .expect("Error when converting KeyUsages to BitString. Please report this error to https://github.com/polyphony-chat/polyproto")
+    }
+}
+
+impl From<KeyUsages> for BitString {
+    fn from(value: KeyUsages) -> Self {
+        value.to_bitstring()
+    }
+}
+
+impl TryFrom<Attribute> for KeyUsages {
+    type Error = ConversionError;
+
+    fn try_from(value: Attribute) -> Result<Self, Self::Error> {
+        if value.tag() != Tag::BitString {
+            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                format!("Expected BitString, found {}", value.tag(),),
+            )));
+        }
+        match value.values.len() {
+            0 => return Ok(KeyUsages::new(&[])),
+            1 => (),
+            _ => {
+                return Err(ConversionError::InvalidInput(InvalidInput::Length {
+                    min_length: 0,
+                    max_length: 1,
+                    actual_length: value.values.len().to_string(),
+                }));
+            }
+        };
+        let inner_value = value.values.get(0).expect("Illegal state. Please report this error to https://github.com/polyphony-chat/polyproto");
+        KeyUsages::from_bitstring(BitString::from_der(inner_value.value())?)
+    }
+}
+
+fn multiply_starting_number(number: &mut u32) {
+    if !*number == 256 {
+        *number *= 2;
+    }
+}
+
+impl TryFrom<Extension> for KeyUsages {
+    type Error = ConversionError;
+
+    fn try_from(value: Extension) -> Result<Self, Self::Error> {
+        if value.extn_id.to_string().as_str() != OID_KEY_USAGE {
+            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                format!(
+                    "Expected OID {} for KeyUsages, found OID {}",
+                    OID_KEY_USAGE, value.extn_id
+                ),
+            )));
+        }
+        let any = Any::from_der(value.extn_value.as_bytes())?;
+        KeyUsages::from_bitstring(BitString::from_bytes(any.value())?)
+    }
+}
+
+impl TryFrom<KeyUsages> for Attribute {
+    type Error = ConversionError;
+
+    fn try_from(value: KeyUsages) -> Result<Self, Self::Error> {
+        let mut sov = SetOfVec::new();
+        let bitstring = value.to_bitstring();
+        sov.insert(Any::from_der(&bitstring.to_der()?)?)?;
+        Ok(Attribute {
+            oid: ObjectIdentifier::from_str(OID_KEY_USAGE)?,
+            values: sov,
         })
     }
 }
 
-impl TryFrom<Extension> for KeyUsage {
-    type Error = InvalidInput;
-
-    /// Performs the conversion.
-    ///
-    /// Fails, if the input attribute does not contain a boolean value. Also fails if the OID of
-    /// the attribute does not match any known KeyUsage variant, especially when the unknown OID is
-    /// marked as "critical"
-    fn try_from(value: Extension) -> Result<Self, Self::Error> {
-        #[allow(unreachable_patterns)]
-        if value.critical
-            && !matches!(
-                value.extn_id.to_string().as_str(),
-                OID_KEY_USAGE_CONTENT_COMMITMENT
-                    | OID_KEY_USAGE_CRL_SIGN
-                    | OID_KEY_USAGE_DATA_ENCIPHERMENT
-                    | OID_KEY_USAGE_DATA_ENCIPHERMENT
-                    | OID_KEY_USAGE_DECIPHER_ONLY
-                    | OID_KEY_USAGE_DIGITAL_SIGNATURE
-                    | OID_KEY_USAGE_ENCIPHER_ONLY
-                    | OID_KEY_USAGE_KEY_AGREEMENT
-                    | OID_KEY_USAGE_KEY_CERT_SIGN
-                    | OID_KEY_USAGE_KEY_ENCIPHERMENT
-            )
-        {
-            // Error if we encounter a "critical" X.509 extension which we do not know of
-            return Err(InvalidInput::UnknownCriticalExtension { oid: value.extn_id });
-        }
-
-        let boolean_value = match value.extn_value.as_bytes() {
-            &[0x00] => false,
-            &[0xFF] | &[0x01] => true,
-            _ => {
-                return Err(InvalidInput::IncompatibleVariantForConversion {
-                    reason: "Encountered unexpected value for Boolean tag".to_string(),
-                });
-            }
-        };
-        // Now we have to match the OID of the attribute to the known KeyUsage variants
-        #[allow(unreachable_patterns)]
-        return Ok(match value.extn_id.to_string().as_str() {
-            super::OID_KEY_USAGE_CONTENT_COMMITMENT => KeyUsage::ContentCommitment(boolean_value),
-            super::OID_KEY_USAGE_CRL_SIGN => KeyUsage::CrlSign(boolean_value),
-            super::OID_KEY_USAGE_DATA_ENCIPHERMENT => KeyUsage::DataEncipherment(boolean_value),
-            super::OID_KEY_USAGE_DECIPHER_ONLY => KeyUsage::DecipherOnly(boolean_value),
-            super::OID_KEY_USAGE_DIGITAL_SIGNATURE => KeyUsage::DigitalSignature(boolean_value),
-            super::OID_KEY_USAGE_ENCIPHER_ONLY => KeyUsage::EncipherOnly(boolean_value),
-            super::OID_KEY_USAGE_KEY_AGREEMENT => KeyUsage::KeyAgreement(boolean_value),
-            super::OID_KEY_USAGE_KEY_CERT_SIGN => KeyUsage::KeyCertSign(boolean_value),
-            super::OID_KEY_USAGE_KEY_ENCIPHERMENT => KeyUsage::KeyEncipherment(boolean_value),
-            // If the OID does not match any known KeyUsage variant, we return an error
-            _ => {
-                return Err(InvalidInput::IncompatibleVariantForConversion {
-                        reason: format!("The OID of the attribute does not match any known KeyUsage variant. Found OID \"{}\"", value.extn_id)
-                    },
-                )
-            }
-        });
-    }
-}
-
-impl From<KeyUsage> for Any {
-    fn from(value: KeyUsage) -> Self {
-        Any::new(der::Tag::Boolean,match bool::from(value) {
-            true => vec![0xff],
-            false => vec![0x00],
-        },
-        ).expect("Error occurred when converting BasicConstraints bool to der::Any. Please report this crash at https://github.com/polyphony-chat/polyproto.")
-    }
-}
-
-impl From<KeyUsage> for ObjectIdentifier {
-    fn from(value: KeyUsage) -> Self {
-        let result = match value {
-            KeyUsage::DigitalSignature(_) => {
-                ObjectIdentifier::from_str(super::OID_KEY_USAGE_DIGITAL_SIGNATURE)
-            }
-            KeyUsage::CrlSign(_) => ObjectIdentifier::from_str(super::OID_KEY_USAGE_CRL_SIGN),
-            KeyUsage::ContentCommitment(_) => {
-                ObjectIdentifier::from_str(super::OID_KEY_USAGE_CONTENT_COMMITMENT)
-            }
-            KeyUsage::KeyEncipherment(_) => {
-                ObjectIdentifier::from_str(super::OID_KEY_USAGE_KEY_ENCIPHERMENT)
-            }
-            KeyUsage::DataEncipherment(_) => {
-                ObjectIdentifier::from_str(super::OID_KEY_USAGE_DATA_ENCIPHERMENT)
-            }
-            KeyUsage::KeyAgreement(_) => {
-                ObjectIdentifier::from_str(super::OID_KEY_USAGE_KEY_AGREEMENT)
-            }
-            KeyUsage::KeyCertSign(_) => {
-                ObjectIdentifier::from_str(super::OID_KEY_USAGE_KEY_CERT_SIGN)
-            }
-            KeyUsage::EncipherOnly(_) => {
-                ObjectIdentifier::from_str(super::OID_KEY_USAGE_ENCIPHER_ONLY)
-            }
-            KeyUsage::DecipherOnly(_) => {
-                ObjectIdentifier::from_str(super::OID_KEY_USAGE_DECIPHER_ONLY)
-            }
-        };
-        result.expect("Error occurred when converting KeyUsage enum to ObjectIdentifier. Please report this crash at https://github.com/polyphony-chat/polyproto.")
-    }
-}
-
-impl From<KeyUsage> for Attribute {
-    fn from(value: KeyUsage) -> Self {
-        // Creating a Any from a bool is really simple, so we can expect this to never fail.
-        let any_val = Any::from(value);
-        let mut sov = SetOfVec::new();
-        // .insert() only fails if the value is not unique. We are inserting a single value, so this
-        // should never fail. See tests below for verification.
-        sov.insert(any_val).expect("Error occurred when inserting KeyUsage into der::Any to SetOfVec. Please report this crash at https://github.com/polyphony-chat/polyproto");
-        Attribute {
-            oid: value.into(),
-            values: sov,
-        }
-    }
-}
-
-impl From<KeyUsage> for Extension {
-    fn from(value: KeyUsage) -> Self {
-        Extension {
-            extn_id: value.into(),
+impl TryFrom<KeyUsages> for Extension {
+    type Error = ConversionError;
+    fn try_from(value: KeyUsages) -> Result<Self, Self::Error> {
+        let bitstring = value.to_bitstring();
+        let any = Any::from_der(&bitstring.to_der()?)?;
+        Ok(Extension {
+            extn_id: ObjectIdentifier::from_str(OID_KEY_USAGE)?,
             critical: true,
-            extn_value: OctetString::new(bool::from(value).to_der().expect("Error occured when trying to convert bool to DER. Please report this crash at https://github.com/polyphony-chat/polyproto")).expect("Error occured when trying to convert bool to an OctetString. Please report this crash at https://github.com/polyphony-chat/polyproto"),
-        }
+            extn_value: OctetString::new(any.to_der()?)?,
+        })
     }
 }
 
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    fn key_usage_to_extension() {
-        let key_usage = KeyUsage::KeyCertSign(true);
-        let extension = Extension::from(key_usage);
-        dbg!(extension);
+    fn key_usages_to_bitstring() {
+        let key_usages = KeyUsages::new(&[
+            KeyUsage::CrlSign,
+            KeyUsage::EncipherOnly,
+            KeyUsage::KeyAgreement,
+        ]);
+        let _bitstring = BitString::from(key_usages);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn key_usages_vec_sorts_correctly() {
+        #[allow(clippy::useless_vec)]
+        let mut vec = vec![
+            KeyUsage::ContentCommitment,
+            KeyUsage::EncipherOnly,
+            KeyUsage::DataEncipherment,
+            KeyUsage::DigitalSignature,
+        ];
+        vec.sort();
+        assert!(*vec.first().unwrap() == KeyUsage::DigitalSignature);
+        assert!(*vec.get(1).unwrap() == KeyUsage::ContentCommitment);
+        assert!(*vec.get(2).unwrap() == KeyUsage::DataEncipherment);
+        assert!(*vec.get(3).unwrap() == KeyUsage::EncipherOnly);
     }
 }

@@ -4,12 +4,12 @@
 
 use der::asn1::Uint;
 use der::{Decode, Encode};
-use spki::AlgorithmIdentifierOwned;
 use x509_cert::name::Name;
 use x509_cert::time::Validity;
 use x509_cert::Certificate;
 
-use crate::errors::composite::IdCertError;
+use crate::errors::base::InvalidInput;
+use crate::errors::composite::ConversionError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 use crate::Constrained;
@@ -50,16 +50,14 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         serial_number: Uint,
         issuer: Name,
         validity: Validity,
-    ) -> Result<Self, IdCertError> {
+    ) -> Result<Self, ConversionError> {
         // IdCsr gets validated in IdCertTbs::from_..._csr
         let signature_algorithm = signing_key.algorithm_identifier();
         issuer.validate()?; // TODO: Maybe this and the below validation should be done in IdCertTbs?
         if !equal_domain_components(&id_csr.inner_csr.subject, &issuer) {
-            return Err(IdCertError::ConstraintError(
-                crate::errors::base::ConstraintError::Malformed(Some(
-                    "Domain components of the issuer and the subject do not match".to_string(),
-                )),
-            ));
+            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                "Domain components of the issuer and the subject do not match".to_string(),
+            )));
         }
         let id_cert_tbs =
             IdCertTbs::from_ca_csr(id_csr, serial_number, signature_algorithm, issuer, validity)?;
@@ -84,15 +82,15 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         serial_number: Uint,
         issuer: Name,
         validity: Validity,
-    ) -> Result<Self, IdCertError> {
+    ) -> Result<Self, ConversionError> {
         // IdCsr gets validated in IdCertTbs::from_..._csr
         let signature_algorithm = signing_key.algorithm_identifier();
         issuer.validate()?;
         if !equal_domain_components(&id_csr.inner_csr.subject, &issuer) {
-            return Err(IdCertError::ConstraintError(
-                crate::errors::base::ConstraintError::Malformed(Some(
+            return Err(ConversionError::InvalidInput(
+                crate::errors::base::InvalidInput::Malformed(
                     "Domain components of the issuer and the subject do not match".to_string(),
-                )),
+                ),
             ));
         }
         let id_cert_tbs = IdCertTbs::from_actor_csr(
@@ -112,20 +110,20 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     }
 
     /// Create an IdCsr from a byte slice containing a DER encoded X.509 Certificate.
-    pub fn from_der(value: Vec<u8>) -> Result<Self, IdCertError> {
+    pub fn from_der(value: Vec<u8>) -> Result<Self, ConversionError> {
         let cert = IdCert::try_from(Certificate::from_der(&value)?)?;
         cert.validate()?;
         Ok(cert)
     }
 
     /// Encode this type as DER, returning a byte vector.
-    pub fn to_der(self) -> Result<Vec<u8>, IdCertError> {
+    pub fn to_der(self) -> Result<Vec<u8>, ConversionError> {
         Ok(Certificate::try_from(self)?.to_der()?)
     }
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<IdCert<S, P>> for Certificate {
-    type Error = IdCertError;
+    type Error = ConversionError;
     fn try_from(value: IdCert<S, P>) -> Result<Self, Self::Error> {
         Ok(Self {
             tbs_certificate: value.id_cert_tbs.clone().try_into()?,
@@ -136,7 +134,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<IdCert<S, P>> for Certificate {
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<Certificate> for IdCert<S, P> {
-    type Error = IdCertError;
+    type Error = ConversionError;
 
     fn try_from(value: Certificate) -> Result<Self, Self::Error> {
         let id_cert_tbs = value.tbs_certificate.try_into()?;

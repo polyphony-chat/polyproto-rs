@@ -10,7 +10,7 @@ use x509_cert::attr::Attributes;
 use x509_cert::name::Name;
 use x509_cert::request::{CertReq, CertReqInfo};
 
-use crate::errors::composite::{IdCsrError, IdCsrInnerError};
+use crate::errors::composite::ConversionError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 use crate::{Constrained, ConstraintError};
@@ -62,7 +62,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
         subject: &Name,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
         capabilities: &Capabilities,
-    ) -> Result<IdCsr<S, P>, IdCsrError> {
+    ) -> Result<IdCsr<S, P>, ConversionError> {
         subject.validate()?;
         let inner_csr = IdCsrInner::<S, P>::new(subject, signing_key.pubkey(), capabilities)?;
         let signature = signing_key.sign(&inner_csr.clone().to_der()?);
@@ -118,12 +118,12 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     }
 
     /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
-    pub fn from_der(bytes: &[u8]) -> Result<Self, IdCsrError> {
+    pub fn from_der(bytes: &[u8]) -> Result<Self, ConversionError> {
         IdCsr::try_from(CertReq::from_der(bytes)?)
     }
 
     /// Encode this type as DER, returning a byte vector.
-    pub fn to_der(self) -> Result<Vec<u8>, IdCsrError> {
+    pub fn to_der(self) -> Result<Vec<u8>, ConversionError> {
         Ok(CertReq::try_from(self)?.to_der()?)
     }
 }
@@ -160,7 +160,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
         subject: &Name,
         public_key: &P,
         capabilities: &Capabilities,
-    ) -> Result<IdCsrInner<S, P>, IdCsrInnerError> {
+    ) -> Result<IdCsrInner<S, P>, ConversionError> {
         subject.validate()?;
         capabilities.validate()?;
 
@@ -177,31 +177,30 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
     }
 
     /// Create an IdCsrInner from a byte slice containing a DER encoded PKCS #10 CSR.
-    pub fn from_der(bytes: &[u8]) -> Result<Self, IdCsrInnerError> {
+    pub fn from_der(bytes: &[u8]) -> Result<Self, ConversionError> {
         IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)
     }
 
     /// Encode this type as DER, returning a byte vector.
-    pub fn to_der(self) -> Result<Vec<u8>, IdCsrInnerError> {
+    pub fn to_der(self) -> Result<Vec<u8>, ConversionError> {
         Ok(CertReqInfo::try_from(self)?.to_der()?)
     }
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<CertReq> for IdCsr<S, P> {
-    type Error = IdCsrError;
+    type Error = ConversionError;
 
     fn try_from(value: CertReq) -> Result<Self, Self::Error> {
         Ok(IdCsr {
             inner_csr: IdCsrInner::try_from(value.info)?,
             signature_algorithm: value.algorithm,
-            // TODO: raw_bytes() or as_bytes()?
             signature: S::from_bitstring(value.signature.raw_bytes()),
         })
     }
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<CertReqInfo> for IdCsrInner<S, P> {
-    type Error = IdCsrInnerError;
+    type Error = ConversionError;
 
     fn try_from(value: CertReqInfo) -> Result<Self, Self::Error> {
         let rdn_sequence = value.subject;
@@ -222,7 +221,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<CertReqInfo> for IdCsrInner<S, P> {
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<IdCsr<S, P>> for CertReq {
-    type Error = IdCsrError;
+    type Error = ConversionError;
 
     fn try_from(value: IdCsr<S, P>) -> Result<Self, Self::Error> {
         Ok(CertReq {
@@ -234,7 +233,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<IdCsr<S, P>> for CertReq {
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<IdCsrInner<S, P>> for CertReqInfo {
-    type Error = IdCsrInnerError;
+    type Error = ConversionError;
     fn try_from(value: IdCsrInner<S, P>) -> Result<Self, Self::Error> {
         Ok(CertReqInfo {
             version: x509_cert::request::Version::V1,

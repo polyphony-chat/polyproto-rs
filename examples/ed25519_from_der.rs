@@ -8,7 +8,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use der::asn1::{BitString, Ia5String, Uint, UtcTime};
-use der::Encode;
+use der::{Decode, Encode};
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
@@ -56,6 +56,7 @@ fn main() {
         &Capabilities::default_actor(),
     )
     .unwrap();
+
     let data = csr.clone().to_der().unwrap();
     let file_name_with_extension = "cert.csr";
     #[cfg(not(target_arch = "wasm32"))]
@@ -79,10 +80,9 @@ fn main() {
         },
     )
     .unwrap();
-    let data = Certificate::try_from(cert).unwrap().to_der().unwrap();
-    let file_name_with_extension = "cert.der";
-    #[cfg(not(target_arch = "wasm32"))]
-    std::fs::write(file_name_with_extension, &data).unwrap();
+    let data = cert.clone().to_der().unwrap();
+    let cert_from_der = IdCert::from_der(data).unwrap();
+    assert_eq!(cert_from_der, cert)
 }
 
 #[cfg(not(target_arch = "wasm32"))]

@@ -65,6 +65,9 @@ pub mod errors;
 
 pub(crate) mod constraints;
 
+pub use der;
+pub use spki;
+
 /// Traits implementing [Constrained] can be validated to be well-formed. This does not guarantee
 /// that a validated type will always be *correct* in the context it is in.
 ///
