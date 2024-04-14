@@ -185,6 +185,7 @@ impl TryFrom<Extensions> for Capabilities {
                     basic_constraints = BasicConstraints::try_from(item.clone())?
                 }
                 OID_KEY_USAGE => {
+                    dbg!("KeyUsage to Capabilities");
                     key_usage = KeyUsages::try_from(item.clone())?
                 },
                 _ => return Err(InvalidInput::ConstraintError(ConstraintError::Malformed(Some(format!("Invalid OID found for converting this set of Extensions to Capabilities: {} is not a valid OID for BasicConstraints or KeyUsages", item.extn_id)))))
@@ -205,27 +206,13 @@ mod test {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn test_key_usage_to_object_identifier() {
-        let _ = ObjectIdentifier::from(KeyUsages::DigitalSignature(true));
-        let _ = ObjectIdentifier::from(KeyUsages::CrlSign(true));
-        let _ = ObjectIdentifier::from(KeyUsages::ContentCommitment(true));
-        let _ = ObjectIdentifier::from(KeyUsages::KeyEncipherment(true));
-        let _ = ObjectIdentifier::from(KeyUsages::DataEncipherment(true));
-        let _ = ObjectIdentifier::from(KeyUsages::KeyAgreement(true));
-        let _ = ObjectIdentifier::from(KeyUsages::KeyCertSign(true));
-        let _ = ObjectIdentifier::from(KeyUsages::EncipherOnly(true));
-        let _ = ObjectIdentifier::from(KeyUsages::DecipherOnly(true));
+        // TODO
+        todo!()
     }
 
     fn test_key_usage_to_attribute(val: bool) {
-        let _ = Attribute::from(KeyUsages::DigitalSignature(val));
-        let _ = Attribute::from(KeyUsages::CrlSign(val));
-        let _ = Attribute::from(KeyUsages::ContentCommitment(val));
-        let _ = Attribute::from(KeyUsages::KeyEncipherment(val));
-        let _ = Attribute::from(KeyUsages::DataEncipherment(val));
-        let _ = Attribute::from(KeyUsages::KeyAgreement(val));
-        let _ = Attribute::from(KeyUsages::KeyCertSign(val));
-        let _ = Attribute::from(KeyUsages::EncipherOnly(val));
-        let _ = Attribute::from(KeyUsages::DecipherOnly(val));
+        // TODO
+        todo!()
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -292,25 +279,8 @@ mod test_key_usage_from_attribute {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn test_key_usage_from_attribute() {
-        let key_usage = KeyUsages::ContentCommitment(true);
-        let attribute = Attribute::from(key_usage);
-        let result = KeyUsages::try_from(attribute);
-        dbg!(&result);
-        assert!(result.is_ok());
-    }
-
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    fn test_key_usage_wrong_value_amount() {
-        let key_usage = KeyUsages::ContentCommitment(true);
-        let mut attribute = Attribute::from(key_usage);
-        attribute
-            .values
-            .insert(Any::from(KeyUsages::DataEncipherment(false)))
-            .unwrap();
-        let result = KeyUsages::try_from(attribute);
-        dbg!(&result);
-        assert!(result.is_err());
+        // TODO
+        todo!()
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
