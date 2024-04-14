@@ -242,8 +242,7 @@ mod test {
             ca: true,
             path_length: Some(0u64),
         };
-        let extension = Extension::try_from(basic_constraints).unwrap();
-        dbg!(extension);
+        let _extension = Extension::try_from(basic_constraints).unwrap();
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

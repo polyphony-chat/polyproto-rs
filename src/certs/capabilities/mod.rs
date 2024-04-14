@@ -187,7 +187,6 @@ impl TryFrom<Extensions> for Capabilities {
                     basic_constraints = BasicConstraints::try_from(item.clone())?
                 }
                 OID_KEY_USAGE => {
-                    dbg!("KeyUsage to Capabilities");
                     key_usage = KeyUsages::try_from(item.clone())?
                 },
                 _ => return Err(ConversionError::InvalidInput(InvalidInput::Malformed(format!("Invalid OID found for converting this set of Extensions to Capabilities: {} is not a valid OID for BasicConstraints or KeyUsages", item.extn_id))))
@@ -298,7 +297,6 @@ mod test_key_usage_from_attribute {
             values: sov,
         };
         let result = KeyUsages::try_from(attribute);
-        dbg!(&result);
         assert!(result.is_err());
     }
 
@@ -313,7 +311,6 @@ mod test_key_usage_from_attribute {
             values: sov,
         };
         let result = KeyUsages::try_from(attribute);
-        dbg!(&result);
         assert!(result.is_err());
     }
 
@@ -328,7 +325,6 @@ mod test_key_usage_from_attribute {
             values: sov,
         };
         let result = KeyUsages::try_from(attribute);
-        dbg!(&result);
         assert!(result.is_err());
     }
 }
@@ -353,7 +349,6 @@ mod test_basic_constraints_from_attribute {
         };
         let attribute = Attribute::try_from(bc).unwrap();
         let result = BasicConstraints::try_from(attribute);
-        dbg!(&result);
         assert!(result.is_ok());
     }
 
@@ -368,7 +363,6 @@ mod test_basic_constraints_from_attribute {
             values: sov,
         };
         let result = BasicConstraints::try_from(attribute);
-        dbg!(&result);
         assert!(result.is_err());
     }
 
@@ -382,7 +376,6 @@ mod test_basic_constraints_from_attribute {
         let mut attribute = Attribute::try_from(bc).unwrap();
         attribute.oid = ObjectIdentifier::from_str("0.0.161.80085").unwrap();
         let result = BasicConstraints::try_from(attribute);
-        dbg!(&result);
         assert!(result.is_err());
     }
 
@@ -399,7 +392,6 @@ mod test_basic_constraints_from_attribute {
             values: sov,
         };
         let result = BasicConstraints::try_from(attribute);
-        dbg!(&result);
         assert!(result.is_err());
 
         let mut sov = SetOfVec::new();
@@ -412,7 +404,6 @@ mod test_basic_constraints_from_attribute {
             values: sov,
         };
         let result = BasicConstraints::try_from(attribute);
-        dbg!(&result);
         assert!(result.is_err());
     }
 
@@ -427,7 +418,6 @@ mod test_basic_constraints_from_attribute {
             values: sov,
         };
         let result = BasicConstraints::try_from(attribute);
-        dbg!(&result);
         assert!(result.is_err());
     }
 }
