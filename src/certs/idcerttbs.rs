@@ -193,9 +193,10 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<IdCertTbs<S, Q>>
             Ok(sernum) => sernum,
             Err(e) => {
                 return Err(ConversionError::InvalidInput(
-                    crate::errors::base::InvalidInput::Malformed(
-                        "Could not convert serial number".to_string(),
-                    ),
+                    crate::errors::base::InvalidInput::Malformed(format!(
+                        "Could not convert serial number: {}",
+                        e
+                    )),
                 ))
             }
         };
