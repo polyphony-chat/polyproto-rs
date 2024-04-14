@@ -143,7 +143,7 @@ impl Constrained for Capabilities {
         let mut has_key_agreement = false;
 
         // Iterate over all the entries in the KeyUsage vector, check if they exist/are true
-        for item in self.key_usage.iter() {
+        for item in self.key_usage.key_usages.iter() {
             if !has_only_encipher && item == &KeyUsage::EncipherOnly {
                 has_only_encipher = true;
             }
