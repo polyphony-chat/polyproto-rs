@@ -112,6 +112,8 @@ impl From<PublicKeyInfo> for SubjectPublicKeyInfoOwned {
     }
 }
 
+/// Checks, if the domain components of two [Name]s are equal and ordered in the same way. Returns
+/// `true`, if the domain components are equal, `false` otherwise.
 pub fn equal_domain_components(name_1: &Name, name_2: &Name) -> bool {
     let mut domain_components_1 = Vec::new();
     let mut domain_components_2 = Vec::new();

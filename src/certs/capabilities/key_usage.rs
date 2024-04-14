@@ -324,7 +324,7 @@ mod test {
             KeyUsage::DigitalSignature,
         ];
         vec.sort();
-        assert!(*vec.get(0).unwrap() == KeyUsage::DigitalSignature);
+        assert!(*vec.first().unwrap() == KeyUsage::DigitalSignature);
         assert!(*vec.get(1).unwrap() == KeyUsage::ContentCommitment);
         assert!(*vec.get(2).unwrap() == KeyUsage::DataEncipherment);
         assert!(*vec.get(3).unwrap() == KeyUsage::EncipherOnly);

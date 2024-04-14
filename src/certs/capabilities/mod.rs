@@ -214,7 +214,7 @@ mod test {
         todo!()
     }
 
-    fn test_key_usage_to_attribute(val: bool) {
+    fn test_key_usage_to_attribute(_val: bool) {
         // TODO
         todo!()
     }

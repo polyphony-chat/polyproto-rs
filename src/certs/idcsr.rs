@@ -194,7 +194,6 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<CertReq> for IdCsr<S, P> {
         Ok(IdCsr {
             inner_csr: IdCsrInner::try_from(value.info)?,
             signature_algorithm: value.algorithm,
-            // TODO: raw_bytes() or as_bytes()?
             signature: S::from_bitstring(value.signature.raw_bytes()),
         })
     }
