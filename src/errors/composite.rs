@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use spki::ObjectIdentifier;
 use thiserror::Error;
 
 use super::base::{ConstraintError, InvalidInput};
@@ -52,12 +53,6 @@ pub enum InvalidCert {
     InvalidValidity,
     #[error("The capabilities presented on the certificate are invalid or otherwise malformed")]
     InvalidCapabilities(ConstraintError),
-}
-
-impl From<der::Error> for InvalidInput {
-    fn from(value: der::Error) -> Self {
-        Self::DerError(value)
-    }
 }
 
 #[derive(Error, Debug, PartialEq, Clone)]
@@ -163,5 +158,33 @@ pub enum IdCertError {
 impl From<der::Error> for IdCertError {
     fn from(value: der::Error) -> Self {
         Self::DerError(value)
+    }
+}
+
+#[derive(Error, Debug, PartialEq, Clone)]
+pub enum ConversionError {
+    #[error(transparent)]
+    ConstraintError(#[from] ConstraintError),
+    #[error(transparent)]
+    InvalidInput(#[from] InvalidInput),
+    #[error("Encountered DER encoding error")]
+    DerError(der::Error),
+    #[error("Encountered DER OID error")]
+    ConstOidError(der::oid::Error),
+    #[error("Critical extension cannot be converted")]
+    UnknownCriticalExtension { oid: ObjectIdentifier },
+    #[error(transparent)]
+    IdCertError(#[from] PublicKeyError),
+}
+
+impl From<der::Error> for ConversionError {
+    fn from(value: der::Error) -> Self {
+        Self::DerError(value)
+    }
+}
+
+impl From<der::oid::Error> for ConversionError {
+    fn from(value: der::oid::Error) -> Self {
+        Self::ConstOidError(value)
     }
 }

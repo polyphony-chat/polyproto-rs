@@ -10,7 +10,8 @@ use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
 
-use crate::errors::base::{InvalidInput, UnsuccessfulConversion};
+use crate::errors::base::InvalidInput;
+use crate::errors::composite::ConversionError;
 
 use super::*;
 
@@ -57,13 +58,15 @@ pub enum KeyUsage {
 }
 
 impl TryFrom<u32> for KeyUsage {
-    type Error = UnsuccessfulConversion;
+    type Error = ConversionError;
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         if value > 256 {
-            return Err(UnsuccessfulConversion::InvalidInput(
-                "Value too big to match this enums' variants".to_string(),
-            ));
+            return Err(ConversionError::InvalidInput(InvalidInput::Length {
+                min_length: 0,
+                max_length: 256,
+                actual_length: value.to_string(),
+            }));
         }
         match value {
             x if x == KeyUsage::DigitalSignature as u32 => Ok(KeyUsage::DigitalSignature),
@@ -75,9 +78,9 @@ impl TryFrom<u32> for KeyUsage {
             x if x == KeyUsage::CrlSign as u32 => Ok(KeyUsage::CrlSign),
             x if x == KeyUsage::EncipherOnly as u32 => Ok(KeyUsage::EncipherOnly),
             x if x == KeyUsage::DecipherOnly as u32 => Ok(KeyUsage::DecipherOnly),
-            _ => Err(UnsuccessfulConversion::InvalidInput(
-                "Value does not match any of the variants".to_string(),
-            )),
+            _ => Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                "Input cannot be matched to any of the KeyUsage variants".to_string(),
+            ))),
         }
     }
 }
@@ -114,7 +117,7 @@ impl KeyUsages {
     ///     encipherOnly            (7),
     ///     decipherOnly            (8) }
     /// ```
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, InvalidInput> {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ConversionError> {
         /* Below, we are doing some operations on bits. RFC 5280 says:
         KeyUsage ::= BIT STRING {
             digitalSignature        (0),
@@ -214,26 +217,23 @@ impl From<KeyUsages> for BitString {
 }
 
 impl TryFrom<Attribute> for KeyUsages {
-    type Error = InvalidInput;
+    type Error = ConversionError;
 
     fn try_from(value: Attribute) -> Result<Self, Self::Error> {
         if value.tag() != Tag::BitString {
-            return Err(InvalidInput::IncompatibleVariantForConversion {
-                reason: format!("Expected BitString, found {}", value.tag()),
-            });
+            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                format!("Expected BitString, found {}", value.tag(),),
+            )));
         }
         match value.values.len() {
             0 => return Ok(KeyUsages::new(&[])),
             1 => (),
             _ => {
-                return Err(InvalidInput::ConstraintError(
-                    ConstraintError::OutOfBounds {
-                        lower: 0,
-                        upper: 1,
-                        actual: value.values.len().to_string(),
-                        reason: Some("Too many values to be a valid KeyUsages value".to_string()),
-                    },
-                ))
+                return Err(ConversionError::InvalidInput(InvalidInput::Length {
+                    min_length: 0,
+                    max_length: 1,
+                    actual_length: value.values.len().to_string(),
+                }));
             }
         };
         let inner_value = value.values.get(0).expect("Illegal state. Please report this error to https://github.com/polyphony-chat/polyproto");
@@ -248,16 +248,16 @@ fn divide_starting_number(number: &mut u32) {
 }
 
 impl TryFrom<Extension> for KeyUsages {
-    type Error = InvalidInput;
+    type Error = ConversionError;
 
     fn try_from(value: Extension) -> Result<Self, Self::Error> {
         if value.extn_id.to_string().as_str() != OID_KEY_USAGE {
-            return Err(InvalidInput::IncompatibleVariantForConversion {
-                reason: format!(
+            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                format!(
                     "Expected OID {} for KeyUsages, found OID {}",
                     OID_KEY_USAGE, value.extn_id
                 ),
-            });
+            )));
         }
         // here we need to NOT just do .as_bytes() but to somehow get the actual value in this
         // octetstring
@@ -266,35 +266,37 @@ impl TryFrom<Extension> for KeyUsages {
     }
 }
 
-impl From<KeyUsages> for Attribute {
-    fn from(value: KeyUsages) -> Self {
+impl TryFrom<KeyUsages> for Attribute {
+    type Error = ConversionError;
+
+    fn try_from(value: KeyUsages) -> Result<Self, Self::Error> {
         let mut sov = SetOfVec::new();
         let bitstring = value.to_bitstring();
-        sov.insert(
-            Any::from_der(&bitstring.to_der().expect(
-                "Error occurred when converting blah blah blah this will be tryfrom anyways soon",
-            ))
-            .expect("this is tryfrom soon lalalalalla"),
-        )
-        .expect("wow");
+        sov.insert(Any::from_der(&bitstring.to_der()?)?)
+            .expect("wow");
         dbg!(&sov);
-        Attribute {
-            oid: ObjectIdentifier::from_str(OID_KEY_USAGE).expect(
-                "Error occurred when converting KeyUsages to ObjectIdentifier. Please report this crash",
-            ),
+        Ok(Attribute {
+            oid: ObjectIdentifier::from_str(OID_KEY_USAGE)?,
             values: sov,
-        }
+        })
     }
 }
 
-impl From<KeyUsages> for Extension {
-    fn from(value: KeyUsages) -> Self {
+impl TryFrom<KeyUsages> for Extension {
+    type Error = ConversionError;
+    fn try_from(value: KeyUsages) -> Result<Self, Self::Error> {
         let bitstring = value.to_bitstring();
-        let any = Any::from_der(&bitstring.to_der().expect("guh")).expect("Error occurred when converting KeyUsages to BitString. Please report this crash at https://github.com/polyphony-chat/polyproto");
-        Extension { extn_id: ObjectIdentifier::from_str(OID_KEY_USAGE).expect("Error occurred when converting KeyUsages to ObjectIdentifier. Please report this crash at https://github.com/polyphony-chat/polyproto"), critical: true, extn_value: OctetString::new(any.to_der().expect("Error occurred when converting KeyUsages to DER. Please report this crash at https://github.com/polyphony-chat/polyproto")).expect("Error occurred when creating OctetString. Please report this crash at https://github.com/polyphony-chat/polyproto") }
+        let any = Any::from_der(&bitstring.to_der()?)?;
+        Ok(Extension {
+            extn_id: ObjectIdentifier::from_str(OID_KEY_USAGE)?,
+            critical: true,
+            extn_value: OctetString::new(any.to_der()?)?,
+        })
     }
 }
 
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod test {
     use super::*;

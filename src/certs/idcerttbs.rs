@@ -12,7 +12,8 @@ use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 use x509_cert::TbsCertificate;
 
-use crate::errors::composite::{IdCertTbsError, IdCertToTbsCert, TbsCertToIdCert};
+use crate::errors::base::InvalidInput;
+use crate::errors::composite::ConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::Constrained;
@@ -74,13 +75,11 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         signature_algorithm: AlgorithmIdentifierOwned,
         issuer: Name,
         validity: Validity,
-    ) -> Result<Self, IdCertTbsError> {
+    ) -> Result<Self, ConversionError> {
         if id_csr.inner_csr.capabilities.basic_constraints.ca {
-            return Err(IdCertTbsError::ConstraintError(
-                crate::errors::base::ConstraintError::Malformed(Some(
-                    "Actor ID-Cert cannot have \"CA\" BasicConstraint set to true".to_string(),
-                )),
-            ));
+            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                "Actor ID-Cert cannot have \"CA\" BasicConstraint set to true".to_string(),
+            )));
         }
         id_csr.validate()?;
         issuer.validate()?;
@@ -113,13 +112,11 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         signature_algorithm: AlgorithmIdentifierOwned,
         issuer: Name,
         validity: Validity,
-    ) -> Result<Self, IdCertTbsError> {
+    ) -> Result<Self, ConversionError> {
         if !id_csr.inner_csr.capabilities.basic_constraints.ca {
-            return Err(IdCertTbsError::ConstraintError(
-                crate::errors::base::ConstraintError::Malformed(Some(
-                    "CA ID-Cert must have \"CA\" BasicConstraint set to true".to_string(),
-                )),
-            ));
+            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                "CA ID-Cert must have \"CA\" BasicConstraint set to true".to_string(),
+            )));
         }
         id_csr.validate()?;
         // Verify if signature of IdCsr matches contents
@@ -140,12 +137,12 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     }
 
     /// Encode this type as DER, returning a byte vector.
-    pub fn to_der(self) -> Result<Vec<u8>, IdCertTbsError> {
+    pub fn to_der(self) -> Result<Vec<u8>, ConversionError> {
         Ok(TbsCertificate::try_from(self)?.to_der()?)
     }
 
     /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
-    pub fn from_der(bytes: &[u8]) -> Result<Self, TbsCertToIdCert> {
+    pub fn from_der(bytes: &[u8]) -> Result<Self, ConversionError> {
         IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)
     }
 }
@@ -153,22 +150,25 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
 impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
     for IdCertTbs<S, Q>
 {
-    type Error = TbsCertToIdCert;
+    type Error = ConversionError;
 
     fn try_from(value: TbsCertificateInner<P>) -> Result<Self, Self::Error> {
         value.subject.validate()?;
 
-        let capabilities = match value.extensions {
-            Some(ext) => Capabilities::try_from(ext)?,
-            None => return Err(TbsCertToIdCert::Extensions),
-        };
+        let capabilities =
+            match value.extensions {
+                Some(ext) => Capabilities::try_from(ext)?,
+                None => return Err(ConversionError::InvalidInput(
+                    crate::errors::base::InvalidInput::Malformed(
+                        "field 'extensions' was None. Expected: Some(x509_cert::ext::Extensions)"
+                            .to_string(),
+                    ),
+                )),
+            };
         let subject_public_key_info =
             PublicKey::from_public_key_info(PublicKeyInfo::from(value.subject_public_key_info));
 
-        let serial_number = match Uint::new(value.serial_number.as_bytes()) {
-            Ok(snum) => snum,
-            Err(e) => return Err(TbsCertToIdCert::Signature(e)),
-        };
+        let serial_number = Uint::new(value.serial_number.as_bytes())?;
 
         Ok(Self {
             serial_number,
@@ -186,12 +186,18 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
 impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<IdCertTbs<S, Q>>
     for TbsCertificateInner<P>
 {
-    type Error = IdCertToTbsCert;
+    type Error = ConversionError;
 
     fn try_from(value: IdCertTbs<S, Q>) -> Result<Self, Self::Error> {
         let serial_number = match SerialNumber::<P>::new(value.serial_number.as_bytes()) {
             Ok(sernum) => sernum,
-            Err(e) => return Err(IdCertToTbsCert::SerialNumber(e)),
+            Err(e) => {
+                return Err(ConversionError::InvalidInput(
+                    crate::errors::base::InvalidInput::Malformed(
+                        "Could not convert serial number".to_string(),
+                    ),
+                ))
+            }
         };
 
         let signature = AlgorithmIdentifierOwned {
@@ -209,7 +215,7 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<IdCertTbs<S, Q>>
             subject_public_key_info: value.subject_public_key_info.public_key_info().into(),
             issuer_unique_id: None,
             subject_unique_id: None,
-            extensions: Some(Extensions::from(value.capabilities)),
+            extensions: Some(Extensions::try_from(value.capabilities)?),
         })
     }
 }

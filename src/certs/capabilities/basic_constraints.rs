@@ -11,6 +11,7 @@ use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
 
 use crate::errors::base::{ConstraintError, InvalidInput};
+use crate::errors::composite::ConversionError;
 
 use super::OID_BASIC_CONSTRAINTS;
 
@@ -36,7 +37,7 @@ impl From<BasicConstraints> for ObjectIdentifier {
 }
 
 impl TryFrom<Attribute> for BasicConstraints {
-    type Error = InvalidInput;
+    type Error = ConversionError;
     /// Performs the conversion.
     ///
     /// Fails, if the input attribute
@@ -51,21 +52,20 @@ impl TryFrom<Attribute> for BasicConstraints {
     fn try_from(value: Attribute) -> Result<Self, Self::Error> {
         // Basic input validation. Check OID of Attribute and length of the "values" SetOfVec provided.
         if value.oid.to_string() != super::OID_BASIC_CONSTRAINTS {
-            return Err(Self::Error::IncompatibleVariantForConversion {
-                reason: format!(
+            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                format!(
                     "OID of value does not match any of OID_BASIC_CONSTRAINTS. Found OID {}",
                     value.oid
                 ),
-            });
+            )));
         }
         let values = value.values;
         if values.len() > 2usize {
-            return Err(InvalidInput::IncompatibleVariantForConversion {
-                reason: format!(
-                    "Expected 1 or 2 values for BasicConstraints, found {}",
-                    values.len()
-                ),
-            });
+            return Err(ConversionError::InvalidInput(InvalidInput::Length {
+                min_length: 1,
+                max_length: 2,
+                actual_length: values.len().to_string(),
+            }));
         }
         let mut num_ca = 0u8;
         let mut num_path_length = 0u8;
@@ -79,7 +79,7 @@ impl TryFrom<Attribute> for BasicConstraints {
                         num_ca += 1;
                         ca = any_to_bool(value.clone())?;
                     } else {
-                        return Err(InvalidInput::IncompatibleVariantForConversion { reason: "Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string() });
+                        return Err(ConversionError::InvalidInput(InvalidInput::Malformed("Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string())));
                     }
                 }
                 Tag::Integer => {
@@ -88,54 +88,57 @@ impl TryFrom<Attribute> for BasicConstraints {
                         num_path_length += 1;
                         path_length = Some(any_to_u64(value.clone())?);
                     } else {
-                        return Err(InvalidInput::IncompatibleVariantForConversion { reason: "Encountered > 1 Integer tags. Expected 0 or 1 Integer tags.".to_string() });
+                        return Err(ConversionError::InvalidInput(InvalidInput::Malformed("Encountered > 1 Integer tags. Expected 0 or 1 Integer tags.".to_string())));
                     }
                 }
-                _ => return Err(InvalidInput::IncompatibleVariantForConversion { reason: format!("Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer", value.tag()) }),
+                _ => return Err(ConversionError::InvalidInput(InvalidInput::Malformed(format!("Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer", value.tag())))),
             }
         }
         if num_ca == 0 {
-            return Err(InvalidInput::IncompatibleVariantForConversion {
-                reason: "Expected 1 Boolean tag, found 0".to_string(),
-            });
+            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                "Expected 1 Boolean tag, found 0".to_string(),
+            )));
         }
         Ok(BasicConstraints { ca, path_length })
     }
 }
 
-impl From<BasicConstraints> for Attribute {
-    fn from(value: BasicConstraints) -> Self {
+impl TryFrom<BasicConstraints> for Attribute {
+    type Error = ConversionError;
+    fn try_from(value: BasicConstraints) -> Result<Self, Self::Error> {
         let mut sov = SetOfVec::new();
-        sov.insert(Any::new(der::Tag::Boolean, match value.ca {
-                        true => vec![0xff],
-                        false => vec![0x00],
-                    },
-                ).expect("Error occurred when converting BasicConstraints bool to der::Any. Please report this crash at https://github.com/polyphony-chat/polyproto.")).expect("Error occurred when inserting into der::Any to SetOfVec. Please report this crash at https://github.com/polyphony-chat/polyproto");
+        sov.insert(Any::new(
+            der::Tag::Boolean,
+            match value.ca {
+                true => vec![0xff],
+                false => vec![0x00],
+            },
+        )?)?;
         if let Some(length) = value.path_length {
-            sov.insert(Any::new(der::Tag::Integer, length.to_be_bytes()).expect("Error occurred when converting BasicConstraints u64 to der::Any. Please report this crash at https://github.com/polyphony-chat/polyproto.")).
-            expect("Error occurred when inserting into der::Any to SetOfVec. Please report this crash at https://github.com/polyphony-chat/polyproto");
+            sov.insert(Any::new(der::Tag::Integer, length.to_be_bytes())?)?;
         }
-        Attribute {
+        Ok(Attribute {
             oid: value.into(),
             values: sov,
-        }
+        })
     }
 }
 
-impl From<BasicConstraints> for Extension {
-    fn from(value: BasicConstraints) -> Self {
-        let attribute = Attribute::from(value);
-        Extension {
+impl TryFrom<BasicConstraints> for Extension {
+    type Error = ConversionError;
+    fn try_from(value: BasicConstraints) -> Result<Self, Self::Error> {
+        let attribute = Attribute::try_from(value)?;
+        Ok(Extension {
             extn_id: value.into(),
             critical: true,
             // This should be infallible. We are converting a boolean and a 64bit integer into DER and creating an OctetString from it.
-            extn_value: OctetString::new(attribute.values.to_der().expect("Error occurred when converting BasicConstraints u64 to DER. Please report this crash at https://github.com/polyphony-chat/polyproto.")).expect("Error occurred when converting BasicConstraints u64 to OctetString. Please report this crash at https://github.com/polyphony-chat/polyproto."),
-        }
+            extn_value: OctetString::new(attribute.values.to_der()?)?,
+        })
     }
 }
 
 impl TryFrom<Extension> for BasicConstraints {
-    type Error = InvalidInput;
+    type Error = ConversionError;
 
     /// Performs the conversion. Assumes, that the order of the bool value and the
     /// `int`/`none` value is **not** important.
@@ -147,21 +150,18 @@ impl TryFrom<Extension> for BasicConstraints {
         #[allow(unreachable_patterns)]
         if value.critical && !matches!(value.extn_id.to_string().as_str(), OID_BASIC_CONSTRAINTS) {
             // Error if we encounter a "critical" X.509 extension which we do not know of
-            return Err(InvalidInput::UnknownCriticalExtension { oid: value.extn_id });
+            return Err(ConversionError::UnknownCriticalExtension { oid: value.extn_id });
         }
         // If the Extension is a valid BasicConstraint, the octet string will contain DER ANY values
         // in a DER SET OF type
-        let sov: SetOfVec<Any> = match SetOfVec::from_der(value.extn_value.as_bytes()) {
-            Ok(sov) => sov,
-            Err(e) => return Err(InvalidInput::DerError(e)),
-        };
+        let sov: SetOfVec<Any> = SetOfVec::from_der(value.extn_value.as_bytes())?;
         if sov.len() > 2 {
-            return Err(InvalidInput::IncompatibleVariantForConversion {
-                reason: format!(
+            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                format!(
                     "This x509_cert::Extension has {} values stored. Expected a maximum of 2 values",
                     sov.len()
                 ),
-            });
+            )));
         }
         let mut bool_encounters = 0u8;
         let mut int_encounters = 0u8;
@@ -182,10 +182,14 @@ impl TryFrom<Extension> for BasicConstraints {
                     null_encounters += 1;
                     path_length = None;
                 },
-                _ => return Err(InvalidInput::IncompatibleVariantForConversion { reason: format!("Found {:?} in value, which does not match expected [Tag::Boolean, Tag::Integer, Tag::Null]", item.tag().to_string()) }),
+                _ => return Err(ConversionError::InvalidInput(InvalidInput::Malformed(format!("Encountered unexpected tag {:?}, when tag should have been either Boolean, Integer or Null", item.tag())))),
             }
             if bool_encounters > 1 || int_encounters > 1 || null_encounters > 1 {
-                return Err(InvalidInput::ConstraintError(ConstraintError::OutOfBounds { lower: 0, upper: 1, actual: 2.to_string(), reason: Some("Expected 0 or 1 Boolean, Integer or Null values, found more than one of one of these variants".to_string()) }));
+                return Err(ConversionError::InvalidInput(InvalidInput::Length {
+                    min_length: 0,
+                    max_length: 1,
+                    actual_length: 2.to_string(),
+                }));
             }
         }
         Ok(BasicConstraints { ca, path_length })
@@ -226,6 +230,8 @@ fn any_to_u64(value: Any) -> Result<u64, ConstraintError> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
+#[cfg(test)]
 mod test {
     use super::*;
 
@@ -236,7 +242,7 @@ mod test {
             ca: true,
             path_length: Some(0u64),
         };
-        let extension = Extension::from(basic_constraints);
+        let extension = Extension::try_from(basic_constraints).unwrap();
         dbg!(extension);
     }
 
@@ -247,7 +253,7 @@ mod test {
             ca: true,
             path_length: Some(u64::MAX),
         };
-        let extension = Extension::from(basic_constraints);
+        let extension = Extension::try_from(basic_constraints).unwrap();
         #[allow(clippy::unwrap_used)]
         let from_extension = BasicConstraints::try_from(extension).unwrap();
         assert_eq!(from_extension, basic_constraints);
@@ -256,7 +262,7 @@ mod test {
             ca: true,
             path_length: None,
         };
-        let extension = Extension::from(basic_constraints);
+        let extension = Extension::try_from(basic_constraints).unwrap();
         #[allow(clippy::unwrap_used)]
         let from_extension = BasicConstraints::try_from(extension).unwrap();
         assert_eq!(from_extension, basic_constraints);
@@ -265,7 +271,7 @@ mod test {
             ca: false,
             path_length: Some(u64::MAX),
         };
-        let extension = Extension::from(basic_constraints);
+        let extension = Extension::try_from(basic_constraints).unwrap();
         #[allow(clippy::unwrap_used)]
         let from_extension = BasicConstraints::try_from(extension).unwrap();
         assert_eq!(from_extension, basic_constraints);
@@ -274,7 +280,7 @@ mod test {
             ca: false,
             path_length: None,
         };
-        let extension = Extension::from(basic_constraints);
+        let extension = Extension::try_from(basic_constraints).unwrap();
         #[allow(clippy::unwrap_used)]
         let from_extension = BasicConstraints::try_from(extension).unwrap();
         assert_eq!(from_extension, basic_constraints);
