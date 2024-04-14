@@ -114,7 +114,7 @@ impl TryFrom<Attributes> for Capabilities {
             match item.oid.to_string().as_str() {
                 #[allow(unreachable_patterns)] // cargo thinks the below pattern is unreachable.
                 OID_KEY_USAGE => {
-                    key_usages = KeyUsages::try_from(*item)?;
+                    key_usages = KeyUsages::try_from(item.clone())?;
                 }
                 OID_BASIC_CONSTRAINTS => {
                     num_basic_constraints += 1;
@@ -141,12 +141,9 @@ impl TryFrom<Capabilities> for Attributes {
     fn try_from(value: Capabilities) -> Result<Self, Self::Error> {
         value.validate()?;
         let mut sov = SetOfVec::new();
-        // TODO: Impl From<KeyUsages> for Attributes and then just call that here
-        for item in value.key_usage.iter() {
-            let insertion = sov.insert(Attribute::from(*item));
-            if insertion.is_err() {
-                return Err(ConstraintError::Malformed(Some("Tried inserting non-unique element into SetOfVec. You likely have a duplicate value in your Capabilities".to_string())));
-            }
+        let insertion = sov.insert(Attribute::from(value.key_usage));
+        if insertion.is_err() {
+            return Err(ConstraintError::Malformed(Some("Tried inserting non-unique element into SetOfVec. You likely have a duplicate value in your Capabilities".to_string())));
         }
         let insertion = sov.insert(Attribute::from(value.basic_constraints));
         if insertion.is_err() {
@@ -163,12 +160,10 @@ impl From<Capabilities> for Extensions {
     ///
     /// try_from does **not** check whether the resulting [Extensions] are well-formed.
     fn from(value: Capabilities) -> Self {
-        let mut vec = Vec::new();
-        vec.push(Extension::from(value.basic_constraints));
-        for item in value.key_usage.iter() {
-            vec.push(Extension::from(*item));
-        }
-        vec
+        vec![
+            Extension::from(value.basic_constraints),
+            Extension::from(value.key_usage),
+        ]
     }
 }
 
@@ -182,23 +177,15 @@ impl TryFrom<Extensions> for Capabilities {
     /// these resulting [Capabilities].
     fn try_from(value: Extensions) -> Result<Self, Self::Error> {
         let mut basic_constraints: BasicConstraints = BasicConstraints::default();
-        let mut key_usage: Vec<KeyUsages> = Vec::new();
+        let mut key_usage: KeyUsages = KeyUsages::default();
         for item in value.iter() {
             #[allow(unreachable_patterns)] // cargo thinks that we have an unreachable pattern here
             match item.extn_id.to_string().as_str() {
                 OID_BASIC_CONSTRAINTS => {
                     basic_constraints = BasicConstraints::try_from(item.clone())?
                 }
-                OID_KEY_USAGE_CONTENT_COMMITMENT
-                | OID_KEY_USAGE_CRL_SIGN
-                | OID_KEY_USAGE_DATA_ENCIPHERMENT
-                | OID_KEY_USAGE_DECIPHER_ONLY
-                | OID_KEY_USAGE_DIGITAL_SIGNATURE
-                | OID_KEY_USAGE_ENCIPHER_ONLY
-                | OID_KEY_USAGE_KEY_AGREEMENT
-                | OID_KEY_USAGE_KEY_CERT_SIGN
-                | OID_KEY_USAGE_KEY_ENCIPHERMENT => {
-                    key_usage.push(KeyUsages::try_from(item.clone())?)
+                OID_KEY_USAGE => {
+                    key_usage = KeyUsages::try_from(item.clone())?
                 },
                 _ => return Err(InvalidInput::ConstraintError(ConstraintError::Malformed(Some(format!("Invalid OID found for converting this set of Extensions to Capabilities: {} is not a valid OID for BasicConstraints or KeyUsages", item.extn_id)))))
             };
