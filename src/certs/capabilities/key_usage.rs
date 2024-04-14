@@ -156,14 +156,14 @@ impl TryFrom<Attribute> for KeyUsages {
         // current value of starting_number to a KeyUsage variant. On every iteration, we divide
         // starting_number by two, until it equals 1 and thus cannot be divided any further.
         for bit in bitstring.bits() {
-            let bitval = match bit {
+            match bit {
                 true => 1u8,
                 false => {
                     divide_starting_number(&mut starting_number);
                     continue;
                 }
             };
-            key_usages.push(KeyUsage::try_from(starting_number as u32)?);
+            key_usages.push(KeyUsage::try_from(starting_number)?);
             if starting_number == 1 {
                 // Stop the loop if starting_number is already 1.
                 break;
