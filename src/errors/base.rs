@@ -33,6 +33,8 @@ pub enum InvalidInput {
     UnknownCriticalExtension { oid: ObjectIdentifier },
     #[error(transparent)]
     ConstraintError(#[from] ConstraintError),
+    #[error(transparent)]
+    UnsuccessfulConversion(#[from] UnsuccessfulConversion),
 }
 
 #[derive(Error, Debug, PartialEq, Clone)]

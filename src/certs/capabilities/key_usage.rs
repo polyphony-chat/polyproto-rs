@@ -10,7 +10,7 @@ use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
 
-use crate::errors::base::InvalidInput;
+use crate::errors::base::{InvalidInput, UnsuccessfulConversion};
 
 use super::*;
 
@@ -54,6 +54,32 @@ pub enum KeyUsage {
     /// public key may be used only for deciphering data while performing key agreement. The
     /// `KeyAgreement` capability must be set for this.
     DecipherOnly = 256,
+}
+
+impl TryFrom<u32> for KeyUsage {
+    type Error = UnsuccessfulConversion;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        if value > 256 {
+            return Err(UnsuccessfulConversion::InvalidInput(
+                "Value too big to match this enums' variants".to_string(),
+            ));
+        }
+        match value {
+            x if x == KeyUsage::DigitalSignature as u32 => Ok(KeyUsage::DigitalSignature),
+            x if x == KeyUsage::ContentCommitment as u32 => Ok(KeyUsage::ContentCommitment),
+            x if x == KeyUsage::KeyEncipherment as u32 => Ok(KeyUsage::KeyEncipherment),
+            x if x == KeyUsage::DataEncipherment as u32 => Ok(KeyUsage::DataEncipherment),
+            x if x == KeyUsage::KeyAgreement as u32 => Ok(KeyUsage::KeyAgreement),
+            x if x == KeyUsage::KeyCertSign as u32 => Ok(KeyUsage::KeyCertSign),
+            x if x == KeyUsage::CrlSign as u32 => Ok(KeyUsage::CrlSign),
+            x if x == KeyUsage::EncipherOnly as u32 => Ok(KeyUsage::EncipherOnly),
+            x if x == KeyUsage::DecipherOnly as u32 => Ok(KeyUsage::DecipherOnly),
+            _ => Err(UnsuccessfulConversion::InvalidInput(
+                "Value does not match any of the variants".to_string(),
+            )),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -103,6 +129,54 @@ impl TryFrom<Attribute> for KeyUsages {
             }
         };
         let inner_value = value.values.get(0).expect("Illegal state. Please report this error to https://github.com/polyphony-chat/polyproto");
+        /* Below, we are doing some operations on bits. RFC 5280 says:
+        KeyUsage ::= BIT STRING {
+            digitalSignature        (0),
+            nonRepudiation          (1), -- recent editions of X.509 have
+                                -- renamed this bit to contentCommitment
+            keyEncipherment         (2),
+            dataEncipherment        (3),
+            keyAgreement            (4),
+            keyCertSign             (5),
+            cRLSign                 (6),
+            encipherOnly            (7),
+            decipherOnly            (8) }
+
+        It is now our task to check, which bits (0 - 8) are set, and to construct KeyUsage variants
+        from this information.
+        Note, that BitStrings represent the bits they store in big endian order, meaning that the
+        most significant bit (MSB) is the first bit in the BitString.
+        */
+        let bitstring = BitString::from_bytes(inner_value.value())?;
+        // The "starting number" is 2 to the power of len(bitstring) [<-pseudocode].
+        // For a bit of length 8, this would be 2^8=256.
+        let mut starting_number = 2u32.pow(bitstring.bit_len() as u32);
+        let mut key_usages = Vec::new();
+        // We iterate over all bits, check if the current bit is set and try to convert the
+        // current value of starting_number to a KeyUsage variant. On every iteration, we divide
+        // starting_number by two, until it equals 1 and thus cannot be divided any further.
+        for bit in bitstring.bits() {
+            let bitval = match bit {
+                true => 1u8,
+                false => {
+                    divide_starting_number(&mut starting_number);
+                    continue;
+                }
+            };
+            key_usages.push(KeyUsage::try_from(starting_number as u32)?);
+            if starting_number == 1 {
+                // Stop the loop if starting_number is already 1.
+                break;
+            }
+            divide_starting_number(&mut starting_number);
+        }
+        Ok(KeyUsages::new(&key_usages))
+    }
+}
+
+fn divide_starting_number(number: &mut u32) {
+    if !*number == 1 {
+        *number /= 2;
     }
 }
 
