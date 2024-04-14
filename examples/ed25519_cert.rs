@@ -56,9 +56,7 @@ fn main() {
         &Capabilities::default_actor(),
     )
     .unwrap();
-
     let data = csr.clone().to_der().unwrap();
-    dbg!(&data);
     let file_name_with_extension = "cert.csr";
     #[cfg(not(target_arch = "wasm32"))]
     std::fs::write(file_name_with_extension, &data).unwrap();
