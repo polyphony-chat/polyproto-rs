@@ -50,7 +50,7 @@ pub const OID_KEY_USAGE: &str = "2.5.29.15";
 /// are relevant to polyproto certificates.
 pub struct Capabilities {
     /// The key usage extension defines the purpose of the key contained in the certificate.
-    pub key_usage: Vec<KeyUsages>,
+    pub key_usage: KeyUsages,
     /// Extension type that defines whether a given certificate is allowed
     /// to sign additional certificates and what path length restrictions may exist.
     pub basic_constraints: BasicConstraints,
@@ -72,7 +72,7 @@ impl Capabilities {
     /// Sane default for actor [IdCsr]/[IdCert] [Capabilities]. Uses the DigitalSignature flag,
     /// not the ContentCommitment flag.
     pub fn default_actor() -> Self {
-        let key_usage = vec![KeyUsage::DigitalSignature];
+        let key_usage = KeyUsages::new(&[KeyUsage::DigitalSignature]);
         let basic_constraints = BasicConstraints {
             ca: false,
             path_length: None,
@@ -85,7 +85,7 @@ impl Capabilities {
 
     /// Sane default for home server [IdCsr]/[IdCert] [Capabilities].
     pub fn default_home_server() -> Self {
-        let key_usage = vec![KeyUsage::KeyCertSign];
+        let key_usage = KeyUsages::new(&[KeyUsage::KeyCertSign]);
         let basic_constraints = BasicConstraints {
             ca: true,
             path_length: Some(1),
@@ -107,22 +107,14 @@ impl TryFrom<Attributes> for Capabilities {
     /// to ensure that the constraints are valid according to the X.509 standard and the polyproto
     /// specification.
     fn try_from(value: Attributes) -> Result<Self, Self::Error> {
-        let mut key_usages: Vec<KeyUsages> = Vec::new();
+        let mut key_usages = KeyUsages::new(&[]);
         let mut basic_constraints = BasicConstraints::default();
         let mut num_basic_constraints = 0u8;
         for item in value.iter() {
             match item.oid.to_string().as_str() {
                 #[allow(unreachable_patterns)] // cargo thinks the below pattern is unreachable.
-                OID_KEY_USAGE_CONTENT_COMMITMENT
-                | OID_KEY_USAGE_CRL_SIGN
-                | OID_KEY_USAGE_DATA_ENCIPHERMENT
-                | OID_KEY_USAGE_DECIPHER_ONLY
-                | OID_KEY_USAGE_DIGITAL_SIGNATURE
-                | OID_KEY_USAGE_ENCIPHER_ONLY
-                | OID_KEY_USAGE_KEY_AGREEMENT
-                | OID_KEY_USAGE_KEY_CERT_SIGN
-                | OID_KEY_USAGE_KEY_ENCIPHERMENT => {
-                    key_usages.push(KeyUsages::try_from(item.clone())?);
+                OID_KEY_USAGE => {
+                    key_usages = KeyUsages::try_from(*item)?;
                 }
                 OID_BASIC_CONSTRAINTS => {
                     num_basic_constraints += 1;
@@ -149,6 +141,7 @@ impl TryFrom<Capabilities> for Attributes {
     fn try_from(value: Capabilities) -> Result<Self, Self::Error> {
         value.validate()?;
         let mut sov = SetOfVec::new();
+        // TODO: Impl From<KeyUsages> for Attributes and then just call that here
         for item in value.key_usage.iter() {
             let insertion = sov.insert(Attribute::from(*item));
             if insertion.is_err() {
