@@ -206,29 +206,6 @@ mod test {
     use spki::ObjectIdentifier;
 
     use super::*;
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    fn test_key_usage_to_object_identifier() {
-        // TODO
-        todo!()
-    }
-
-    fn test_key_usage_to_attribute(_val: bool) {
-        // TODO
-        todo!()
-    }
-
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    fn test_key_usage_to_attribute_true() {
-        test_key_usage_to_attribute(true);
-    }
-
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    fn test_key_usage_to_attribute_false() {
-        test_key_usage_to_attribute(false);
-    }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
@@ -278,13 +255,6 @@ mod test_key_usage_from_attribute {
     use spki::ObjectIdentifier;
 
     use super::*;
-
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    fn test_key_usage_from_attribute() {
-        // TODO
-        todo!()
-    }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
