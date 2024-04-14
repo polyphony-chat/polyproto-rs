@@ -117,7 +117,7 @@ impl KeyUsages {
     ///     encipherOnly            (7),
     ///     decipherOnly            (8) }
     /// ```
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ConversionError> {
+    pub fn from_bitstring(bitstring: BitString) -> Result<Self, ConversionError> {
         /* Below, we are doing some operations on bits. RFC 5280 says:
         KeyUsage ::= BIT STRING {
             digitalSignature        (0),
@@ -136,28 +136,29 @@ impl KeyUsages {
         Note, that BitStrings represent the bits they store in big endian order, meaning that the
         most significant bit (MSB) is the first bit in the BitString.
         */
-        let bitstring = BitString::from_bytes(bytes)?;
-        // The "starting number" is 2 to the power of len(bitstring) [<-pseudocode].
-        // For a bit of length 8, this would be 2^8=256.
-        let mut starting_number = 2u32.pow(bitstring.bit_len() as u32);
+        let mut starting_number = 1;
         let mut key_usages = Vec::new();
         // We iterate over all bits, check if the current bit is set and try to convert the
         // current value of starting_number to a KeyUsage variant. On every iteration, we divide
         // starting_number by two, until it equals 1 and thus cannot be divided any further.
-        for bit in bitstring.bits() {
-            match bit {
-                true => 1u8,
-                false => {
-                    divide_starting_number(&mut starting_number);
-                    continue;
-                }
-            };
+        for bit in bitstring.raw_bytes().iter() {
+            if *bit == 0 {
+                // If the bit is 0, we can skip the current iteration, increment the starting_number
+                // and continue with the next iteration.
+                multiply_starting_number(&mut starting_number);
+                continue;
+            }
+            if *bit != 1 {
+                // If the bit is not 0 or 1, we are likely looking at the "unused bits" byte of the
+                // BitString. We can safely ignore this byte.
+                continue;
+            }
             key_usages.push(KeyUsage::try_from(starting_number)?);
-            if starting_number == 1 {
-                // Stop the loop if starting_number is already 1.
+            if starting_number == 256 {
+                // Stop the loop if starting_number is already 256.
                 break;
             }
-            divide_starting_number(&mut starting_number);
+            multiply_starting_number(&mut starting_number);
         }
         Ok(KeyUsages::new(&key_usages))
     }
@@ -206,7 +207,7 @@ impl KeyUsages {
             unused_bits += 1;
         }
         BitString::new(unused_bits, bytes)
-            .expect("Error when converting KeyUsages to BitString. Please report this error")
+            .expect("Error when converting KeyUsages to BitString. Please report this error to https://github.com/polyphony-chat/polyproto")
     }
 }
 
@@ -237,13 +238,13 @@ impl TryFrom<Attribute> for KeyUsages {
             }
         };
         let inner_value = value.values.get(0).expect("Illegal state. Please report this error to https://github.com/polyphony-chat/polyproto");
-        KeyUsages::from_bytes(inner_value.value())
+        KeyUsages::from_bitstring(BitString::from_der(inner_value.value())?)
     }
 }
 
-fn divide_starting_number(number: &mut u32) {
-    if !*number == 1 {
-        *number /= 2;
+fn multiply_starting_number(number: &mut u32) {
+    if !*number == 256 {
+        *number *= 2;
     }
 }
 
@@ -259,10 +260,8 @@ impl TryFrom<Extension> for KeyUsages {
                 ),
             )));
         }
-        // here we need to NOT just do .as_bytes() but to somehow get the actual value in this
-        // octetstring
-        // TODO
-        KeyUsages::from_bytes(value.extn_value.as_bytes())
+        let any = Any::from_der(value.extn_value.as_bytes())?;
+        KeyUsages::from_bitstring(BitString::from_bytes(any.value())?)
     }
 }
 
@@ -272,9 +271,7 @@ impl TryFrom<KeyUsages> for Attribute {
     fn try_from(value: KeyUsages) -> Result<Self, Self::Error> {
         let mut sov = SetOfVec::new();
         let bitstring = value.to_bitstring();
-        sov.insert(Any::from_der(&bitstring.to_der()?)?)
-            .expect("wow");
-        dbg!(&sov);
+        sov.insert(Any::from_der(&bitstring.to_der()?)?)?;
         Ok(Attribute {
             oid: ObjectIdentifier::from_str(OID_KEY_USAGE)?,
             values: sov,
@@ -309,8 +306,7 @@ mod test {
             KeyUsage::EncipherOnly,
             KeyUsage::KeyAgreement,
         ]);
-        let bitstring = BitString::from(key_usages);
-        dbg!(bitstring);
+        let _bitstring = BitString::from(key_usages);
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
