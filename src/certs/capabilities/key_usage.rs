@@ -82,7 +82,7 @@ impl TryFrom<u32> for KeyUsage {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct KeyUsages {
     pub key_usages: Vec<KeyUsage>,
 }
