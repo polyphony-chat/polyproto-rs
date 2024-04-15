@@ -33,13 +33,6 @@ use x509_cert::Certificate;
 /// ```sh
 /// openssl req -in cert.csr -verify -inform der
 /// ```
-///
-/// After that, the program creates an ID-Cert from the given ID-CSR. The `cert.der` file can also
-/// be validated using openssl:
-///
-/// ```sh
-/// openssl x509 -in cert.der -text -noout -inform der
-/// ```
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
