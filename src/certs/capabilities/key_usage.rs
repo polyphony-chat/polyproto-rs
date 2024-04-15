@@ -22,39 +22,39 @@ use super::*;
 pub enum KeyUsage {
     /// This purpose is set when the subject public key is used for verifying digital
     /// signatures, other than signatures on certificates (`key_cert_sign`) and CRLs (`crl_sign`).
-    DigitalSignature = 1,
+    DigitalSignature,
     /// This purpose is set when the subject public key is used for verifying digital
     /// signatures, other than signatures on certificates (`key_cert_sign`) and CRLs (`crl_sign`).
     /// It is used to provide a non-repudiation service that protects against the signing entity
     /// falsely denying some action. In the case of later conflict, a reliable third party may
     /// determine the authenticity of the signed data. This was called `non_repudiation` in older
     /// revisions of the X.509 specification.
-    ContentCommitment = 2,
+    ContentCommitment,
     /// This purpose is set when the subject public key is used for enciphering private or
     /// secret keys.
-    KeyEncipherment = 4,
+    KeyEncipherment,
     /// This purpose is set when the subject public key is used for directly enciphering raw
     /// user data without the use of an intermediate symmetric cipher.
-    DataEncipherment = 8,
+    DataEncipherment,
     /// This purpose is set when the subject public key is used for key agreement. For
     /// example, when a Diffie-Hellman key is to be used for key management, then this purpose is
     /// set.
-    KeyAgreement = 16,
+    KeyAgreement,
     /// This purpose is set when the subject public key is used for verifying signatures on
     /// public key certificates. If this purpose is set to true then ca must be true in the
     /// `BasicConstraints` extension.
-    KeyCertSign = 32,
+    KeyCertSign,
     /// This purpose is set when the subject public key is used for verifying signatures on
     /// certificate revocation lists.
-    CrlSign = 64,
+    CrlSign,
     /// When this purpose is set and the `key_agreement` purpose is also set, the subject
     /// public key may be used only for enciphering data while performing key agreement. The
     /// `KeyAgreement` capability must be set for this.
-    EncipherOnly = 128,
+    EncipherOnly,
     /// When this purpose is set and the `key_agreement` purpose is also set, the subject
     /// public key may be used only for deciphering data while performing key agreement. The
     /// `KeyAgreement` capability must be set for this.
-    DecipherOnly = 256,
+    DecipherOnly,
 }
 
 impl TryFrom<u32> for KeyUsage {
