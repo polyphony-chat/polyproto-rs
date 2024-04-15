@@ -95,6 +95,7 @@ impl Signature for Ed25519Signature {
         }
     }
 
+    #[cfg(not(tarpaulin_include))]
     fn from_bitstring(signature: &[u8]) -> Self {
         let mut signature_vec = signature.to_vec();
         signature_vec.resize(64, 0);
@@ -113,6 +114,7 @@ impl Signature for Ed25519Signature {
 // The `SignatureBitStringEncoding` trait is used to convert a signature to a bit string. We implement
 // it for our signature type.
 impl SignatureBitStringEncoding for Ed25519Signature {
+    #[cfg(not(tarpaulin_include))]
     fn to_bitstring(&self) -> der::Result<der::asn1::BitString> {
         BitString::from_bytes(&self.as_signature().to_bytes())
     }
@@ -182,6 +184,7 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
     // certificate or a CSR. It is named after the `SubjectPublicKeyInfo` type from the X.509
     // standard, and thus includes the information needed to encode the public key in a certificate
     // or a CSR.
+    #[cfg(not(tarpaulin_include))]
     fn public_key_info(&self) -> PublicKeyInfo {
         PublicKeyInfo {
             algorithm: Ed25519Signature::algorithm_identifier(),
@@ -189,6 +192,7 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
         }
     }
 
+    #[cfg(not(tarpaulin_include))]
     fn from_public_key_info(public_key_info: PublicKeyInfo) -> Self {
         let mut key_vec = public_key_info.public_key_bitstring.raw_bytes().to_vec();
         key_vec.resize(32, 0);

@@ -120,6 +120,7 @@ impl Signature for Ed25519Signature {
         }
     }
 
+    #[cfg(not(tarpaulin_include))]
     fn from_bitstring(signature: &[u8]) -> Self {
         let mut signature_vec = signature.to_vec();
         signature_vec.resize(64, 0);
@@ -192,6 +193,7 @@ struct Ed25519PublicKey {
 impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
     // Verifies a signature. We use the `verify_strict` method from the ed25519-dalek crate.
     // This method is used to mitigate weak key forgery.
+    #[cfg(not(tarpaulin_include))]
     fn verify_signature(
         &self,
         signature: &Ed25519Signature,
@@ -214,6 +216,7 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
         }
     }
 
+    #[cfg(not(tarpaulin_include))]
     fn from_public_key_info(public_key_info: PublicKeyInfo) -> Self {
         let mut key_vec = public_key_info.public_key_bitstring.raw_bytes().to_vec();
         key_vec.resize(32, 0);
