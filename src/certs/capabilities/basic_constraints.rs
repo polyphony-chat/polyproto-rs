@@ -4,7 +4,7 @@
 
 use std::str::FromStr;
 
-use der::asn1::{OctetString, SetOfVec};
+use der::asn1::{OctetString, SequenceOf, SetOfVec};
 use der::{Any, Decode, Encode, Tag, Tagged};
 use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
@@ -60,18 +60,25 @@ impl TryFrom<Attribute> for BasicConstraints {
             )));
         }
         let values = value.values;
-        if values.len() > 2usize {
+        if values.len() != 1usize {
             return Err(ConversionError::InvalidInput(InvalidInput::Length {
                 min_length: 1,
-                max_length: 2,
+                max_length: 1,
                 actual_length: values.len().to_string(),
             }));
         }
+        let element = values.get(0).expect("This should be infallible. Report this issue at https://github.com/polyphony-chat/polyproto");
+        if element.tag() != Tag::Sequence {
+            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                format!("Expected a Sequence tag, found {}", element.tag()),
+            )));
+        }
+        let sequence = SequenceOf::<Any, 2>::from_der(&element.to_der()?)?;
         let mut num_ca = 0u8;
         let mut num_path_length = 0u8;
         let mut ca: bool = false;
         let mut path_length: Option<u64> = None;
-        for value in values.iter() {
+        for value in sequence.iter() {
             match value.tag() {
                 Tag::Boolean => {
                     // Keep track of how many Boolean tags we encounter
@@ -106,8 +113,8 @@ impl TryFrom<Attribute> for BasicConstraints {
 impl TryFrom<BasicConstraints> for Attribute {
     type Error = ConversionError;
     fn try_from(value: BasicConstraints) -> Result<Self, Self::Error> {
-        let mut sov = SetOfVec::new();
-        sov.insert(Any::new(
+        let mut sequence = SequenceOf::<Any, 2>::new();
+        sequence.add(Any::new(
             der::Tag::Boolean,
             match value.ca {
                 true => vec![0xff],
@@ -115,8 +122,11 @@ impl TryFrom<BasicConstraints> for Attribute {
             },
         )?)?;
         if let Some(length) = value.path_length {
-            sov.insert(Any::new(der::Tag::Integer, length.to_be_bytes())?)?;
+            sequence.add(Any::new(der::Tag::Integer, length.to_be_bytes())?)?;
         }
+        let any = Any::from_der(sequence.to_der()?.as_slice())?;
+        let mut sov = SetOfVec::new();
+        sov.insert(any)?;
         Ok(Attribute {
             oid: value.into(),
             values: sov,
@@ -128,11 +138,20 @@ impl TryFrom<BasicConstraints> for Extension {
     type Error = ConversionError;
     fn try_from(value: BasicConstraints) -> Result<Self, Self::Error> {
         let attribute = Attribute::try_from(value)?;
+        let set = SetOfVec::<Any>::from_der(&attribute.values.to_der()?)?;
+        let element = match set.get(0) {
+            Some(element) => element,
+            None => {
+                return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                    "SetOfVec has no elements".to_string(),
+                )))
+            }
+        };
+        let sequence = SequenceOf::<Any, 2>::from_der(&element.to_der()?)?;
         Ok(Extension {
             extn_id: value.into(),
             critical: true,
-            // This should be infallible. We are converting a boolean and a 64bit integer into DER and creating an OctetString from it.
-            extn_value: OctetString::new(attribute.values.to_der()?)?,
+            extn_value: OctetString::new(sequence.to_der()?)?,
         })
     }
 }
@@ -154,12 +173,12 @@ impl TryFrom<Extension> for BasicConstraints {
         }
         // If the Extension is a valid BasicConstraint, the octet string will contain DER ANY values
         // in a DER SET OF type
-        let sov: SetOfVec<Any> = SetOfVec::from_der(value.extn_value.as_bytes())?;
-        if sov.len() > 2 {
+        let sequence: SequenceOf<Any, 2> = SequenceOf::from_der(value.extn_value.as_bytes())?;
+        if sequence.len() > 2 {
             return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
                 format!(
                     "This x509_cert::Extension has {} values stored. Expected a maximum of 2 values",
-                    sov.len()
+                    sequence.len()
                 ),
             )));
         }
@@ -168,7 +187,7 @@ impl TryFrom<Extension> for BasicConstraints {
         let mut null_encounters = 0u8;
         let mut ca = false;
         let mut path_length: Option<u64> = None;
-        for item in sov.iter() {
+        for item in sequence.iter() {
             match item.tag() {
                 Tag::Boolean => {
                     bool_encounters += 1;
