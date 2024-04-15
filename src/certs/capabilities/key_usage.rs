@@ -127,11 +127,16 @@ impl KeyUsages {
         byte_array.remove(0);
         let mut key_usages = Vec::new();
         if byte_array.len() == 2 {
+            // If the length of the byte array is 2, this means that DecipherOnly is set.
             key_usages.push(KeyUsage::DecipherOnly);
             byte_array.remove(0);
         }
         let mut current_try = 128u8;
         loop {
+            // If the first byte is bigger than or equal to the current_try, this means that the
+            // KeyUsage belonging to the current_try is set. We can then divide the current_try by 2
+            // and continue checking if the KeyUsage belonging to the current_try is set, until we
+            // reach current_try == 1.
             if current_try <= byte_array[0] {
                 byte_array[0] -= current_try;
                 key_usages.push(match current_try {
@@ -143,6 +148,7 @@ impl KeyUsages {
                     4 => KeyUsage::KeyCertSign,
                     2 => KeyUsage::CrlSign,
                     1 => KeyUsage::EncipherOnly,
+                    // This should never happen, as we are only dividing by 2 until we reach 1.
                     _ => panic!("This should never happen. Please report this error to https://github.com/polyphony-chat/polyproto"),
                 })
             }
