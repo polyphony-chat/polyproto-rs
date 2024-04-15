@@ -251,12 +251,6 @@ impl TryFrom<Attribute> for KeyUsages {
     }
 }
 
-fn multiply_starting_number(number: &mut u32) {
-    if !*number == 256 {
-        *number *= 2;
-    }
-}
-
 impl TryFrom<Extension> for KeyUsages {
     type Error = ConversionError;
 
