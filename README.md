@@ -4,7 +4,7 @@
 [![Matrix]][Matrix-invite]
 [![Build][build-shield]][build-url]
 [![Coverage][coverage-shield]][coverage-url]
-<img src="https://img.shields.io/static/v1?label=Status&message=Early Development&color=blue" alt="Blue status badge, reading 'Early Development'">
+<img src="https://img.shields.io/static/v1?label=Status&message=Alpha&color=blue" alt="Blue status badge, reading 'Alpha'">
 
 </div>
 
@@ -16,7 +16,7 @@ running.
 
 ## Implementing polyproto
 
-**The crate is currently in very early (alpha) development. A lot of functionality is missing, and
+**The crate is currently in an alpha stage. Some functionality is missing, and
 things may break or change at any point in time.**
 
 This crate extends upon types offered by [der](https://crates.io/crates/der) and
