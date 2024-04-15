@@ -57,34 +57,6 @@ pub enum KeyUsage {
     DecipherOnly,
 }
 
-impl TryFrom<u32> for KeyUsage {
-    type Error = ConversionError;
-
-    fn try_from(value: u32) -> Result<Self, Self::Error> {
-        if value > 256 {
-            return Err(ConversionError::InvalidInput(InvalidInput::Length {
-                min_length: 0,
-                max_length: 256,
-                actual_length: value.to_string(),
-            }));
-        }
-        match value {
-            x if x == KeyUsage::DigitalSignature as u32 => Ok(KeyUsage::DigitalSignature),
-            x if x == KeyUsage::ContentCommitment as u32 => Ok(KeyUsage::ContentCommitment),
-            x if x == KeyUsage::KeyEncipherment as u32 => Ok(KeyUsage::KeyEncipherment),
-            x if x == KeyUsage::DataEncipherment as u32 => Ok(KeyUsage::DataEncipherment),
-            x if x == KeyUsage::KeyAgreement as u32 => Ok(KeyUsage::KeyAgreement),
-            x if x == KeyUsage::KeyCertSign as u32 => Ok(KeyUsage::KeyCertSign),
-            x if x == KeyUsage::CrlSign as u32 => Ok(KeyUsage::CrlSign),
-            x if x == KeyUsage::EncipherOnly as u32 => Ok(KeyUsage::EncipherOnly),
-            x if x == KeyUsage::DecipherOnly as u32 => Ok(KeyUsage::DecipherOnly),
-            _ => Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                "Input cannot be matched to any of the KeyUsage variants".to_string(),
-            ))),
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 /// The KeyUsages struct is a collection of KeyUsage variants.
 pub struct KeyUsages {
