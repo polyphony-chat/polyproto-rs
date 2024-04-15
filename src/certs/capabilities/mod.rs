@@ -43,12 +43,10 @@ pub const OID_BASIC_CONSTRAINTS: &str = "2.5.29.19";
 pub const OID_KEY_USAGE: &str = "2.5.29.15";
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-/// Capabilities which an ID-Cert or ID-CSR might have. For ID-Certs, you'd find these capabilities
-/// in the `Extensions` field of a certificate. ID-CSRs store these capabilities as part of the
-/// `Attributes` field.
+/// An abstraction over X.509 Extensions and PKCS#10 Attributes, representing the capabilities
+/// of a certificate. Capabilities can be converted from and to both [Attributes] and [Extensions].
 ///
-/// This struct only covers the CertCapability subtype trees of which at least one of the subtypes
-/// are relevant to polyproto certificates.
+/// This struct only covers the Attributes/Extensions currently relevant to polyproto.
 pub struct Capabilities {
     /// The key usage extension defines the purpose of the key contained in the certificate.
     pub key_usage: KeyUsages,

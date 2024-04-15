@@ -54,9 +54,9 @@ pub struct IdCertTbs<S: Signature, P: PublicKey<S>> {
     pub validity: Validity,
     /// X.501 name, identifying the subject (actor) of the certificate.
     pub subject: Name,
-    /// Information regarding the subjects' public key.
-    pub subject_public_key_info: P,
-    /// X.509 Extensions matching what is described in the polyproto specification document.
+    /// The subjects' public key: [PublicKey].
+    pub subject_public_key: P,
+    /// Capabilities assigned to the subject of the certificate.
     pub capabilities: Capabilities,
     /// PhantomData
     s: std::marker::PhantomData<S>,
@@ -84,7 +84,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         id_csr.validate()?;
         issuer.validate()?;
         // Verify if signature of IdCsr matches contents
-        id_csr.inner_csr.subject_public_key_info.verify_signature(
+        id_csr.inner_csr.subject_public_key.verify_signature(
             &id_csr.signature,
             id_csr.inner_csr.clone().to_der()?.as_slice(),
         )?;
@@ -94,7 +94,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
             issuer,
             validity,
             subject: id_csr.inner_csr.subject,
-            subject_public_key_info: id_csr.inner_csr.subject_public_key_info,
+            subject_public_key: id_csr.inner_csr.subject_public_key,
             capabilities: id_csr.inner_csr.capabilities,
             s: std::marker::PhantomData,
         })
@@ -120,7 +120,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         }
         id_csr.validate()?;
         // Verify if signature of IdCsr matches contents
-        id_csr.inner_csr.subject_public_key_info.verify_signature(
+        id_csr.inner_csr.subject_public_key.verify_signature(
             &id_csr.signature,
             id_csr.inner_csr.clone().to_der()?.as_slice(),
         )?;
@@ -130,7 +130,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
             issuer,
             validity,
             subject: id_csr.inner_csr.subject,
-            subject_public_key_info: id_csr.inner_csr.subject_public_key_info,
+            subject_public_key: id_csr.inner_csr.subject_public_key,
             capabilities: id_csr.inner_csr.capabilities,
             s: std::marker::PhantomData,
         })
@@ -177,7 +177,7 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
             issuer: value.issuer,
             validity: value.validity,
             subject: value.subject,
-            subject_public_key_info,
+            subject_public_key: subject_public_key_info,
             capabilities,
             s: std::marker::PhantomData,
         })
@@ -214,7 +214,7 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<IdCertTbs<S, Q>>
             issuer: value.issuer,
             validity: value.validity,
             subject: value.subject,
-            subject_public_key_info: value.subject_public_key_info.public_key_info().into(),
+            subject_public_key_info: value.subject_public_key.public_key_info().into(),
             issuer_unique_id: None,
             subject_unique_id: None,
             extensions: Some(Extensions::try_from(value.capabilities)?),

@@ -207,7 +207,7 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
     fn validate(&self) -> Result<(), ConstraintError> {
         self.inner_csr.capabilities.validate()?;
         self.inner_csr.subject.validate()?;
-        match self.inner_csr.subject_public_key_info.verify_signature(
+        match self.inner_csr.subject_public_key.verify_signature(
             &self.signature,
             match &self.inner_csr.clone().to_der() {
                 Ok(data) => data,
@@ -224,7 +224,7 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCert<S, P> {
     fn validate(&self) -> Result<(), ConstraintError> {
         self.id_cert_tbs.validate()?;
-        match self.id_cert_tbs.subject_public_key_info.verify_signature(
+        match self.id_cert_tbs.subject_public_key.verify_signature(
             &self.signature,
             match &self.id_cert_tbs.clone().to_der() {
                 Ok(data) => data,

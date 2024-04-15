@@ -129,10 +129,9 @@ pub struct IdCsrInner<S: Signature, P: PublicKey<S>> {
     pub version: PkcsVersion,
     /// Information about the subject (actor).
     pub subject: Name,
-    /// The subjects' public key and related metadata.
-    pub subject_public_key_info: P,
-    /// attributes is a collection of attributes providing additional
-    /// information about the subject of the certificate.
+    /// The subjects' public key: [PublicKey].
+    pub subject_public_key: P,
+    /// Capabilities requested by the subject.
     pub capabilities: Capabilities,
     phantom_data: PhantomData<S>,
 }
@@ -155,7 +154,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
         Ok(IdCsrInner {
             version: PkcsVersion::V1,
             subject,
-            subject_public_key_info,
+            subject_public_key: subject_public_key_info,
             capabilities: capabilities.clone(),
             phantom_data: PhantomData,
         })
@@ -198,7 +197,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<CertReqInfo> for IdCsrInner<S, P> {
         Ok(IdCsrInner {
             version: PkcsVersion::V1,
             subject: rdn_sequence,
-            subject_public_key_info: PublicKey::try_from_public_key_info(public_key_info)?,
+            subject_public_key: PublicKey::try_from_public_key_info(public_key_info)?,
             capabilities: Capabilities::try_from(value.attributes)?,
             phantom_data: PhantomData,
         })
@@ -223,7 +222,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<IdCsrInner<S, P>> for CertReqInfo {
         Ok(CertReqInfo {
             version: x509_cert::request::Version::V1,
             subject: value.subject,
-            public_key: value.subject_public_key_info.public_key_info().into(),
+            public_key: value.subject_public_key.public_key_info().into(),
             attributes: Attributes::try_from(value.capabilities)?,
         })
     }
