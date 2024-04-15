@@ -53,7 +53,6 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     ) -> Result<Self, ConversionError> {
         // IdCsr gets validated in IdCertTbs::from_..._csr
         let signature_algorithm = signing_key.algorithm_identifier();
-        issuer.validate()?; // TODO: Maybe this and the below validation should be done in IdCertTbs?
         if !equal_domain_components(&id_csr.inner_csr.subject, &issuer) {
             return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
                 "Domain components of the issuer and the subject do not match".to_string(),
