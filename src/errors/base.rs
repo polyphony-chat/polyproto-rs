@@ -13,7 +13,7 @@ pub enum ConstraintError {
         lower: i32,
         upper: i32,
         actual: String,
-        reason: Option<String>, // TODO: Remove the Option<> here.
+        reason: String,
     },
 }
 

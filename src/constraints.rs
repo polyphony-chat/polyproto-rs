@@ -57,7 +57,7 @@ impl Constrained for Name {
                                 lower: 1,
                                 upper: 1,
                                 actual: num_cn.to_string(),
-                                reason: Some("Distinguished Names must include exactly one common name attribute.".to_string())
+                                reason: "Distinguished Names must include exactly one common name attribute.".to_string()
                             });
                         }
                     }
@@ -71,7 +71,7 @@ impl Constrained for Name {
                 lower: 1,
                 upper: u8::MAX as i32,
                 actual: "0".to_string(),
-                reason: Some("Domain Component is missing".to_string()),
+                reason: "Domain Component is missing".to_string(),
             });
         }
         if num_uid > 1 {
@@ -79,7 +79,7 @@ impl Constrained for Name {
                 lower: 0,
                 upper: 1,
                 actual: num_uid.to_string(),
-                reason: Some("Too many UID components supplied".to_string()),
+                reason: "Too many UID components supplied".to_string(),
             });
         }
         if num_unique_identifier > 1 {
@@ -87,7 +87,7 @@ impl Constrained for Name {
                 lower: 0,
                 upper: 1,
                 actual: num_unique_identifier.to_string(),
-                reason: Some("Too many uniqueIdentifier components supplied".to_string()),
+                reason: "Too many uniqueIdentifier components supplied".to_string(),
             });
         }
         if num_unique_identifier > 0 && num_uid == 0 {
@@ -95,10 +95,8 @@ impl Constrained for Name {
                 lower: 1,
                 upper: 1,
                 actual: num_uid.to_string(),
-                reason: Some(
-                    "Actors must have uniqueIdentifier AND UID, only uniqueIdentifier found"
-                        .to_string(),
-                ),
+                reason: "Actors must have uniqueIdentifier AND UID, only uniqueIdentifier found"
+                    .to_string(),
             });
         }
         if num_uid > 0 && num_unique_identifier == 0 {
@@ -106,9 +104,7 @@ impl Constrained for Name {
                 lower: 1,
                 upper: 1,
                 actual: num_unique_identifier.to_string(),
-                reason: Some(
-                    "Actors must have uniqueIdentifier AND UID, only UID found".to_string(),
-                ),
+                reason: "Actors must have uniqueIdentifier AND UID, only UID found".to_string(),
             });
         }
         Ok(())
@@ -123,7 +119,7 @@ impl Constrained for SessionId {
                 lower: 1,
                 upper: 32,
                 actual: self.len().to_string(),
-                reason: Some("SessionId too long".to_string()),
+                reason: "SessionId too long".to_string(),
             });
         }
         Ok(())
