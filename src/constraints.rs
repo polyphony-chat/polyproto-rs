@@ -208,6 +208,16 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
     fn validate(&self) -> Result<(), ConstraintError> {
         self.inner_csr.capabilities.validate()?;
         self.inner_csr.subject.validate()?;
+        match self.inner_csr.subject_public_key_info.verify_signature(
+            &self.signature,
+            match &self.inner_csr.clone().to_der() {
+                Ok(data) => data,
+                Err(_) => return Err(ConstraintError::Malformed(Some("DER conversion failure when converting inner IdCsr to DER. IdCsr is likely malformed".to_string())))
+            }
+        ) {
+            Ok(_) => (),
+            Err(_) => return Err(ConstraintError::Malformed(Some("Provided signature does not match computed signature".to_string())))
+        };
         Ok(())
     }
 }

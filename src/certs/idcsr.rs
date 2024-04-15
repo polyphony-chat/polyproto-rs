@@ -76,43 +76,28 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     }
 
     /// Validates the well-formedness of the [IdCsr] and its contents. Fails, if the [Name] or
-    /// [Capabilities] do not meet polyprotos' validation criteria for actor CSRs.
-    ///
-    /// ## Signature Verification
-    ///
-    /// This method does not verify the signature of the [IdCsr]. To verify the signature, use the
-    /// [crate::key::PublicKey::verify_signature] method. If you do not have the public key as a
-    /// `dyn PublicKey`, you can use the [crate::key::PublicKey::from_public_key_info] method to
-    /// create a `dyn PublicKey` from the [PublicKeyInfo] in the [IdCsrInner].
-    /// TODO: We can change this now
-    pub fn valid_actor_csr(&self) -> Result<(), ConstraintError> {
-        self.inner_csr.subject.validate()?;
-        self.inner_csr.capabilities.validate()?;
+    /// [Capabilities] do not meet polyproto validation criteria for actor CSRs, or if
+    /// the signature fails to be verified.
+
+    pub fn valid_actor_csr(&self) -> Result<(), ConversionError> {
+        self.validate()?;
         if self.inner_csr.capabilities.basic_constraints.ca {
-            return Err(ConstraintError::Malformed(Some(
-                "Actor CSR must not be a CA".to_string(),
-            )));
+            return Err(ConversionError::ConstraintError(
+                ConstraintError::Malformed(Some("Actor CSR must not be a CA".to_string())),
+            ));
         }
         Ok(())
     }
 
     /// Validates the well-formedness of the [IdCsr] and its contents. Fails, if the [Name] or
-    /// [Capabilities] do not meet polyprotos' validation criteria for home server CSRs.
-    ///
-    /// ## Signature Verification
-    ///
-    /// This method does not verify the signature of the [IdCsr]. To verify the signature, use the
-    /// [crate::key::PublicKey::verify_signature] method. If you do not have the public key as a
-    /// `dyn PublicKey`, you can use the [crate::key::PublicKey::from_public_key_info] method to
-    /// create a `dyn PublicKey` from the [PublicKeyInfo] in the [IdCsrInner].
-    /// TODO: We can change this now
-    pub fn valid_home_server_csr(&self) -> Result<(), ConstraintError> {
-        self.inner_csr.subject.validate()?;
-        self.inner_csr.capabilities.validate()?;
+    /// [Capabilities] do not meet polyproto validation criteria for home server CSRs, or if
+    /// the signature fails to be verified.
+    pub fn valid_home_server_csr(&self) -> Result<(), ConversionError> {
+        self.validate()?;
         if !self.inner_csr.capabilities.basic_constraints.ca {
-            return Err(ConstraintError::Malformed(Some(
-                "Actor CSR must be a CA".to_string(),
-            )));
+            return Err(ConversionError::ConstraintError(
+                ConstraintError::Malformed(Some("Actor CSR must be a CA".to_string())),
+            ));
         }
         Ok(())
     }
