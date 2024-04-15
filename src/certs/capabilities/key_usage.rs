@@ -167,7 +167,9 @@ impl KeyUsages {
 
     /// Converts the KeyUsages to a [BitString].
     pub fn to_bitstring(self) -> BitString {
-        let vec = self.key_usages;
+        let mut vec = self.key_usages;
+        vec.sort();
+        vec.dedup();
         let mut encoded_numbers = [0u8; 2];
         let mut unused_bits: u8 = 0;
         /*
