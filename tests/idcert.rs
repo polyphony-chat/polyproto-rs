@@ -13,6 +13,7 @@ use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, Veri
 use polyproto::certs::capabilities::{self, Capabilities};
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::PublicKeyInfo;
+use polyproto::errors::composite::ConversionError;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use rand::rngs::OsRng;
@@ -270,7 +271,7 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
         }
     }
 
-    fn from_public_key_info(public_key_info: PublicKeyInfo) -> Self {
+    fn try_from_public_key_info(public_key_info: PublicKeyInfo) -> Result<Self, ConversionError> {
         let mut key_vec = public_key_info.public_key_bitstring.raw_bytes().to_vec();
         key_vec.resize(32, 0);
         let signature_array: [u8; 32] = {
@@ -278,8 +279,8 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
             array.copy_from_slice(&key_vec[..]);
             array
         };
-        Self {
+        Ok(Self {
             key: VerifyingKey::from_bytes(&signature_array).unwrap(),
-        }
+        })
     }
 }

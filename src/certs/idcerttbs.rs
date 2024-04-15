@@ -165,8 +165,9 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
                     ),
                 )),
             };
-        let subject_public_key_info =
-            PublicKey::from_public_key_info(PublicKeyInfo::from(value.subject_public_key_info));
+        let subject_public_key_info = PublicKey::try_from_public_key_info(PublicKeyInfo::from(
+            value.subject_public_key_info,
+        ))?;
 
         let serial_number = Uint::new(value.serial_number.as_bytes())?;
 
