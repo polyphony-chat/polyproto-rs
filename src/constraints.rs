@@ -28,7 +28,6 @@ impl Constrained for Name {
     /// - MAY have "organizational unit" attributes
     /// - MAY have other attributes, which might be ignored by other home servers and other clients.
     fn validate(&self) -> Result<(), ConstraintError> {
-        // this code sucks. i couldn't think of a way to make it better though. sorry!
         let mut num_cn: u8 = 0;
         let mut num_dc: u8 = 0;
         let mut num_uid: u8 = 0;
