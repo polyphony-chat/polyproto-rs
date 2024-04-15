@@ -163,50 +163,55 @@ impl KeyUsages {
         Ok(KeyUsages::new(&key_usages))
     }
 
-    /// Converts the KeyUsages to a bitstring in little endian order.
-    pub fn to_le_bits(mut self) -> [bool; 9] {
-        self.key_usages.sort();
-        self.key_usages.dedup();
-        let mut bit_vec = [false; 9];
-        for item in self.key_usages.into_iter() {
-            match item {
-                KeyUsage::DigitalSignature => bit_vec[0] = true,
-                KeyUsage::ContentCommitment => bit_vec[1] = true,
-                KeyUsage::KeyEncipherment => bit_vec[2] = true,
-                KeyUsage::DataEncipherment => bit_vec[3] = true,
-                KeyUsage::KeyAgreement => bit_vec[4] = true,
-                KeyUsage::KeyCertSign => bit_vec[5] = true,
-                KeyUsage::CrlSign => bit_vec[6] = true,
-                KeyUsage::EncipherOnly => bit_vec[7] = true,
-                KeyUsage::DecipherOnly => bit_vec[8] = true,
-            }
-        }
-        bit_vec
-    }
-
-    /// Converts the KeyUsages to a bitstring in big endian order.
-    pub fn to_be_bits(self) -> [bool; 9] {
-        let mut bit_vec = self.to_le_bits();
-        bit_vec.reverse();
-        bit_vec
-    }
-
     /// Converts the KeyUsages to a [BitString].
     pub fn to_bitstring(self) -> BitString {
-        let bits = self.to_be_bits();
-        let mut bytes = bits
-            .iter()
-            .map(|x| if *x { 1 } else { 0 })
-            .collect::<Vec<u8>>();
-        while bytes[0] == 0 {
-            bytes.remove(0);
-        }
+        let vec = self.key_usages;
+        let mut encoded_numbers = [0u8; 2];
         let mut unused_bits: u8 = 0;
-        while bytes.len() % 8 != 0 {
-            bytes.push(0);
-            unused_bits += 1;
+        /*
+        If DecipherOnly is supposed to be set, we need to store this information as a separate
+        byte. All other KeyUsages can be stored in the first byte.
+
+        Normally, DigitalSignature would equal 1, ContentCommitment would equal 2, KeyEncipherment
+        would equal 4, and so on. However, because of the way DER BitStrings are encoded, we need
+        to reverse the order of the bits. This means that DigitalSignature has a value of 128, and
+        DecipherOnly has a value of 1.
+
+        We are adding these values to the u8 stored in the second byte of the encoded_numbers array.
+         */
+        for keyusage in vec.iter() {
+            match *keyusage {
+                KeyUsage::DigitalSignature => encoded_numbers[1] += 128,
+                KeyUsage::ContentCommitment => encoded_numbers[1] += 64,
+                KeyUsage::KeyEncipherment => encoded_numbers[1] += 32,
+                KeyUsage::DataEncipherment => encoded_numbers[1] += 16,
+                KeyUsage::KeyAgreement => encoded_numbers[1] += 8,
+                KeyUsage::KeyCertSign => encoded_numbers[1] += 4,
+                KeyUsage::CrlSign => encoded_numbers[1] += 2,
+                KeyUsage::EncipherOnly => encoded_numbers[1] += 1,
+                KeyUsage::DecipherOnly => encoded_numbers[0] += 128,
+            }
         }
-        BitString::new(unused_bits, bytes)
+        let mut encoded_numbers_vec = encoded_numbers.to_vec();
+        if encoded_numbers[0] == 0 {
+            encoded_numbers_vec.remove(0);
+            // {:08b} means that we want to format the number as a binary string with 8 bits.
+            let binary = format!("{:08b}", encoded_numbers[1].to_be());
+            for bit in binary.chars() {
+                // If the bit is 0, increment the unused_bits counter.
+                if bit == '0' {
+                    unused_bits += 1;
+                } else {
+                    break;
+                }
+            }
+        } else {
+            // If encoded_numbers[0] is not 0, this means that DecipherOnly is set. Since only
+            // DecipherOnly can be set in the first byte, we know that there have to be 7 unused
+            // bits.
+            unused_bits = 7;
+        }
+        BitString::new(unused_bits, encoded_numbers_vec)
             .expect("Error when converting KeyUsages to BitString. Please report this error to https://github.com/polyphony-chat/polyproto")
     }
 }
