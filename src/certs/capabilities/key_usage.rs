@@ -118,49 +118,45 @@ impl KeyUsages {
     ///     decipherOnly            (8) }
     /// ```
     pub fn from_bitstring(bitstring: BitString) -> Result<Self, ConversionError> {
-        /* Below, we are doing some operations on bits. RFC 5280 says:
-        KeyUsage ::= BIT STRING {
-            digitalSignature        (0),
-            nonRepudiation          (1), -- recent editions of X.509 have
-                                -- renamed this bit to contentCommitment
-            keyEncipherment         (2),
-            dataEncipherment        (3),
-            keyAgreement            (4),
-            keyCertSign             (5),
-            cRLSign                 (6),
-            encipherOnly            (7),
-            decipherOnly            (8) }
-
-        It is now our task to check, which bits (0 - 8) are set, and to construct KeyUsage variants
-        from this information.
-        Note, that BitStrings represent the bits they store in big endian order, meaning that the
-        most significant bit (MSB) is the first bit in the BitString.
-        */
-        let mut starting_number = 1;
+        let mut byte_array = bitstring.raw_bytes().to_vec();
+        if byte_array.is_empty() || byte_array.len() < 2 {
+            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                "Passed BitString seems to be invalid".to_string(),
+            )));
+        }
+        byte_array.remove(0);
         let mut key_usages = Vec::new();
-        // We iterate over all bits, check if the current bit is set and try to convert the
-        // current value of starting_number to a KeyUsage variant. On every iteration, we divide
-        // starting_number by two, until it equals 1 and thus cannot be divided any further.
-        for bit in bitstring.raw_bytes().iter() {
-            if *bit == 0 {
-                // If the bit is 0, we can skip the current iteration, increment the starting_number
-                // and continue with the next iteration.
-                multiply_starting_number(&mut starting_number);
-                continue;
+        if byte_array.len() == 2 {
+            key_usages.push(KeyUsage::DecipherOnly);
+            byte_array.remove(0);
+        }
+        let mut current_try = 128u8;
+        loop {
+            if current_try <= byte_array[0] {
+                byte_array[0] -= current_try;
+                key_usages.push(match current_try {
+                    128 => KeyUsage::DigitalSignature,
+                    64 => KeyUsage::ContentCommitment,
+                    32 => KeyUsage::KeyEncipherment,
+                    16 => KeyUsage::DataEncipherment,
+                    8 => KeyUsage::KeyAgreement,
+                    4 => KeyUsage::KeyCertSign,
+                    2 => KeyUsage::CrlSign,
+                    1 => KeyUsage::EncipherOnly,
+                    _ => panic!("This should never happen. Please report this error to https://github.com/polyphony-chat/polyproto"),
+                })
             }
-            if *bit != 1 {
-                // If the bit is not 0 or 1, we are likely looking at the "unused bits" byte of the
-                // BitString. We can safely ignore this byte.
-                continue;
-            }
-            key_usages.push(KeyUsage::try_from(starting_number)?);
-            if starting_number == 256 {
-                // Stop the loop if starting_number is already 256.
+            if current_try == 1 {
                 break;
             }
-            multiply_starting_number(&mut starting_number);
+            current_try /= 2;
         }
-        Ok(KeyUsages::new(&key_usages))
+        if byte_array[0] != 0 {
+            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                "Could not properly convert this BitString to KeyUsages. The BitString is malformed".to_string(),
+            )));
+        }
+        Ok(KeyUsages { key_usages })
     }
 
     /// Converts the KeyUsages to a [BitString].
