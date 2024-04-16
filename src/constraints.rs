@@ -15,7 +15,10 @@ use crate::certs::{equal_domain_components, SessionId};
 use crate::errors::base::ConstraintError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
-use crate::Constrained;
+use crate::{
+    Constrained, OID_RDN_COMMON_NAME, OID_RDN_DOMAIN_COMPONENT, OID_RDN_UID,
+    OID_RDN_UNIQUE_IDENTIFIER,
+};
 
 impl Constrained for Name {
     /// [Name] must meet the following criteria to be valid in the context of polyproto:
@@ -39,8 +42,7 @@ impl Constrained for Name {
         for rdn in rdns.iter() {
             for item in rdn.0.iter() {
                 match item.oid.to_string().as_str() {
-                    // TODO: Replace OID strs with consts from lib.rs
-                    "0.9.2342.19200300.100.1.1" => {
+                    OID_RDN_UID => {
                         num_uid += 1;
                         let fid_regex =
                             Regex::new(r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)")
@@ -52,8 +54,8 @@ impl Constrained for Name {
                                     .to_string(),
                             )));
                         }
-                    } //TODO check against regex
-                    "0.9.2342.19200300.100.1.44" => {
+                    }
+                    OID_RDN_UNIQUE_IDENTIFIER => {
                         num_unique_identifier += 1;
                         if let Ok(value) =
                             Ia5String::new(&String::from_utf8_lossy(item.value.value()).to_string())
@@ -65,7 +67,7 @@ impl Constrained for Name {
                             )));
                         }
                     }
-                    "2.5.4.3" => {
+                    OID_RDN_COMMON_NAME => {
                         num_cn += 1;
                         if num_cn > 1 {
                             return Err(ConstraintError::OutOfBounds {
@@ -76,7 +78,7 @@ impl Constrained for Name {
                             });
                         }
                     }
-                    "0.9.2342.19200300.100.1.25" => num_dc += 1,
+                    OID_RDN_DOMAIN_COMPONENT => num_dc += 1,
                     _ => {}
                 }
             }
@@ -347,10 +349,10 @@ mod name_constraints {
             Name::from_str("cn=flori,dc=localhost,uid=\"flori@\",uniqueIdentifier=3245").unwrap();
         assert!(name.validate().is_err());
         let name =
-            Name::from_str("cn=flori,dc=localhost,uid=\"flori@localhost\",uniqueIdentifier=3245").unwrap();
+            Name::from_str("cn=flori,dc=localhost,uid=\"flori@localhost\",uniqueIdentifier=3245")
+                .unwrap();
         assert!(name.validate().is_ok());
-        let name =
-            Name::from_str("cn=flori,dc=localhost,uid=\"1\",uniqueIdentifier=3245").unwrap();
+        let name = Name::from_str("cn=flori,dc=localhost,uid=\"1\",uniqueIdentifier=3245").unwrap();
         assert!(name.validate().is_err());
     }
 }
