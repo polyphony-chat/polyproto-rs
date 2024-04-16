@@ -3,3 +3,15 @@
 {"rule":"COMMA_PARENTHESIS_WHITESPACE","sentence":"^\\QCertificationRequestInfo ::= SEQUENCE {\nversion       INTEGER { v1(0) } (v1,...),\nsubject       Name,\nsubjectPKInfo SubjectPublicKeyInfo{{ PKInfoAlgorithms }},\nattributes    0 Attributes{{ CRIAttributes }}\n}\\E$"}
 {"rule":"ENGLISH_WORD_REPEAT_RULE","sentence":"^\\QCertificationRequest ::= SEQUENCE {\ncertificationRequestInfo CertificationRequestInfo,\nsignatureAlgorithm AlgorithmIdentifier{{ SignatureAlgorithms }},\nsignature          BIT STRING\n}\\E$"}
 {"rule":"COMMA_PARENTHESIS_WHITESPACE","sentence":"^\\QCertificationRequest ::= SEQUENCE {\ncertificationRequestInfo CertificationRequestInfo,\nsignatureAlgorithm AlgorithmIdentifier{{ SignatureAlgorithms }},\nsignature          BIT STRING\n}\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QObject Identifier for the KeyUsage::ContentCommitment variant.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QObject Identifier for the KeyUsage::KeyEncipherment variant.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QObject Identifier for the KeyUsage::DataEncipherment variant.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QObject Identifier for the KeyUsage::KeyAgreement variant.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QObject Identifier for the KeyUsage::KeyCertSign variant.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QObject Identifier for the KeyUsage::EncipherOnly variant.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QObject Identifier for the KeyUsage::DecipherOnly variant.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QObject Identifier for the BasicConstraints variant.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QObject Identifier for the KeyUsage flag.\\E$"}
+{"rule":"UNLIKELY_OPENING_PUNCTUATION","sentence":"^\\Q:3\\E$"}
+{"rule":"DOUBLE_PUNCTUATION","sentence":"^\\QExtensions  ::=  SEQUENCE SIZE (1..MAX) OF Extension\\E$"}
+{"rule":"COMMA_PARENTHESIS_WHITESPACE","sentence":"^\\QExtension  ::=  SEQUENCE  {\nextnID      OBJECT IDENTIFIER,\ncritical    BOOLEAN DEFAULT FALSE,\nextnValue   OCTET STRING\n-- contains the DER encoding of an ASN.1 value\n-- corresponding to the extension type identified\n-- by extnID\n}\\E$"}

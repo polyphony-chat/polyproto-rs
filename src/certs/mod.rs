@@ -58,7 +58,7 @@ impl SessionId {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(u8)]
 /// `PKCS#10` version. From the PKCS specification document (RFC 2986):
 /// > version is the version number, for compatibility with future
