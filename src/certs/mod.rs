@@ -51,19 +51,10 @@ impl SessionId {
     /// Creates a new [SessionId] which can be converted into an [Attribute] using `.as_attribute()`,
     /// if needed. Checks if the input is a valid Ia5String and if the [SessionId] constraints have
     /// been violated.
-    pub fn new_validated(id: String) -> Result<Self, ConstraintError> {
-        let ia5string = Ia5String::new(&id);
-        if let Ok(converted) = ia5string {
-            let session_id = Self {
-                session_id: converted,
-            };
-            session_id.validate()?;
-            Ok(session_id)
-        } else {
-            Err(ConstraintError::Malformed(Some(
-                "Cannot turn input String into Ia5String".to_string(),
-            )))
-        }
+    pub fn new_validated(id: Ia5String) -> Result<Self, ConstraintError> {
+        let session_id = SessionId { session_id: id };
+        session_id.validate()?;
+        Ok(session_id)
     }
 }
 

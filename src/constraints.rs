@@ -2,7 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use der::asn1::Ia5String;
 use der::Length;
+use regex::Regex;
 use x509_cert::name::Name;
 
 use crate::certs::capabilities::{Capabilities, KeyUsage};
@@ -38,14 +40,28 @@ impl Constrained for Name {
             for item in rdn.0.iter() {
                 match item.oid.to_string().as_str() {
                     // TODO: Replace OID strs with consts from lib.rs
-                    "0.9.2342.19200300.100.1.1" => num_uid += 1,
+                    "0.9.2342.19200300.100.1.1" => {
+                        num_uid += 1;
+                        let fid_regex =
+                            Regex::new(r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)")
+                                .expect("Regex failed to compile");
+                        let string = String::from_utf8_lossy(item.value.value()).to_string();
+                        if !fid_regex.is_match(&string) {
+                            return Err(ConstraintError::Malformed(Some(
+                                "Provided Federation ID (FID) in uid field seems to be invalid"
+                                    .to_string(),
+                            )));
+                        }
+                    } //TODO check against regex
                     "0.9.2342.19200300.100.1.44" => {
                         num_unique_identifier += 1;
-                        if let Ok(value) = item.value.decode_as::<String>() {
+                        if let Ok(value) =
+                            Ia5String::new(&String::from_utf8_lossy(item.value.value()).to_string())
+                        {
                             SessionId::new_validated(value)?;
                         } else {
                             return Err(ConstraintError::Malformed(Some(
-                                "Tried to decode SessionID as String and failed".to_string(),
+                                "Tried to decode SessionID (uniqueIdentifier) as Ia5String and failed".to_string(),
                             )));
                         }
                     }
@@ -315,7 +331,7 @@ mod name_constraints {
     }
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
-    fn malformed_session_id_failes() {
+    fn malformed_session_id_fails() {
         let name =
             Name::from_str("cn=flori,dc=localhost,uid=flori@localhost,uniqueIdentifier=").unwrap();
         assert!(name.validate().is_err());
@@ -323,30 +339,50 @@ mod name_constraints {
             Name::from_str("cn=flori,dc=localhost,uid=flori@localhost,uniqueIdentifier=123456789012345678901234567890123").unwrap();
         assert!(name.validate().is_err());
     }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn malformed_uid_fails() {
+        let name =
+            Name::from_str("cn=flori,dc=localhost,uid=\"flori@\",uniqueIdentifier=3245").unwrap();
+        assert!(name.validate().is_err());
+        let name =
+            Name::from_str("cn=flori,dc=localhost,uid=\"flori@localhost\",uniqueIdentifier=3245").unwrap();
+        assert!(name.validate().is_ok());
+        let name =
+            Name::from_str("cn=flori,dc=localhost,uid=\"1\",uniqueIdentifier=3245").unwrap();
+        assert!(name.validate().is_err());
+    }
 }
 
 #[cfg(test)]
 mod session_id_constraints {
+
+    use der::asn1::Ia5String;
 
     use crate::certs::SessionId;
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn zero_long_session_id_fails() {
-        assert!(SessionId::new_validated(String::from("")).is_err())
+        assert!(SessionId::new_validated(Ia5String::new("".as_bytes()).unwrap()).is_err())
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn thirtytwo_length_session_id_is_ok() {
-        assert!(SessionId::new_validated(String::from("11111111111111111111111111222222")).is_ok())
+        assert!(SessionId::new_validated(
+            Ia5String::new("11111111111111111111111111222222".as_bytes()).unwrap()
+        )
+        .is_ok())
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn thirtythree_length_session_id_fails() {
-        assert!(
-            SessionId::new_validated(String::from("111111111111111111111111112222223")).is_err()
+        assert!(SessionId::new_validated(
+            Ia5String::new("111111111111111111111111112222223".as_bytes()).unwrap()
         )
+        .is_err())
     }
 }
