@@ -41,6 +41,16 @@ implementing polyproto by transforming the
 [polyproto specification](https://docs.polyphony.chat/Protocol%20Specifications/core/) into
 well-defined yet adaptable Rust types.
 
+## WebAssembly
+
+This crate is designed to work with the `wasm32-unknown-unknown` target. To compile for `wasm`, you
+will have to use the `wasm` feature:
+
+```toml
+[dependencies]
+polyproto = { version = "0", features = ["wasm"] }
+```
+
 [build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/polyproto/build_and_test.yml?style=flat
 [build-url]: https://github.com/polyphony-chat/polyproto/blob/main/.github/workflows/build_and_test.yml
 [coverage-shield]: https://coveralls.io/repos/github/polyphony-chat/polyproto/badge.svg?branch=main
