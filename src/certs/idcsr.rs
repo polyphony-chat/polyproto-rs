@@ -4,7 +4,8 @@
 
 use std::marker::PhantomData;
 
-use der::{Decode, Encode};
+use der::pem::LineEnding;
+use der::{Decode, DecodePem, Encode, EncodePem};
 use spki::AlgorithmIdentifierOwned;
 use x509_cert::attr::Attributes;
 use x509_cert::name::Name;
@@ -110,6 +111,14 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// Encode this type as DER, returning a byte vector.
     pub fn to_der(self) -> Result<Vec<u8>, ConversionError> {
         Ok(CertReq::try_from(self)?.to_der()?)
+    }
+
+    pub fn from_pem(pem: &str) -> Result<Self, ConversionError> {
+        IdCsr::try_from(CertReq::from_pem(pem)?)
+    }
+
+    pub fn to_pem(self, line_ending: LineEnding) -> Result<String, ConversionError> {
+        Ok(CertReq::try_from(self)?.to_pem(line_ending)?)
     }
 }
 

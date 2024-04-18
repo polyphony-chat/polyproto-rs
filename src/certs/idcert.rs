@@ -3,7 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use der::asn1::Uint;
-use der::{Decode, Encode};
+use der::pem::LineEnding;
+use der::{Decode, DecodePem, Encode, EncodePem};
 use x509_cert::name::Name;
 use x509_cert::time::Validity;
 use x509_cert::Certificate;
@@ -118,6 +119,18 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// Encode this type as DER, returning a byte vector.
     pub fn to_der(self) -> Result<Vec<u8>, ConversionError> {
         Ok(Certificate::try_from(self)?.to_der()?)
+    }
+
+    /// Create an IdCsr from a byte slice containing a PEM encoded X.509 Certificate.
+    pub fn from_pem(pem: &str) -> Result<Self, ConversionError> {
+        let cert = IdCert::try_from(Certificate::from_pem(pem)?)?;
+        cert.validate()?;
+        Ok(cert)
+    }
+
+    /// Encode this type as PEM, returning a string.
+    pub fn to_pem(self, line_ending: LineEnding) -> Result<String, ConversionError> {
+        Ok(Certificate::try_from(self)?.to_pem(line_ending)?)
     }
 }
 
