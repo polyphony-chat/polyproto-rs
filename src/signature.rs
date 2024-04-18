@@ -5,7 +5,7 @@
 use spki::{AlgorithmIdentifierOwned, SignatureBitStringEncoding};
 
 /// A signature value, generated using a [SignatureAlgorithm]
-pub trait Signature: PartialEq + Eq + SignatureBitStringEncoding + Clone {
+pub trait Signature: PartialEq + Eq + SignatureBitStringEncoding + Clone + ToString {
     type Signature;
     /// The signature value
     fn as_signature(&self) -> &Self::Signature;

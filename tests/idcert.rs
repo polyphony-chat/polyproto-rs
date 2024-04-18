@@ -156,6 +156,12 @@ struct Ed25519Signature {
     algorithm: AlgorithmIdentifierOwned,
 }
 
+impl std::fmt::Display for Ed25519Signature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.signature)
+    }
+}
+
 // We implement the Signature trait for our signature type.
 impl Signature for Ed25519Signature {
     // We define the signature type from the ed25519-dalek crate as the associated type.
