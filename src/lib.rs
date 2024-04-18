@@ -88,7 +88,7 @@ pub use spki;
 /// The password "123" might be well-formed, as in, it meets the validation criteria specified by
 /// the system. However, this makes no implications about "123" being the correct password for a
 /// given user account.
-pub(crate) trait Constrained {
+pub trait Constrained {
     fn validate(&self) -> Result<(), ConstraintError>;
 }
 
