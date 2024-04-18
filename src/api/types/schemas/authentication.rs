@@ -63,6 +63,7 @@ impl TryFrom<GetChallengeResponse> for Challenge {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 /// Completed challenge payload.
+// TODO: Move this to /types/entities or another, more appropriate module.
 pub struct ChallengePayload {
     /// The challenge string.
     pub challenge: String,
