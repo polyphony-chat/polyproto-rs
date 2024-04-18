@@ -113,10 +113,12 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
         Ok(CertReq::try_from(self)?.to_der()?)
     }
 
+    /// Create an IdCsr from a string containing a PEM encoded PKCS #10 CSR.
     pub fn from_pem(pem: &str) -> Result<Self, ConversionError> {
         IdCsr::try_from(CertReq::from_pem(pem)?)
     }
 
+    /// Encode this type as PEM, returning a string.
     pub fn to_pem(self, line_ending: LineEnding) -> Result<String, ConversionError> {
         Ok(CertReq::try_from(self)?.to_pem(line_ending)?)
     }
