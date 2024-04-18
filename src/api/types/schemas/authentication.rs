@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::api::types::entities::Challenge;
 use crate::certs::idcert::IdCert;
 use crate::errors::composite::ConversionError;
 use crate::key::PublicKey;
@@ -27,5 +28,20 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<SessionCreatedSchema> for IdCert<S, 
 
     fn try_from(value: SessionCreatedSchema) -> Result<Self, Self::Error> {
         Self::from_pem(&value.id_cert)
+    }
+}
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub struct GetChallengeResponseSchema {
+    pub challenge: String,
+    pub expires: u64,
+}
+
+impl TryFrom<GetChallengeResponseSchema> for Challenge {
+    type Error = ConversionError;
+
+    fn try_from(value: GetChallengeResponseSchema) -> Result<Self, Self::Error> {
+        Challenge::new(&value.challenge, value.expires)
     }
 }

@@ -11,19 +11,25 @@ use crate::errors::base::ConstraintError;
 use crate::errors::composite::ConversionError;
 use crate::Constrained;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// A challenge string, used to prove that an actor possesses a private key, without revealing it.
 pub struct Challenge {
     challenge: Ia5String,
+    pub expires: u64,
 }
 
-impl std::str::FromStr for Challenge {
-    type Err = ConversionError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let challenge = Self {
-            challenge: Ia5String::new(s)?,
-        };
-        challenge.validate()?;
-        Ok(challenge)
+impl Challenge {
+    /// Creates a new challenge string.
+    ///
+    /// ## Arguments
+    ///
+    /// - **challenge**: The challenge string.
+    /// - **expires**: The UNIX timestamp when the challenge expires.
+    pub fn new(challenge: &str, expires: u64) -> Result<Self, ConversionError> {
+        Ok(Self {
+            challenge: Ia5String::new(challenge)?,
+            expires,
+        })
     }
 }
 
