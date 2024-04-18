@@ -16,7 +16,7 @@ use crate::Constrained;
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A challenge string, used to prove that an actor possesses a private key, without revealing it.
 pub struct Challenge {
-    challenge: Ia5String,
+    pub(crate) challenge: Ia5String,
     pub expires: u64,
 }
 
@@ -35,8 +35,12 @@ impl Challenge {
     }
 
     /// Completes the challenge by signing it with the private key.
-    pub fn complete<S: Signature, V: PrivateKey<S>>(&self, key: &V) -> S {
-        key.sign(self.challenge.as_bytes())
+    pub fn complete<S: Signature, V: PrivateKey<S>>(&self, key: &V) -> CompletedChallenge<S> {
+        let s = key.sign(self.challenge.as_bytes());
+        CompletedChallenge {
+            challenge: self.clone(),
+            signature: s,
+        }
     }
 }
 
@@ -76,4 +80,12 @@ impl Constrained for Challenge {
 
         Ok(())
     }
+}
+
+/// A completed challenge, containing the challenge and the signature.
+pub struct CompletedChallenge<S: Signature> {
+    /// The challenge.
+    pub challenge: Challenge,
+    /// The signature of the challenge.
+    pub signature: S,
 }
