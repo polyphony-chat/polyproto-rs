@@ -13,7 +13,7 @@ crate-type = ["rlib", "cdylib", "staticlib"]
 [features]
 wasm = ["getrandom", "getrandom/js"]
 getrandom = ["dep:getrandom"]
-api = ["dep:reqwest", "serde"]
+routes = ["dep:reqwest", "serde"]
 serde = ["dep:serde", "dep:serde_json"]
 
 [dependencies]

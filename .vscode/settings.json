@@ -1,4 +1,4 @@
 {
 	"markiscodecoverage.searchCriteria": ".coverage/lcov*.info",
-	"rust-analyzer.cargo.features": ["api"]
+	"rust-analyzer.cargo.features": ["routes"]
 }

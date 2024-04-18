@@ -72,7 +72,6 @@ pub mod signature;
 /// Error types used in this crate
 pub mod errors;
 
-#[cfg(feature = "api")]
 pub mod api;
 
 pub(crate) mod constraints;
