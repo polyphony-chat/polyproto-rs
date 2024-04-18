@@ -26,6 +26,6 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<NewIdCertCreated> for IdCert<S, P> {
     type Error = ConversionError;
 
     fn try_from(value: NewIdCertCreated) -> Result<Self, Self::Error> {
-        todo!()
+        Self::from_pem(&value.id_cert)
     }
 }
