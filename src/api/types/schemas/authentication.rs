@@ -9,7 +9,7 @@ use crate::signature::Signature;
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
-pub struct NewIdCert {
+pub struct IdCertCreationSchema {
     pub actor_name: String,
     pub csr: String,
     pub auth_payload: Option<String>,
@@ -17,15 +17,15 @@ pub struct NewIdCert {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
-pub struct NewIdCertCreated {
+pub struct IdCertCreatedSchema {
     pub id_cert: String,
     pub token: String,
 }
 
-impl<S: Signature, P: PublicKey<S>> TryFrom<NewIdCertCreated> for IdCert<S, P> {
+impl<S: Signature, P: PublicKey<S>> TryFrom<IdCertCreatedSchema> for IdCert<S, P> {
     type Error = ConversionError;
 
-    fn try_from(value: NewIdCertCreated) -> Result<Self, Self::Error> {
+    fn try_from(value: IdCertCreatedSchema) -> Result<Self, Self::Error> {
         Self::from_pem(&value.id_cert)
     }
 }
