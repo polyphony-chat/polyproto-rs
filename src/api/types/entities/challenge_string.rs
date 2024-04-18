@@ -9,6 +9,8 @@ use der::Length;
 
 use crate::errors::base::ConstraintError;
 use crate::errors::composite::ConversionError;
+use crate::key::PrivateKey;
+use crate::signature::Signature;
 use crate::Constrained;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,6 +32,11 @@ impl Challenge {
             challenge: Ia5String::new(challenge)?,
             expires,
         })
+    }
+
+    /// Completes the challenge by signing it with the private key.
+    pub fn complete<S: Signature, V: PrivateKey<S>>(&self, key: &V) -> S {
+        key.sign(self.challenge.as_bytes())
     }
 }
 
