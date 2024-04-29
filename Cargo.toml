@@ -11,20 +11,22 @@ rust-version = "1.65.0"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [features]
+default = ["routes", "reqwest"]
 wasm = ["getrandom", "getrandom/js"]
 getrandom = ["dep:getrandom"]
-routes = ["dep:reqwest", "serde"]
+routes = ["serde"]
+reqwest = ["dep:reqwest"]
 serde = ["dep:serde", "dep:serde_json"]
 
 [dependencies]
 der = "0.7.9"
 getrandom = { version = "0.2.14", optional = true }
 regex = "1.10.4"
-reqwest = { version = "0.12.3", features = ["json"], optional = true }
-serde = { version = "1.0.198", optional = true, features = ["derive"] }
+reqwest = { version = "0.12.4", features = ["json"], optional = true }
+serde = { version = "1.0.199", optional = true, features = ["derive"] }
 serde_json = { version = "1.0.116", optional = true }
 spki = "0.7.3"
-thiserror = "1.0.58"
+thiserror = "1.0.59"
 x509-cert = { version = "0.2.5", default-features = false, features = ["pem"] }
 
 [dev-dependencies]
