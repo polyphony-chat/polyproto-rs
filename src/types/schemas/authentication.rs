@@ -2,11 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use crate::api::types::entities::{Challenge, CompletedChallenge};
 use crate::certs::idcert::IdCert;
 use crate::errors::composite::ConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
+use crate::types::entities::{Challenge, CompletedChallenge};
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]

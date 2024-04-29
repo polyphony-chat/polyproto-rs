@@ -43,7 +43,6 @@ will have to use the `wasm` feature:
 [dependencies]
 polyproto = { version = "0", features = ["wasm"] }
 ```
-
 */
 
 pub const OID_RDN_DOMAIN_COMPONENT: &str = "0.9.2342.19200300.100.1.25";
@@ -53,26 +52,20 @@ pub const OID_RDN_UID: &str = "0.9.2342.19200300.100.1.1";
 
 use errors::base::ConstraintError;
 
-#[warn(
-    missing_docs,
-    missing_debug_implementations,
-    missing_copy_implementations,
-    clippy::unnecessary_mut_passed
-)]
-#[deny(clippy::unwrap_used, clippy::todo, clippy::unimplemented)]
-#[forbid(unsafe_code)]
-
+#[cfg(feature = "reqwest")]
+/// Ready-to-use API routes, implemented using `reqwest`
+pub mod api;
 /// Generic polyproto certificate types and traits.
 pub mod certs;
+/// Error types used in this crate
+pub mod errors;
 /// Generic polyproto public- and private key traits.
 pub mod key;
 /// Generic polyproto signature traits.
 pub mod signature;
-
-/// Error types used in this crate
-pub mod errors;
-
-pub mod api;
+#[cfg(feature = "routes")]
+/// Types used in polyproto and the polyproto HTTP/REST APIs
+pub mod types;
 
 pub(crate) mod constraints;
 
