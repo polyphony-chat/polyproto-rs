@@ -41,15 +41,27 @@ implementing polyproto by transforming the
 [polyproto specification](https://docs.polyphony.chat/Protocol%20Specifications/core/) into
 well-defined yet adaptable Rust types.
 
+```toml
+[dependencies]
+polyproto = { version = "0", features = ["wasm"] }
+```
+
 ## WebAssembly
 
 This crate is designed to work with the `wasm32-unknown-unknown` target. To compile for `wasm`, you
 will have to use the `wasm` feature:
 
+## reqwest
+
+By default, this crate uses `reqwest` for HTTP requests. `reqwest` is an optional dependency, and
+you can disable it by using polyproto with `default-features = false` in your `Cargo.toml`:
+
 ```toml
 [dependencies]
-polyproto = { version = "0", features = ["wasm"] }
+polyproto = { version = "0", default-features = false, features = ["routes"] }
 ```
+
+Disabling `reqwest` gives you the ability to use your own HTTP client.
 
 [build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/polyproto/build_and_test.yml?style=flat
 [build-url]: https://github.com/polyphony-chat/polyproto/blob/main/.github/workflows/build_and_test.yml
