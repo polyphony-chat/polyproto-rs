@@ -5,6 +5,8 @@
 use serde::Deserialize;
 use serde_json::from_str;
 
+use crate::errors::composite::RequestError;
+
 pub mod authentication;
 pub mod events;
 pub mod identity;
@@ -22,11 +24,13 @@ impl HttpClient {
         Self { client, headers }
     }
 
+    /// Creates a new instance of the client with the provided headers.
     pub fn with_headers(mut self, headers: reqwest::header::HeaderMap) -> Self {
         self.headers = headers;
         self
     }
 
+    /// Sends a request and returns the response.
     pub async fn request(
         &self,
         method: reqwest::Method,
@@ -41,23 +45,13 @@ impl HttpClient {
         request.send().await
     }
 
-    /// Sends a [`ChorusRequest`] and returns a [`ChorusResult`] that contains a [`T`] if the request
-    /// was successful, or a [`ChorusError`] if the request failed.
+    /// Sends a request, handles the response, and returns the deserialized object.
     pub(crate) async fn handle_response<T: for<'a> Deserialize<'a>>(
         response: Result<reqwest::Response, reqwest::Error>,
-    ) -> Result<T, crate::errors::composite::InvalidCert> {
-        let response = match response {
-            Ok(response) => response,
-            Err(e) => return todo!(),
-        };
-        let response_text = match response.text().await {
-            Ok(string) => string,
-            Err(e) => return todo!(),
-        };
-        let object = match from_str::<T>(&response_text) {
-            Ok(object) => object,
-            Err(e) => return todo!(),
-        };
+    ) -> Result<T, RequestError> {
+        let response = response?;
+        let response_text = response.text().await?;
+        let object = from_str::<T>(&response_text)?;
         Ok(object)
     }
 }

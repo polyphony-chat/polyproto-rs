@@ -45,6 +45,14 @@ pub enum ConversionError {
     IdCertError(#[from] PublicKeyError),
 }
 
+#[derive(Error, Debug)]
+pub enum RequestError {
+    #[error(transparent)]
+    HttpError(#[from] reqwest::Error),
+    #[error("Failed to deserialize response into expected type")]
+    DeserializationError(#[from] serde_json::Error),
+}
+
 impl From<der::Error> for ConversionError {
     fn from(value: der::Error) -> Self {
         Self::DerError(value)
