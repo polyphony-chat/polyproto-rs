@@ -17,6 +17,8 @@ pub struct HttpClient {
     headers: reqwest::header::HeaderMap,
 }
 
+pub type HttpResult<T> = Result<T, RequestError>;
+
 impl HttpClient {
     pub fn new() -> Self {
         let client = reqwest::Client::new();

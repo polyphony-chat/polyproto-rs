@@ -15,8 +15,8 @@ default = ["routes", "reqwest"]
 wasm = ["getrandom", "getrandom/js"]
 getrandom = ["dep:getrandom"]
 routes = ["serde"]
-reqwest = ["dep:reqwest"]
-serde = ["dep:serde", "dep:serde_json"]
+reqwest = ["dep:reqwest", "routes"]
+serde = ["dep:serde", "dep:serde_json", "dep:ser_der"]
 
 [dependencies]
 der = "0.7.9"
@@ -28,6 +28,7 @@ serde_json = { version = "1.0.116", optional = true }
 spki = "0.7.3"
 thiserror = "1.0.59"
 x509-cert = { version = "0.2.5", default-features = false, features = ["pem"] }
+ser_der = { version = "0.1.0-alpha.1", optional = true, features = ["alloc"] }
 
 [dev-dependencies]
 ed25519-dalek = { version = "2.1.1", features = ["rand_core", "signature"] }

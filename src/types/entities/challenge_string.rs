@@ -4,8 +4,9 @@
 
 use std::ops::{Deref, DerefMut};
 
-use der::asn1::Ia5String;
 use der::Length;
+use ser_der::asn1::Ia5String;
+use serde::{Deserialize, Serialize};
 
 use crate::errors::base::ConstraintError;
 use crate::errors::composite::ConversionError;
@@ -13,7 +14,7 @@ use crate::key::PrivateKey;
 use crate::signature::Signature;
 use crate::Constrained;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 /// A challenge string, used to prove that an actor possesses a private key, without revealing it.
 pub struct Challenge {
     pub(crate) challenge: Ia5String,
@@ -28,8 +29,9 @@ impl Challenge {
     /// - **challenge**: The challenge string.
     /// - **expires**: The UNIX timestamp when the challenge expires.
     pub fn new(challenge: &str, expires: u64) -> Result<Self, ConversionError> {
+        let ia5string = der::asn1::Ia5String::new(challenge)?;
         Ok(Self {
-            challenge: Ia5String::new(challenge)?,
+            challenge: ia5string.into(),
             expires,
         })
     }
