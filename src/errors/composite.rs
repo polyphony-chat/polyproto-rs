@@ -51,6 +51,8 @@ pub enum RequestError {
     HttpError(#[from] reqwest::Error),
     #[error("Failed to deserialize response into expected type")]
     DeserializationError(#[from] serde_json::Error),
+    #[error("Failed to convert response into expected type")]
+    ConversionError(#[from] ConversionError),
 }
 
 impl From<der::Error> for ConversionError {
