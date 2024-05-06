@@ -76,7 +76,8 @@ pub enum PkcsVersion {
     V1 = 0,
 }
 
-/// Information regarding a subjects' public key.
+/// Information regarding a subjects' public key. This is a `SubjectPublicKeyInfo` in the context of
+/// PKCS #10.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PublicKeyInfo {
     /// Properties of the signature algorithm used to create the public key.
