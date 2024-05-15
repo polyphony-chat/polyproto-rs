@@ -110,8 +110,8 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     }
 
     /// Create an IdCsr from a byte slice containing a DER encoded X.509 Certificate.
-    pub fn from_der(value: Vec<u8>) -> Result<Self, ConversionError> {
-        let cert = IdCert::try_from(Certificate::from_der(&value)?)?;
+    pub fn from_der(value: &[u8]) -> Result<Self, ConversionError> {
+        let cert = IdCert::try_from(Certificate::from_der(value)?)?;
         cert.validate()?;
         Ok(cert)
     }
