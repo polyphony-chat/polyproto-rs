@@ -33,7 +33,6 @@ ser_der = { version = "0.1.0-alpha.1", optional = true, features = ["alloc"] }
 [dev-dependencies]
 ed25519-dalek = { version = "2.1.1", features = ["rand_core", "signature"] }
 rand = "0.8.5"
-polyproto = { path = "./" }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3.42"
