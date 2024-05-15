@@ -74,7 +74,7 @@ fn main() {
     )
     .unwrap();
     let data = cert.clone().to_der().unwrap();
-    let cert_from_der = IdCert::from_der(data).unwrap();
+    let cert_from_der = IdCert::from_der(&data).unwrap();
     assert_eq!(cert_from_der, cert)
 }
 
@@ -119,7 +119,7 @@ impl Signature for Ed25519Signature {
         }
     }
 
-    fn from_bitstring(signature: &[u8]) -> Self {
+    fn from_bytes(signature: &[u8]) -> Self {
         let mut signature_vec = signature.to_vec();
         signature_vec.resize(64, 0);
         let signature_array: [u8; 64] = {

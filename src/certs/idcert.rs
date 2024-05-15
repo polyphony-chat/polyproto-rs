@@ -169,7 +169,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<Certificate> for IdCert<S, P> {
 
     fn try_from(value: Certificate) -> Result<Self, Self::Error> {
         let id_cert_tbs = value.tbs_certificate.try_into()?;
-        let signature = S::from_bitstring(value.signature.raw_bytes());
+        let signature = S::from_bytes(value.signature.raw_bytes());
         Ok(IdCert {
             id_cert_tbs,
             signature,
