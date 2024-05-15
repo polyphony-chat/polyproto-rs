@@ -132,6 +132,25 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     pub fn to_pem(self, line_ending: LineEnding) -> Result<String, ConversionError> {
         Ok(Certificate::try_from(self)?.to_pem(line_ending)?)
     }
+
+    /// Validates the well-formedness of the [IdCert] and its contents. Fails, if the [Name] or
+    /// [Capabilities] do not meet polyproto validation criteria for home server certs, or if
+    /// the signature fails to be verified.
+    // PRETTYFYME: validate_home_server and validate_actor could be made into a trait?
+    pub fn validate_home_server(&self) -> Result<(), ConversionError> {
+        self.validate()?;
+        self.id_cert_tbs.validate_home_server()?;
+        Ok(())
+    }
+
+    /// Validates the well-formedness of the [IdCert] and its contents. Fails, if the [Name] or
+    /// [Capabilities] do not meet polyproto validation criteria for actor certs, or if
+    /// the signature fails to be verified.
+    pub fn validate_actor(&self) -> Result<(), ConversionError> {
+        self.validate()?;
+        self.id_cert_tbs.validate_actor()?;
+        Ok(())
+    }
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<IdCert<S, P>> for Certificate {
