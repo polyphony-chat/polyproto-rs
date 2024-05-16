@@ -56,10 +56,6 @@ fn main() {
         &Capabilities::default_actor(),
     )
     .unwrap();
-    let csr_pem = csr.clone().to_pem(der::pem::LineEnding::LF).unwrap();
-    let csr_from_pem =
-        polyproto::certs::idcsr::IdCsr::<Ed25519Signature, Ed25519PublicKey>::from_pem(&csr_pem)
-            .unwrap();
     let data = csr.clone().to_der().unwrap();
     let file_name_with_extension = "cert.csr";
     #[cfg(not(target_arch = "wasm32"))]
