@@ -91,12 +91,6 @@ impl KeyUsages {
     /// ```
     pub fn from_bitstring(bitstring: BitString) -> Result<Self, ConversionError> {
         let mut byte_array = bitstring.raw_bytes().to_vec();
-        if byte_array.is_empty() || byte_array.len() < 2 {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                "Passed BitString seems to be invalid".to_string(),
-            )));
-        }
-        byte_array.remove(0);
         let mut key_usages = Vec::new();
         if byte_array.len() == 2 {
             // If the length of the byte array is 2, this means that DecipherOnly is set.
@@ -278,7 +272,8 @@ impl TryFrom<KeyUsages> for Attribute {
     fn try_from(value: KeyUsages) -> Result<Self, Self::Error> {
         let mut sov = SetOfVec::new();
         let bitstring = value.to_bitstring();
-        sov.insert(Any::from_der(&bitstring.to_der()?)?)?;
+        let any = Any::new(Tag::BitString, bitstring.to_der()?)?;
+        sov.insert(any)?;
         Ok(Attribute {
             oid: ObjectIdentifier::from_str(OID_KEY_USAGE)?,
             values: sov,
