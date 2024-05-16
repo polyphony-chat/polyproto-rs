@@ -202,6 +202,8 @@ impl TryFrom<Attribute> for KeyUsages {
     type Error = ConversionError;
 
     fn try_from(value: Attribute) -> Result<Self, Self::Error> {
+        // The issue seems to be that the value is a SetOfVec CONTAINING a BitString, rather than
+        // just a BitString itself.
         if value.tag() != Tag::BitString {
             return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
                 format!("Expected BitString, found {}", value.tag(),),
