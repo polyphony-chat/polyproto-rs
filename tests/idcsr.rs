@@ -47,7 +47,7 @@ use x509_cert::Certificate;
 /// ```
 
 #[test]
-fn main() {
+fn id_csr_to_from_pem() {
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
     println!("Private Key is: {:?}", priv_key.key.to_bytes());
@@ -123,7 +123,10 @@ impl Signature for Ed25519Signature {
 // it for our signature type.
 impl SignatureBitStringEncoding for Ed25519Signature {
     fn to_bitstring(&self) -> der::Result<der::asn1::BitString> {
-        BitString::from_bytes(&self.as_signature().to_bytes())
+        let unused_bits: u8 = (self.as_signature().to_bytes().len() % 8)
+            .try_into()
+            .unwrap();
+        BitString::new(unused_bits, self.as_signature().to_bytes().to_vec())
     }
 }
 
@@ -210,8 +213,14 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
             array.copy_from_slice(&key_vec[..]);
             array
         };
-        Ok(Self {
-            key: VerifyingKey::from_bytes(&signature_array).unwrap(),
-        })
+        match VerifyingKey::from_bytes(&signature_array) {
+            Ok(key) => Ok(Ed25519PublicKey { key }),
+            Err(e) => Err(polyproto::errors::composite::ConversionError::InvalidInput(
+                polyproto::errors::base::InvalidInput::Malformed(format!(
+                    "Could not convert public key: {}",
+                    e
+                )),
+            )),
+        }
     }
 }
