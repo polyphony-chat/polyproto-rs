@@ -177,14 +177,6 @@ fn cert_from_der() {
         },
     )
     .unwrap();
-    dbg!(&cert.id_cert_tbs.capabilities.key_usage);
-    dbg!(&cert
-        .id_cert_tbs
-        .capabilities
-        .key_usage
-        .clone()
-        .to_bitstring()
-        .raw_bytes());
     let data = cert.clone().to_der().unwrap();
     let cert_from_der = IdCert::from_der(&data).unwrap();
     assert_eq!(cert_from_der, cert)

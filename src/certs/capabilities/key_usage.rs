@@ -91,7 +91,6 @@ impl KeyUsages {
     /// ```
     pub fn from_bitstring(bitstring: BitString) -> Result<Self, ConversionError> {
         let mut byte_array = bitstring.raw_bytes().to_vec();
-        dbg!(&byte_array);
         let mut key_usages = Vec::new();
         if byte_array == [0] || byte_array.is_empty() {
             // TODO: PLEASE write a test for this. Is an empty byte array valid? Is a byte array with a single 0 valid, and does it mean that no KeyUsage is set? -bitfl0wer
@@ -138,7 +137,6 @@ impl KeyUsages {
                 "Could not properly convert this BitString to KeyUsages. The BitString is malformed".to_string(),
             )));
         }
-        dbg!(&key_usages);
         Ok(KeyUsages { key_usages })
     }
 
