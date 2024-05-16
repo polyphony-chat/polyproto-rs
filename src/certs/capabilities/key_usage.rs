@@ -202,11 +202,41 @@ impl TryFrom<Attribute> for KeyUsages {
     type Error = ConversionError;
 
     fn try_from(value: Attribute) -> Result<Self, Self::Error> {
-        // The issue seems to be that the value is a SetOfVec CONTAINING a BitString, rather than
-        // just a BitString itself.
-        if value.tag() != Tag::BitString && value.tag() != Tag::Sequence {
+        // The issue seems to be that the BitString is invalid.
+        /*
+        Good BitString:
+        Any {
+            tag: Tag(0x03: BIT STRING),
+            value: BytesOwned {
+                length: Length(
+                    4,
+                ),
+                inner: [
+                    3,
+                    2,
+                    0,
+                    255,
+                ],
+            },
+        }
+
+        Bad BitString:
+        Any {
+            tag: Tag(0x03: BIT STRING),
+            value: BytesOwned {
+                length: Length(
+                    2,
+                ),
+                inner: [
+                    0,          <- Missing Tag "3", Missing Length "2"
+                    128,
+                ],
+            },
+        }
+         */
+        if value.tag() != Tag::Sequence {
             return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                format!("Expected BitString or Sequence, found {}", value.tag(),),
+                format!("Expected Sequence, found {}", value.tag(),),
             )));
         }
         match value.values.len() {
@@ -220,9 +250,7 @@ impl TryFrom<Attribute> for KeyUsages {
                 }));
             }
         };
-        dbg!(&value);
         let inner_value = value.values.get(0).expect("Illegal state. Please report this error to https://github.com/polyphony-chat/polyproto");
-        dbg!(inner_value.value());
         KeyUsages::from_bitstring(BitString::from_der(inner_value.value())?)
     }
 }
