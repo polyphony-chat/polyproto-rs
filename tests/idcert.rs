@@ -146,6 +146,50 @@ fn test_create_invalid_actor_csr() {
     assert!(csr.is_err());
 }
 
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn cert_from_der() {
+    let mut csprng = rand::rngs::OsRng;
+    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
+
+    let csr = polyproto::certs::idcsr::IdCsr::new(
+        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
+        &priv_key,
+        &Capabilities::default_actor(),
+    )
+    .unwrap();
+
+    let mut cert = IdCert::from_actor_csr(
+        csr,
+        &priv_key,
+        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        RdnSequence::from_str(
+            "CN=root,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
+        )
+        .unwrap(),
+        Validity {
+            not_before: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
+            ),
+            not_after: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
+            ),
+        },
+    )
+    .unwrap();
+    dbg!(&cert.id_cert_tbs.capabilities.key_usage);
+    dbg!(&cert
+        .id_cert_tbs
+        .capabilities
+        .key_usage
+        .clone()
+        .to_bitstring()
+        .raw_bytes());
+    let data = cert.clone().to_der().unwrap();
+    let cert_from_der = IdCert::from_der(&data).unwrap();
+    assert_eq!(cert_from_der, cert)
+}
+
 // As mentioned in the README, we start by implementing the signature trait.
 
 // Here, we start by defining the signature type, which is a wrapper around the signature type from

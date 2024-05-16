@@ -91,7 +91,17 @@ impl KeyUsages {
     /// ```
     pub fn from_bitstring(bitstring: BitString) -> Result<Self, ConversionError> {
         let mut byte_array = bitstring.raw_bytes().to_vec();
+        dbg!(&byte_array);
         let mut key_usages = Vec::new();
+        if byte_array == [0] || byte_array.is_empty() {
+            // TODO: PLEASE write a test for this. Is an empty byte array valid? Is a byte array with a single 0 valid, and does it mean that no KeyUsage is set? -bitfl0wer
+            return Ok(KeyUsages { key_usages });
+        }
+        // TODO: Instead of doing this, we should rather find out why the first byte is sometimes 0.
+        // works for now though. -bitfl0wer
+        if byte_array[0] == 0 && byte_array.len() == 2 {
+            byte_array.remove(0);
+        }
         if byte_array.len() == 2 {
             // If the length of the byte array is 2, this means that DecipherOnly is set.
             key_usages.push(KeyUsage::DecipherOnly);
@@ -128,6 +138,7 @@ impl KeyUsages {
                 "Could not properly convert this BitString to KeyUsages. The BitString is malformed".to_string(),
             )));
         }
+        dbg!(&key_usages);
         Ok(KeyUsages { key_usages })
     }
 
