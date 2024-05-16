@@ -19,7 +19,7 @@ reqwest = ["dep:reqwest", "routes"]
 serde = ["dep:serde", "dep:serde_json", "dep:ser_der"]
 
 [dependencies]
-der = "0.7.9"
+der = { version = "0.7.9", features = ["pem"] }
 getrandom = { version = "0.2.14", optional = true }
 regex = "1.10.4"
 reqwest = { version = "0.12.4", features = ["json"], optional = true }
@@ -27,7 +27,7 @@ serde = { version = "1.0.199", optional = true, features = ["derive"] }
 serde_json = { version = "1.0.116", optional = true }
 spki = "0.7.3"
 thiserror = "1.0.59"
-x509-cert = { version = "0.2.5", default-features = false, features = ["pem"] }
+x509-cert = "0.2.5"
 ser_der = { version = "0.1.0-alpha.1", optional = true, features = ["alloc"] }
 
 [dev-dependencies]

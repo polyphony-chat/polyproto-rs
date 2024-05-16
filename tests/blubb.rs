@@ -1,3 +1,8 @@
+// Copyright (c) 2024 bitfl0wer
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -41,8 +46,7 @@ use x509_cert::Certificate;
 /// openssl x509 -in cert.der -text -noout -inform der
 /// ```
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
+#[test]
 fn main() {
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
@@ -60,38 +64,7 @@ fn main() {
     let csr_from_pem =
         polyproto::certs::idcsr::IdCsr::<Ed25519Signature, Ed25519PublicKey>::from_pem(&csr_pem)
             .unwrap();
-    let data = csr.clone().to_der().unwrap();
-    let file_name_with_extension = "cert.csr";
-    #[cfg(not(target_arch = "wasm32"))]
-    std::fs::write(file_name_with_extension, &data).unwrap();
-
-    let cert = IdCert::from_actor_csr(
-        csr,
-        &priv_key,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
-        RdnSequence::from_str(
-            "CN=root,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
-        )
-        .unwrap(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
-    )
-    .unwrap();
-    let data = Certificate::try_from(cert).unwrap().to_der().unwrap();
-    let file_name_with_extension = "cert.der";
-    #[cfg(not(target_arch = "wasm32"))]
-    std::fs::write(file_name_with_extension, &data).unwrap();
 }
-
-#[cfg(not(target_arch = "wasm32"))]
-#[cfg(not(test))]
-fn main() {}
 
 // As mentioned in the README, we start by implementing the signature trait.
 
