@@ -110,8 +110,8 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     }
 
     /// Create an IdCsr from a byte slice containing a DER encoded X.509 Certificate.
-    pub fn from_der(value: Vec<u8>) -> Result<Self, ConversionError> {
-        let cert = IdCert::try_from(Certificate::from_der(&value)?)?;
+    pub fn from_der(value: &[u8]) -> Result<Self, ConversionError> {
+        let cert = IdCert::try_from(Certificate::from_der(value)?)?;
         cert.validate()?;
         Ok(cert)
     }
@@ -132,6 +132,25 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     pub fn to_pem(self, line_ending: LineEnding) -> Result<String, ConversionError> {
         Ok(Certificate::try_from(self)?.to_pem(line_ending)?)
     }
+
+    /// Validates the well-formedness of the [IdCert] and its contents. Fails, if the [Name] or
+    /// [Capabilities] do not meet polyproto validation criteria for home server certs, or if
+    /// the signature fails to be verified.
+    // PRETTYFYME: validate_home_server and validate_actor could be made into a trait?
+    pub fn validate_home_server(&self) -> Result<(), ConversionError> {
+        self.validate()?;
+        self.id_cert_tbs.validate_home_server()?;
+        Ok(())
+    }
+
+    /// Validates the well-formedness of the [IdCert] and its contents. Fails, if the [Name] or
+    /// [Capabilities] do not meet polyproto validation criteria for actor certs, or if
+    /// the signature fails to be verified.
+    pub fn validate_actor(&self) -> Result<(), ConversionError> {
+        self.validate()?;
+        self.id_cert_tbs.validate_actor()?;
+        Ok(())
+    }
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<IdCert<S, P>> for Certificate {
@@ -150,7 +169,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<Certificate> for IdCert<S, P> {
 
     fn try_from(value: Certificate) -> Result<Self, Self::Error> {
         let id_cert_tbs = value.tbs_certificate.try_into()?;
-        let signature = S::from_bitstring(value.signature.raw_bytes());
+        let signature = S::from_bytes(value.signature.raw_bytes());
         Ok(IdCert {
             id_cert_tbs,
             signature,

@@ -79,8 +79,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// Validates the well-formedness of the [IdCsr] and its contents. Fails, if the [Name] or
     /// [Capabilities] do not meet polyproto validation criteria for actor CSRs, or if
     /// the signature fails to be verified.
-
-    pub fn valid_actor_csr(&self) -> Result<(), ConversionError> {
+    pub fn validate_actor(&self) -> Result<(), ConversionError> {
         self.validate()?;
         if self.inner_csr.capabilities.basic_constraints.ca {
             return Err(ConversionError::ConstraintError(
@@ -93,17 +92,20 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// Validates the well-formedness of the [IdCsr] and its contents. Fails, if the [Name] or
     /// [Capabilities] do not meet polyproto validation criteria for home server CSRs, or if
     /// the signature fails to be verified.
-    pub fn valid_home_server_csr(&self) -> Result<(), ConversionError> {
+    pub fn validate_home_server(&self) -> Result<(), ConversionError> {
         self.validate()?;
         if !self.inner_csr.capabilities.basic_constraints.ca {
             return Err(ConversionError::ConstraintError(
-                ConstraintError::Malformed(Some("Actor CSR must be a CA".to_string())),
+                ConstraintError::Malformed(Some(
+                    "Home server CSR must have the CA capability set to true".to_string(),
+                )),
             ));
         }
         Ok(())
     }
 
     /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
+    // PRETTYFYME: Could be a trait along with to_der, from_pem, to_pem
     pub fn from_der(bytes: &[u8]) -> Result<Self, ConversionError> {
         IdCsr::try_from(CertReq::from_der(bytes)?)
     }
@@ -189,7 +191,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<CertReq> for IdCsr<S, P> {
         Ok(IdCsr {
             inner_csr: IdCsrInner::try_from(value.info)?,
             signature_algorithm: value.algorithm,
-            signature: S::from_bitstring(value.signature.raw_bytes()),
+            signature: S::from_bytes(value.signature.raw_bytes()),
         })
     }
 }

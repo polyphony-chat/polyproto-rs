@@ -102,7 +102,7 @@ impl Signature for Ed25519Signature {
     }
 
     #[cfg(not(tarpaulin_include))]
-    fn from_bitstring(signature: &[u8]) -> Self {
+    fn from_bytes(signature: &[u8]) -> Self {
         let mut signature_vec = signature.to_vec();
         signature_vec.resize(64, 0);
         let signature_array: [u8; 64] = {
