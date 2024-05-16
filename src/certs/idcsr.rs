@@ -206,7 +206,6 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<CertReqInfo> for IdCsrInner<S, P> {
             algorithm: value.public_key.algorithm,
             public_key_bitstring: value.public_key.subject_public_key,
         };
-        dbg!(Capabilities::try_from(value.attributes.clone()).is_err());
         Ok(IdCsrInner {
             version: PkcsVersion::V1,
             subject: rdn_sequence,
