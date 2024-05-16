@@ -188,10 +188,6 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<CertReq> for IdCsr<S, P> {
     type Error = ConversionError;
 
     fn try_from(value: CertReq) -> Result<Self, Self::Error> {
-        dbg!("=====");
-        dbg!(&value.info.subject.to_string());
-        dbg!(IdCsrInner::<S, P>::try_from(value.info.clone()).is_err());
-        dbg!("=====");
         Ok(IdCsr {
             inner_csr: IdCsrInner::try_from(value.info)?,
             signature_algorithm: value.algorithm,
@@ -210,15 +206,11 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<CertReqInfo> for IdCsrInner<S, P> {
             algorithm: value.public_key.algorithm,
             public_key_bitstring: value.public_key.subject_public_key,
         };
-        let public_key = P::try_from_public_key_info(public_key_info);
-        if public_key.is_err() {
-            eprintln!("{}", public_key.clone().err().unwrap());
-        }
-        let public_key = public_key?;
+        dbg!(Capabilities::try_from(value.attributes.clone()).is_err());
         Ok(IdCsrInner {
             version: PkcsVersion::V1,
             subject: rdn_sequence,
-            subject_public_key: public_key,
+            subject_public_key: PublicKey::try_from_public_key_info(public_key_info)?,
             capabilities: Capabilities::try_from(value.attributes)?,
             phantom_data: PhantomData,
         })
