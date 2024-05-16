@@ -13,7 +13,6 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use der::asn1::{BitString, Ia5String, Uint, UtcTime};
-use der::Encode;
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
