@@ -13,7 +13,7 @@ use crate::errors::base::InvalidInput;
 use crate::errors::composite::ConversionError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
-use crate::Constrained;
+use crate::{ActorConstrained, Constrained, HomeServerConstrained};
 
 use super::equal_domain_components;
 use super::idcerttbs::IdCertTbs;
@@ -66,7 +66,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             id_cert_tbs,
             signature,
         };
-        cert.validate()?;
+        cert.validate_home_server()?;
         Ok(cert)
     }
 
@@ -105,7 +105,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             id_cert_tbs,
             signature,
         };
-        cert.validate()?;
+        cert.validate_actor()?;
         Ok(cert)
     }
 
@@ -143,15 +143,6 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         Ok(())
     }
 
-    /// Validates the well-formedness of the [IdCert] and its contents. Fails, if the [Name] or
-    /// [Capabilities] do not meet polyproto validation criteria for actor certs, or if
-    /// the signature fails to be verified.
-    pub fn validate_actor(&self) -> Result<(), ConversionError> {
-        self.validate()?;
-        self.id_cert_tbs.validate_actor()?;
-        Ok(())
-    }
-
     /// Returns a byte vector containing the DER encoded IdCertTbs. This data is encoded
     /// in the signature field of the certificate, and can be used to verify the signature.
     ///
@@ -160,6 +151,15 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// in an error.
     pub fn signature_data(&self) -> Result<Vec<u8>, ConversionError> {
         self.id_cert_tbs.clone().to_der()
+    }
+}
+
+impl<S: Signature, P: PublicKey<S>> ActorConstrained for IdCert<S, P> {
+    fn validate_actor(&self) -> Result<(), crate::errors::base::ConstraintError> {
+        self.validate()?;
+        self.id_cert_tbs.subject.validate_actor()?;
+        self.id_cert_tbs.validate_actor()?;
+        Ok(())
     }
 }
 
