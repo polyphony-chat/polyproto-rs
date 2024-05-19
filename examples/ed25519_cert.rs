@@ -12,7 +12,7 @@ use der::Encode;
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
-use polyproto::certs::PublicKeyInfo;
+use polyproto::certs::{PublicKeyInfo, Target};
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use rand::rngs::OsRng;
@@ -57,6 +57,7 @@ fn main() {
         .unwrap(),
         &priv_key,
         &Capabilities::default_actor(),
+        Some(Target::Actor),
     )
     .unwrap();
     let data = csr.clone().to_der().unwrap();

@@ -12,7 +12,7 @@ use der::Encode;
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::{self, Capabilities};
 use polyproto::certs::idcert::IdCert;
-use polyproto::certs::PublicKeyInfo;
+use polyproto::certs::{PublicKeyInfo, Target};
 use polyproto::errors::composite::ConversionError;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
@@ -62,6 +62,7 @@ fn test_create_actor_cert() {
         .unwrap(),
         &priv_key,
         &capabilities,
+        Some(Target::Actor),
     )
     .unwrap();
     let cert = IdCert::from_actor_csr(
@@ -103,6 +104,7 @@ fn test_create_ca_cert() {
         .unwrap(),
         &priv_key,
         &Capabilities::default_home_server(),
+        Some(Target::HomeServer),
     )
     .unwrap();
     let cert = IdCert::from_ca_csr(
@@ -139,11 +141,12 @@ fn mismatched_dcs_in_csr_and_cert() {
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
         &RdnSequence::from_str(
-            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyproto.chat,uniqueIdentifier=client1",
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
         )
         .unwrap(),
         &priv_key,
         &Capabilities::default_home_server(),
+        Some(Target::Actor),
     )
     .unwrap();
     let cert = IdCert::from_ca_csr(
@@ -182,6 +185,7 @@ fn cert_from_pem() {
         .unwrap(),
         &priv_key,
         &Capabilities::default_actor(),
+        Some(Target::Actor),
     )
     .unwrap();
 

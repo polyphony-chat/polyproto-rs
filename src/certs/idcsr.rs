@@ -14,7 +14,7 @@ use x509_cert::request::{CertReq, CertReqInfo};
 use crate::errors::composite::ConversionError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
-use crate::{Constrained, ConstraintError};
+use crate::{ActorConstrained, Constrained, ConstraintError};
 
 use super::capabilities::Capabilities;
 use super::{PkcsVersion, PublicKeyInfo, Target};
@@ -63,9 +63,17 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
         subject: &Name,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
         capabilities: &Capabilities,
+        target: Option<Target>,
     ) -> Result<IdCsr<S, P>, ConversionError> {
-        subject.validate()?;
-        let inner_csr = IdCsrInner::<S, P>::new(subject, signing_key.pubkey(), capabilities)?;
+        match target {
+            Some(choice) => match choice {
+                Target::Actor => subject.validate_actor()?,
+                Target::HomeServer => subject.validate()?,
+            },
+            None => subject.validate()?,
+        }
+        let inner_csr =
+            IdCsrInner::<S, P>::new(subject, signing_key.pubkey(), capabilities, target)?;
         let signature = signing_key.sign(&inner_csr.clone().to_der()?);
         let signature_algorithm = S::algorithm_identifier();
 
@@ -185,8 +193,15 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
         subject: &Name,
         public_key: &P,
         capabilities: &Capabilities,
+        target: Option<Target>,
     ) -> Result<IdCsrInner<S, P>, ConversionError> {
-        subject.validate()?;
+        match target {
+            Some(choice) => match choice {
+                Target::Actor => subject.validate_actor()?,
+                Target::HomeServer => subject.validate()?,
+            },
+            None => todo!(),
+        }
         capabilities.validate()?;
 
         let subject = subject.clone();
@@ -202,13 +217,29 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
     }
 
     /// Create an IdCsrInner from a byte slice containing a DER encoded PKCS #10 CSR.
-    pub fn from_der(bytes: &[u8]) -> Result<Self, ConversionError> {
-        IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)
+    pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
+        let csr_inner = IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)?;
+        match target {
+            Some(choice) => match choice {
+                Target::Actor => csr_inner.validate_actor()?,
+                Target::HomeServer => csr_inner.validate()?,
+            },
+            None => csr_inner.validate()?,
+        };
+        Ok(csr_inner)
     }
 
     /// Encode this type as DER, returning a byte vector.
     pub fn to_der(self) -> Result<Vec<u8>, ConversionError> {
         Ok(CertReqInfo::try_from(self)?.to_der()?)
+    }
+}
+
+impl<S: Signature, P: PublicKey<S>> ActorConstrained for IdCsrInner<S, P> {
+    fn validate_actor(&self) -> Result<(), ConstraintError> {
+        self.validate()?;
+        self.subject.validate_actor()?;
+        Ok(())
     }
 }
 

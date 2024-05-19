@@ -50,6 +50,7 @@ fn main() {
         .unwrap(),
         &priv_key,
         &Capabilities::default_actor(),
+        Some(polyproto::certs::Target::Actor),
     )
     .unwrap();
 

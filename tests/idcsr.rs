@@ -17,7 +17,7 @@ use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, Veri
 use polyproto::certs::capabilities::{self, Capabilities};
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
-use polyproto::certs::PublicKeyInfo;
+use polyproto::certs::{PublicKeyInfo, Target};
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use rand::rngs::OsRng;
@@ -61,6 +61,7 @@ fn csr_from_pem() {
         .unwrap(),
         &priv_key,
         &Capabilities::default_actor(),
+        Some(Target::Actor),
     )
     .unwrap();
     let data = csr.clone().to_pem(der::pem::LineEnding::LF).unwrap();
@@ -91,6 +92,7 @@ fn test_create_invalid_actor_csr() {
         .unwrap(),
         &priv_key,
         &capabilities,
+        Some(Target::Actor),
     );
     assert!(csr.is_err());
 }
@@ -108,6 +110,7 @@ fn csr_from_der() {
         .unwrap(),
         &priv_key,
         &Capabilities::default_actor(),
+        Some(Target::Actor),
     )
     .unwrap();
     let data = csr.clone().to_der().unwrap();

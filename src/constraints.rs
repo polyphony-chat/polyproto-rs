@@ -11,7 +11,7 @@ use x509_cert::name::{Name, RelativeDistinguishedName};
 use crate::certs::capabilities::{Capabilities, KeyUsage};
 use crate::certs::idcert::IdCert;
 use crate::certs::idcerttbs::IdCertTbs;
-use crate::certs::idcsr::IdCsr;
+use crate::certs::idcsr::{IdCsr, IdCsrInner};
 use crate::certs::{equal_domain_components, SessionId};
 use crate::errors::base::ConstraintError;
 use crate::key::PublicKey;
@@ -308,10 +308,17 @@ impl Constrained for Capabilities {
     }
 }
 
+impl<S: Signature, P: PublicKey<S>> Constrained for IdCsrInner<S, P> {
+    fn validate(&self) -> Result<(), ConstraintError> {
+        self.capabilities.validate()?;
+        self.subject.validate()?;
+        Ok(())
+    }
+}
+
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
     fn validate(&self) -> Result<(), ConstraintError> {
-        self.inner_csr.capabilities.validate()?;
-        self.inner_csr.subject.validate()?;
+        self.inner_csr.validate()?;
         match self.inner_csr.subject_public_key.verify_signature(
             &self.signature,
             match &self.inner_csr.clone().to_der() {
