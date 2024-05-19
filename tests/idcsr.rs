@@ -9,9 +9,12 @@
 
 #![allow(unused)]
 
+mod common;
+
 use std::str::FromStr;
 use std::time::Duration;
 
+use common::init_logger;
 use der::asn1::{BitString, Ia5String, Uint, UtcTime};
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::{self, Capabilities};
@@ -49,6 +52,7 @@ use x509_cert::Certificate;
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn csr_from_pem() {
+    init_logger();
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
 
@@ -70,6 +74,7 @@ fn csr_from_pem() {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn test_create_invalid_actor_csr() {
+    init_logger();
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
     println!("Private Key is: {:?}", priv_key.key.to_bytes());
@@ -98,6 +103,7 @@ fn test_create_invalid_actor_csr() {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn csr_from_der() {
+    init_logger();
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
 

@@ -4,6 +4,8 @@
 
 #![allow(unused)]
 
+mod common;
+
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -25,6 +27,8 @@ use x509_cert::request::CertReq;
 use x509_cert::time::{Time, Validity};
 use x509_cert::Certificate;
 
+use common::init_logger;
+
 /// The following example uses the same setup as in ed25519_basic.rs, but in its main method, it
 /// creates a certificate signing request (CSR) and writes it to a file. The CSR is created from a
 /// polyproto ID CSR, which is a wrapper around a PKCS #10 CSR.
@@ -45,6 +49,7 @@ use x509_cert::Certificate;
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn test_create_actor_cert() {
+    init_logger();
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
     println!("Private Key is: {:?}", priv_key.key.to_bytes());
@@ -91,6 +96,7 @@ fn test_create_actor_cert() {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn test_create_ca_cert() {
+    init_logger();
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
     println!("Private Key is: {:?}", priv_key.key.to_bytes());
@@ -127,6 +133,7 @@ fn test_create_ca_cert() {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn mismatched_dcs_in_csr_and_cert() {
+    init_logger();
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
     println!("Private Key is: {:?}", priv_key.key.to_bytes());
@@ -169,6 +176,7 @@ fn mismatched_dcs_in_csr_and_cert() {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn cert_from_pem() {
+    init_logger();
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
 
