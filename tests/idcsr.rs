@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use der::asn1::{BitString, Ia5String, Uint, UtcTime};
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
-use polyproto::certs::capabilities::Capabilities;
+use polyproto::certs::capabilities::{self, Capabilities};
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
 use polyproto::certs::PublicKeyInfo;
@@ -64,6 +64,33 @@ fn csr_from_pem() {
     let data = csr.clone().to_pem(der::pem::LineEnding::LF).unwrap();
     let csr_from_der = IdCsr::from_pem(&data).unwrap();
     assert_eq!(csr_from_der, csr)
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn test_create_invalid_actor_csr() {
+    let mut csprng = rand::rngs::OsRng;
+    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
+    println!("Private Key is: {:?}", priv_key.key.to_bytes());
+    println!("Public Key is: {:?}", priv_key.public_key.key.to_bytes());
+    println!();
+
+    let mut capabilities = Capabilities::default_actor();
+    // This is not allowed in actor certificates/csrs
+    capabilities
+        .key_usage
+        .key_usages
+        .push(capabilities::KeyUsage::KeyCertSign);
+
+    let csr = polyproto::certs::idcsr::IdCsr::new(
+        &RdnSequence::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap(),
+        &priv_key,
+        &capabilities,
+    );
+    assert!(csr.is_err());
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
