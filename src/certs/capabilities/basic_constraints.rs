@@ -6,6 +6,7 @@ use std::str::FromStr;
 
 use der::asn1::{OctetString, SequenceOf, SetOfVec};
 use der::{Any, Decode, Encode, Tag, Tagged};
+use log::{trace, warn};
 use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
@@ -166,20 +167,24 @@ impl TryFrom<Extension> for BasicConstraints {
     /// this property is critical, use the [Constrained] trait to verify the well-formedness of
     /// these resulting [BasicConstraints].
     fn try_from(value: Extension) -> Result<Self, Self::Error> {
+        trace!("Converting Extension to BasicConstraints");
+        trace!("Extension: {:#?}", value);
         #[allow(unreachable_patterns)]
         if value.critical && !matches!(value.extn_id.to_string().as_str(), OID_BASIC_CONSTRAINTS) {
             // Error if we encounter a "critical" X.509 extension which we do not know of
+            warn!("Unknown critical extension: {:#?}", value.extn_id);
             return Err(ConversionError::UnknownCriticalExtension { oid: value.extn_id });
         }
         // If the Extension is a valid BasicConstraint, the octet string will contain DER ANY values
         // in a DER SET OF type
         let sequence: SequenceOf<Any, 2> = SequenceOf::from_der(value.extn_value.as_bytes())?;
         if sequence.len() > 2 {
+            warn!(
+                "Encountered too many values in BasicConstraints. Found {} values",
+                sequence.len()
+            );
             return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                format!(
-                    "This x509_cert::Extension has {} values stored. Expected a maximum of 2 values",
-                    sequence.len()
-                ),
+                format!("This x509_cert::Extension has {} values stored. Expected a maximum of 2 values", sequence.len()),
             )));
         }
         let mut bool_encounters = 0u8;
@@ -192,18 +197,22 @@ impl TryFrom<Extension> for BasicConstraints {
                 Tag::Boolean => {
                     bool_encounters += 1;
                     ca = any_to_bool(item.clone())?;
-                },
+                }
                 Tag::Integer => {
                     int_encounters += 1;
                     path_length = Some(any_to_u64(item.clone())?);
-                },
+                }
                 Tag::Null => {
                     null_encounters += 1;
                     path_length = None;
-                },
-                _ => return Err(ConversionError::InvalidInput(InvalidInput::Malformed(format!("Encountered unexpected tag {:?}, when tag should have been either Boolean, Integer or Null", item.tag())))),
+                }
+                _ => {
+                    warn!("Encountered unexpected tag: {:?}", item.tag());
+                    return Err(ConversionError::InvalidInput(InvalidInput::Malformed(format!("Encountered unexpected tag {:?}, when tag should have been either Boolean, Integer or Null", item.tag()))));
+                }
             }
             if bool_encounters > 1 || int_encounters > 1 || null_encounters > 1 {
+                warn!("Encountered too many values in BasicConstraints. BasicConstraints are likely malformed. BasicConstraints: {:#?}", value);
                 return Err(ConversionError::InvalidInput(InvalidInput::Length {
                     min_length: 0,
                     max_length: 1,
@@ -218,18 +227,23 @@ impl TryFrom<Extension> for BasicConstraints {
 /// Tries to convert an [Any] value to a [bool].
 fn any_to_bool(value: Any) -> Result<bool, ConstraintError> {
     match value.tag() {
-        Tag::Boolean => {
-            match value.value() {
-                &[0x00] => Ok(false),
-                &[0xFF] | &[0x01] => Ok(true),
-                _ => {
-                    Err(
-                        ConstraintError::Malformed(Some("Encountered unexpected value for Boolean tag".to_string())),
-                    )
-                }
+        Tag::Boolean => match value.value() {
+            &[0x00] => Ok(false),
+            &[0xFF] | &[0x01] => Ok(true),
+            _ => {
+                warn!(
+                    "Encountered unexpected value for Boolean tag: {:?}",
+                    value.value()
+                );
+                Err(ConstraintError::Malformed(Some(
+                    "Encountered unexpected value for Boolean tag".to_string(),
+                )))
             }
         },
-        _ => Err(ConstraintError::Malformed(Some(format!("Found {:?} in value, which does not match expected [Tag::Boolean, Tag::Integer, Tag::Null]", value.tag().to_string())))),
+        _ => {
+            warn!("Encountered unexpected tag: {:?}", value.tag());
+            Err(ConstraintError::Malformed(Some(format!("Found {:?} in value, which does not match expected [Tag::Boolean, Tag::Integer, Tag::Null]", value.tag().to_string()))))
+        }
     }
 }
 
@@ -243,8 +257,11 @@ fn any_to_u64(value: Any) -> Result<u64, ConstraintError> {
             let len = 8.min(value.value().len());
             buf[..len].copy_from_slice(value.value());
             Ok(u64::from_be_bytes(buf))
-        },
-        _ => Err(ConstraintError::Malformed(Some(format!("Found {:?} in value, which does not match expected [Tag::Boolean, Tag::Integer, Tag::Null]", value.tag().to_string())))),
+        }
+        _ => {
+            warn!("Encountered unexpected tag: {:?}", value.tag());
+            Err(ConstraintError::Malformed(Some(format!("Found {:?} in value, which does not match expected [Tag::Boolean, Tag::Integer, Tag::Null]", value.tag().to_string()))))
+        }
     }
 }
 
@@ -252,11 +269,14 @@ fn any_to_u64(value: Any) -> Result<u64, ConstraintError> {
 #[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod test {
+    use crate::testing_utils::init_logger;
+
     use super::*;
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn basic_constraints_to_extension() {
+        init_logger();
         let basic_constraints = BasicConstraints {
             ca: true,
             path_length: Some(0u64),
@@ -267,6 +287,7 @@ mod test {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn extension_to_basic_constraints() {
+        init_logger();
         let basic_constraints = BasicConstraints {
             ca: true,
             path_length: Some(u64::MAX),
