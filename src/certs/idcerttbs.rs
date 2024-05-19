@@ -12,7 +12,6 @@ use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 use x509_cert::TbsCertificate;
 
-use crate::errors::base::InvalidInput;
 use crate::errors::composite::ConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
@@ -76,11 +75,6 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, ConversionError> {
-        if id_csr.inner_csr.capabilities.basic_constraints.ca {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                "Actor ID-Cert cannot have \"CA\" BasicConstraint set to true".to_string(),
-            )));
-        }
         id_csr.validate(Some(Target::Actor))?;
         issuer.validate(Some(Target::Actor))?;
         // Verify if signature of IdCsr matches contents
@@ -113,12 +107,8 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, ConversionError> {
-        if !id_csr.inner_csr.capabilities.basic_constraints.ca {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                "CA ID-Cert must have \"CA\" BasicConstraint set to true".to_string(),
-            )));
-        }
         id_csr.validate(Some(Target::HomeServer))?;
+        issuer.validate(Some(Target::HomeServer))?;
         // Verify if signature of IdCsr matches contents
         id_csr.inner_csr.subject_public_key.verify_signature(
             &id_csr.signature,
