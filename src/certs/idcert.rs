@@ -133,16 +133,6 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         Ok(Certificate::try_from(self)?.to_pem(line_ending)?)
     }
 
-    /// Validates the well-formedness of the [IdCert] and its contents. Fails, if the [Name] or
-    /// [Capabilities] do not meet polyproto validation criteria for home server certs, or if
-    /// the signature fails to be verified.
-    // PRETTYFYME: validate_home_server and validate_actor could be made into a trait?
-    pub fn validate_home_server(&self) -> Result<(), ConversionError> {
-        self.validate()?;
-        self.id_cert_tbs.validate_home_server()?;
-        Ok(())
-    }
-
     /// Returns a byte vector containing the DER encoded IdCertTbs. This data is encoded
     /// in the signature field of the certificate, and can be used to verify the signature.
     ///
@@ -159,6 +149,14 @@ impl<S: Signature, P: PublicKey<S>> ActorConstrained for IdCert<S, P> {
         self.validate()?;
         self.id_cert_tbs.subject.validate_actor()?;
         self.id_cert_tbs.validate_actor()?;
+        Ok(())
+    }
+}
+
+impl<S: Signature, P: PublicKey<S>> HomeServerConstrained for IdCert<S, P> {
+    fn validate_home_server(&self) -> Result<(), crate::errors::base::ConstraintError> {
+        self.validate()?;
+        self.id_cert_tbs.validate_home_server()?;
         Ok(())
     }
 }
