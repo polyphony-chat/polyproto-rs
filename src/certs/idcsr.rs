@@ -14,7 +14,7 @@ use x509_cert::request::{CertReq, CertReqInfo};
 use crate::errors::composite::ConversionError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
-use crate::{ActorConstrained, Constrained, ConstraintError};
+use crate::{ActorConstrained, Constrained, ConstraintError, HomeServerConstrained};
 
 use super::capabilities::Capabilities;
 use super::{PkcsVersion, PublicKeyInfo, Target};
@@ -84,36 +84,6 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
         })
     }
 
-    /// Validates the well-formedness of the [IdCsr] and its contents. Fails, if the [Name] or
-    /// [Capabilities] do not meet polyproto validation criteria for actor CSRs, or if
-    /// the signature fails to be verified.
-    pub fn validate_actor(&self) -> Result<(), ConversionError> {
-        self.validate()?;
-        if self.inner_csr.capabilities.basic_constraints.ca {
-            return Err(ConversionError::ConstraintError(
-                ConstraintError::Malformed(Some("Actor CSR must not be a CA".to_string())),
-            ));
-        }
-        Ok(())
-    }
-
-    /// Validates the well-formedness of the [IdCsr] and its contents. Fails, if the [Name] or
-    /// [Capabilities] do not meet polyproto validation criteria for home server CSRs, or if
-    /// the signature fails to be verified.
-    pub fn validate_home_server(&self) -> Result<(), ConversionError> {
-        self.validate()?;
-        // TODO: There are missing constraints here. The home server CSR must not have a UID/uniqueIdentifier
-        //       field set, for example.
-        if !self.inner_csr.capabilities.basic_constraints.ca {
-            return Err(ConversionError::ConstraintError(
-                ConstraintError::Malformed(Some(
-                    "Home server CSR must have the CA capability set to true".to_string(),
-                )),
-            ));
-        }
-        Ok(())
-    }
-
     /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
     // PRETTYFYME: Could be a trait along with to_der, from_pem, to_pem
     pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
@@ -159,6 +129,30 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// in an error.
     pub fn signature_data(&self) -> Result<Vec<u8>, ConversionError> {
         self.inner_csr.clone().to_der()
+    }
+}
+
+impl<S: Signature, P: PublicKey<S>> ActorConstrained for IdCsr<S, P> {
+    fn validate_actor(&self) -> Result<(), ConstraintError> {
+        self.validate()?;
+        if self.inner_csr.capabilities.basic_constraints.ca {
+            return Err(ConstraintError::Malformed(Some(
+                "Actor CSR must not be a CA".to_string(),
+            )));
+        }
+        Ok(())
+    }
+}
+
+impl<S: Signature, P: PublicKey<S>> HomeServerConstrained for IdCsr<S, P> {
+    fn validate_home_server(&self) -> Result<(), ConstraintError> {
+        self.validate()?;
+        if !self.inner_csr.capabilities.basic_constraints.ca {
+            return Err(ConstraintError::Malformed(Some(
+                "Home server CSR must have the CA capability set to true".to_string(),
+            )));
+        }
+        Ok(())
     }
 }
 
