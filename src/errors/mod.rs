@@ -12,6 +12,8 @@ pub static ERR_MSG_ACTOR_MISSING_SIGNING_CAPS: &str =
     "Actors require one of the following capabilities: \"DigitalSignature\", \"ContentCommitment\". None provided.";
 pub static ERR_MSG_DC_UID_MISMATCH: &str =
     "The domain components found in the DC and UID fields of the Name object do not match!";
+pub static ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT: &str =
+    "The domain components of the issuer and the subject do not match!";
 /// "Base" error types which can be combined into "composite" error types
 pub mod base;
 /// "Composite" error types which consist of one or more "base" error types

@@ -5,12 +5,14 @@
 use der::asn1::Uint;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
+use log::warn;
 use x509_cert::name::Name;
 use x509_cert::time::Validity;
 use x509_cert::Certificate;
 
 use crate::errors::base::InvalidInput;
 use crate::errors::composite::ConversionError;
+use crate::errors::ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 use crate::Constrained;
@@ -55,8 +57,12 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         // IdCsr gets validated in IdCertTbs::from_..._csr
         let signature_algorithm = signing_key.algorithm_identifier();
         if !equal_domain_components(&id_csr.inner_csr.subject, &issuer) {
+            warn!(
+                "{}\nIssuer: {}\nSubject: {}",
+                ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT, issuer, id_csr.inner_csr.subject
+            );
             return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                "Domain components of the issuer and the subject do not match".to_string(),
+                ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT.to_string(),
             )));
         }
         let id_cert_tbs =
@@ -87,9 +93,13 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         let signature_algorithm = signing_key.algorithm_identifier();
         issuer.validate(Some(Target::Actor))?;
         if !equal_domain_components(&id_csr.inner_csr.subject, &issuer) {
+            warn!(
+                "{}\nIssuer: {}\nSubject: {}",
+                ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT, issuer, id_csr.inner_csr.subject
+            );
             return Err(ConversionError::InvalidInput(
                 crate::errors::base::InvalidInput::Malformed(
-                    "Domain components of the issuer and the subject do not match".to_string(),
+                    ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT.to_string(),
                 ),
             ));
         }
