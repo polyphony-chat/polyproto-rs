@@ -140,7 +140,7 @@ impl TryFrom<Capabilities> for Attributes {
     ///
     /// Fails, if `Capabilities::verify()` using the `Constrained` trait fails.
     fn try_from(value: Capabilities) -> Result<Self, Self::Error> {
-        value.validate()?;
+        value.validate(None)?;
         let mut sov = SetOfVec::new();
         let insertion = sov.insert(Attribute::try_from(value.key_usage)?);
         if insertion.is_err() {

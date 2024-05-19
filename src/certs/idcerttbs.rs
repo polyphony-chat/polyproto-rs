@@ -12,11 +12,11 @@ use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 use x509_cert::TbsCertificate;
 
-use crate::errors::base::{ConstraintError, InvalidInput};
+use crate::errors::base::InvalidInput;
 use crate::errors::composite::ConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
-use crate::{ActorConstrained, Constrained, HomeServerConstrained};
+use crate::Constrained;
 
 use super::capabilities::Capabilities;
 use super::idcsr::IdCsr;
@@ -81,8 +81,8 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
                 "Actor ID-Cert cannot have \"CA\" BasicConstraint set to true".to_string(),
             )));
         }
-        id_csr.validate()?;
-        issuer.validate()?;
+        id_csr.validate(Some(Target::Actor))?;
+        issuer.validate(Some(Target::Actor))?;
         // Verify if signature of IdCsr matches contents
         id_csr.inner_csr.subject_public_key.verify_signature(
             &id_csr.signature,
@@ -118,7 +118,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
                 "CA ID-Cert must have \"CA\" BasicConstraint set to true".to_string(),
             )));
         }
-        id_csr.validate()?;
+        id_csr.validate(Some(Target::HomeServer))?;
         // Verify if signature of IdCsr matches contents
         id_csr.inner_csr.subject_public_key.verify_signature(
             &id_csr.signature,
@@ -142,41 +142,10 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     }
 
     /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
-    pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
+    pub fn from_der(bytes: &[u8], target: Target) -> Result<Self, ConversionError> {
         let cert = IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)?;
-        match target {
-            Some(choice) => match choice {
-                Target::Actor => cert.validate_actor()?,
-                Target::HomeServer => cert.validate_home_server()?,
-            },
-            None => cert.validate()?,
-        };
+        cert.validate(Some(target))?;
         Ok(cert)
-    }
-}
-
-impl<S: Signature, P: PublicKey<S>> ActorConstrained for IdCertTbs<S, P> {
-    fn validate_actor(&self) -> Result<(), ConstraintError> {
-        self.validate()?;
-        self.subject.validate_actor()?;
-        if self.capabilities.basic_constraints.ca {
-            return Err(ConstraintError::Malformed(Some(
-                "Actor cert must not be a CA".to_string(),
-            )));
-        }
-        Ok(())
-    }
-}
-
-impl<S: Signature, P: PublicKey<S>> HomeServerConstrained for IdCertTbs<S, P> {
-    fn validate_home_server(&self) -> Result<(), ConstraintError> {
-        self.validate()?;
-        if !self.capabilities.basic_constraints.ca {
-            return Err(ConstraintError::Malformed(Some(
-                "Home server cert must have the CA capability set to true".to_string(),
-            )));
-        }
-        Ok(())
     }
 }
 
@@ -186,7 +155,7 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
     type Error = ConversionError;
 
     fn try_from(value: TbsCertificateInner<P>) -> Result<Self, Self::Error> {
-        value.subject.validate()?;
+        value.subject.validate(None)?;
 
         let capabilities =
             match value.extensions {

@@ -53,7 +53,7 @@ impl SessionId {
     /// been violated.
     pub fn new_validated(id: Ia5String) -> Result<Self, ConstraintError> {
         let session_id = SessionId { session_id: id };
-        session_id.validate()?;
+        session_id.validate(None)?;
         Ok(session_id)
     }
 }

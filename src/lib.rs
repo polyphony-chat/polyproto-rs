@@ -50,6 +50,7 @@ pub const OID_RDN_COMMON_NAME: &str = "2.5.4.3";
 pub const OID_RDN_UNIQUE_IDENTIFIER: &str = "0.9.2342.19200300.100.1.44";
 pub const OID_RDN_UID: &str = "0.9.2342.19200300.100.1.1";
 
+use certs::Target;
 use errors::base::ConstraintError;
 
 #[cfg(feature = "reqwest")]
@@ -67,7 +68,7 @@ pub mod signature;
 /// Types used in polyproto and the polyproto HTTP/REST APIs
 pub mod types;
 
-pub(crate) mod constraints;
+pub mod constraints;
 
 pub use der;
 pub use spki;
@@ -78,6 +79,10 @@ pub use x509_cert::name::*;
 /// guarantees about their well-formedness in the context of an actor or home server. If implemented,
 /// these trait methods should be preferred over the [Constrained] trait method.
 ///
+/// The `target` parameter is used to specify the context in which the type should be validated.
+/// For example: Specifying a [Target] of `Actor` would also check that the IdCert is not a CA
+/// certificate, among other things.
+///
 /// [Constrained] does not guarantee that a validated type will always be *correct* in the context
 /// it is in.
 ///
@@ -87,35 +92,7 @@ pub use x509_cert::name::*;
 /// the system. However, this makes no implications about "123" being the correct password for a
 /// given user account.
 pub trait Constrained {
-    fn validate(&self) -> Result<(), ConstraintError>;
-}
-
-/// Types implementing [ActorConstrained] act just like types implementing [Constrained], with the
-/// additional constraint that they must be well-formed in the context of an actor.
-///
-/// For example: While [Constrained] might validate that an IdCert is well-formed, [ActorConstrained]
-/// would also check that the IdCert is not a CA certificate, among other things.
-///
-/// ## Implementing [ActorConstrained]
-///
-/// As [ActorConstrained] is supposed to offer a super-set of the guarantees offered by [Constrained],
-/// it is recommended to call [Constrained::validate] in the implementation of [ActorConstrained::validate_actor].
-pub trait ActorConstrained: Constrained {
-    fn validate_actor(&self) -> Result<(), ConstraintError>;
-}
-
-/// Types implementing [HomeServerConstrained] act just like types implementing [Constrained], with the
-/// additional constraint that they must be well-formed in the context of an actor.
-///
-/// For example: While [Constrained] might validate that an IdCert is well-formed, [HomeServerConstrained]
-/// would also check that the IdCert is a CA certificate, among other things.
-///
-/// ## Implementing [HomeServerConstrained]
-///
-/// As [HomeServerConstrained] is supposed to offer a super-set of the guarantees offered by [Constrained],
-/// it is recommended to call [Constrained::validate] in the implementation of [HomeServerConstrained::validate_actor].
-pub trait HomeServerConstrained: Constrained {
-    fn validate_home_server(&self) -> Result<(), ConstraintError>;
+    fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError>;
 }
 
 #[cfg(test)]

@@ -98,10 +98,7 @@ fn test_create_ca_cert() {
     println!();
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str(
-            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
-        )
-        .unwrap(),
+        &RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
         &priv_key,
         &Capabilities::default_home_server(),
         Some(Target::HomeServer),
@@ -111,10 +108,7 @@ fn test_create_ca_cert() {
         csr,
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
-        RdnSequence::from_str(
-            "CN=root,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
-        )
-        .unwrap(),
+        RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
         Validity {
             not_before: Time::UtcTime(
                 UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
@@ -145,11 +139,11 @@ fn mismatched_dcs_in_csr_and_cert() {
         )
         .unwrap(),
         &priv_key,
-        &Capabilities::default_home_server(),
+        &Capabilities::default_actor(),
         Some(Target::Actor),
     )
     .unwrap();
-    let cert = IdCert::from_ca_csr(
+    let cert = IdCert::from_actor_csr(
         csr,
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),

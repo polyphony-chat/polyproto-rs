@@ -13,7 +13,7 @@ use crate::errors::base::InvalidInput;
 use crate::errors::composite::ConversionError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
-use crate::{ActorConstrained, Constrained, HomeServerConstrained};
+use crate::Constrained;
 
 use super::idcerttbs::IdCertTbs;
 use super::idcsr::IdCsr;
@@ -66,7 +66,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             id_cert_tbs,
             signature,
         };
-        cert.validate_home_server()?;
+        cert.validate(Some(Target::HomeServer))?;
         Ok(cert)
     }
 
@@ -85,7 +85,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     ) -> Result<Self, ConversionError> {
         // IdCsr gets validated in IdCertTbs::from_..._csr
         let signature_algorithm = signing_key.algorithm_identifier();
-        issuer.validate()?;
+        issuer.validate(Some(Target::Actor))?;
         if !equal_domain_components(&id_csr.inner_csr.subject, &issuer) {
             return Err(ConversionError::InvalidInput(
                 crate::errors::base::InvalidInput::Malformed(
@@ -105,20 +105,14 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             id_cert_tbs,
             signature,
         };
-        cert.validate_actor()?;
+        cert.validate(Some(Target::Actor))?;
         Ok(cert)
     }
 
     /// Create an IdCsr from a byte slice containing a DER encoded X.509 Certificate.
     pub fn from_der(value: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
         let cert = IdCert::try_from(Certificate::from_der(value)?)?;
-        match target {
-            Some(choice) => match choice {
-                Target::Actor => cert.validate_actor()?,
-                Target::HomeServer => cert.validate_home_server()?,
-            },
-            None => todo!(),
-        }
+        cert.validate(target)?;
         Ok(cert)
     }
 
@@ -130,13 +124,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// Create an IdCsr from a byte slice containing a PEM encoded X.509 Certificate.
     pub fn from_pem(pem: &str, target: Option<Target>) -> Result<Self, ConversionError> {
         let cert = IdCert::try_from(Certificate::from_pem(pem)?)?;
-        match target {
-            Some(choice) => match choice {
-                Target::Actor => cert.validate_actor()?,
-                Target::HomeServer => cert.validate_home_server()?,
-            },
-            None => cert.validate()?,
-        }
+        cert.validate(target)?;
         Ok(cert)
     }
 
@@ -153,23 +141,6 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// in an error.
     pub fn signature_data(&self) -> Result<Vec<u8>, ConversionError> {
         self.id_cert_tbs.clone().to_der()
-    }
-}
-
-impl<S: Signature, P: PublicKey<S>> ActorConstrained for IdCert<S, P> {
-    fn validate_actor(&self) -> Result<(), crate::errors::base::ConstraintError> {
-        self.validate()?;
-        self.id_cert_tbs.subject.validate_actor()?;
-        self.id_cert_tbs.validate_actor()?;
-        Ok(())
-    }
-}
-
-impl<S: Signature, P: PublicKey<S>> HomeServerConstrained for IdCert<S, P> {
-    fn validate_home_server(&self) -> Result<(), crate::errors::base::ConstraintError> {
-        self.validate()?;
-        self.id_cert_tbs.validate_home_server()?;
-        Ok(())
     }
 }
 
@@ -190,9 +161,11 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<Certificate> for IdCert<S, P> {
     fn try_from(value: Certificate) -> Result<Self, Self::Error> {
         let id_cert_tbs = value.tbs_certificate.try_into()?;
         let signature = S::from_bytes(value.signature.raw_bytes());
-        Ok(IdCert {
+        let cert = IdCert {
             id_cert_tbs,
             signature,
-        })
+        };
+        cert.validate(None)?;
+        Ok(cert)
     }
 }

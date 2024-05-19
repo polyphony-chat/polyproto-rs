@@ -14,7 +14,7 @@ use x509_cert::request::{CertReq, CertReqInfo};
 use crate::errors::composite::ConversionError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
-use crate::{ActorConstrained, Constrained, ConstraintError, HomeServerConstrained};
+use crate::Constrained;
 
 use super::capabilities::Capabilities;
 use super::{PkcsVersion, PublicKeyInfo, Target};
@@ -65,13 +65,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
         capabilities: &Capabilities,
         target: Option<Target>,
     ) -> Result<IdCsr<S, P>, ConversionError> {
-        match target {
-            Some(choice) => match choice {
-                Target::Actor => subject.validate_actor()?,
-                Target::HomeServer => subject.validate()?,
-            },
-            None => subject.validate()?,
-        }
+        subject.validate(target)?;
         let inner_csr =
             IdCsrInner::<S, P>::new(subject, signing_key.pubkey(), capabilities, target)?;
         let signature = signing_key.sign(&inner_csr.clone().to_der()?);
@@ -88,13 +82,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     // PRETTYFYME: Could be a trait along with to_der, from_pem, to_pem
     pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
         let csr = IdCsr::try_from(CertReq::from_der(bytes)?)?;
-        match target {
-            Some(choice) => match choice {
-                Target::Actor => csr.validate_actor()?,
-                Target::HomeServer => csr.validate_home_server()?,
-            },
-            None => csr.validate()?,
-        };
+        csr.validate(target)?;
         Ok(csr)
     }
 
@@ -106,13 +94,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// Create an IdCsr from a string containing a PEM encoded PKCS #10 CSR.
     pub fn from_pem(pem: &str, target: Option<Target>) -> Result<Self, ConversionError> {
         let csr = IdCsr::try_from(CertReq::from_pem(pem)?)?;
-        match target {
-            Some(choice) => match choice {
-                Target::Actor => csr.validate_actor()?,
-                Target::HomeServer => csr.validate_home_server()?,
-            },
-            None => csr.validate()?,
-        };
+        csr.validate(target)?;
         Ok(csr)
     }
 
@@ -129,30 +111,6 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// in an error.
     pub fn signature_data(&self) -> Result<Vec<u8>, ConversionError> {
         self.inner_csr.clone().to_der()
-    }
-}
-
-impl<S: Signature, P: PublicKey<S>> ActorConstrained for IdCsr<S, P> {
-    fn validate_actor(&self) -> Result<(), ConstraintError> {
-        self.validate()?;
-        if self.inner_csr.capabilities.basic_constraints.ca {
-            return Err(ConstraintError::Malformed(Some(
-                "Actor CSR must not be a CA".to_string(),
-            )));
-        }
-        Ok(())
-    }
-}
-
-impl<S: Signature, P: PublicKey<S>> HomeServerConstrained for IdCsr<S, P> {
-    fn validate_home_server(&self) -> Result<(), ConstraintError> {
-        self.validate()?;
-        if !self.inner_csr.capabilities.basic_constraints.ca {
-            return Err(ConstraintError::Malformed(Some(
-                "Home server CSR must have the CA capability set to true".to_string(),
-            )));
-        }
-        Ok(())
     }
 }
 
@@ -189,14 +147,8 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
         capabilities: &Capabilities,
         target: Option<Target>,
     ) -> Result<IdCsrInner<S, P>, ConversionError> {
-        match target {
-            Some(choice) => match choice {
-                Target::Actor => subject.validate_actor()?,
-                Target::HomeServer => subject.validate()?,
-            },
-            None => todo!(),
-        }
-        capabilities.validate()?;
+        subject.validate(target)?;
+        capabilities.validate(target)?;
 
         let subject = subject.clone();
         let subject_public_key_info = public_key.clone();
@@ -213,27 +165,13 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
     /// Create an IdCsrInner from a byte slice containing a DER encoded PKCS #10 CSR.
     pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
         let csr_inner = IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)?;
-        match target {
-            Some(choice) => match choice {
-                Target::Actor => csr_inner.validate_actor()?,
-                Target::HomeServer => csr_inner.validate()?,
-            },
-            None => csr_inner.validate()?,
-        };
+        csr_inner.validate(target)?;
         Ok(csr_inner)
     }
 
     /// Encode this type as DER, returning a byte vector.
     pub fn to_der(self) -> Result<Vec<u8>, ConversionError> {
         Ok(CertReqInfo::try_from(self)?.to_der()?)
-    }
-}
-
-impl<S: Signature, P: PublicKey<S>> ActorConstrained for IdCsrInner<S, P> {
-    fn validate_actor(&self) -> Result<(), ConstraintError> {
-        self.validate()?;
-        self.subject.validate_actor()?;
-        Ok(())
     }
 }
 
@@ -254,7 +192,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<CertReqInfo> for IdCsrInner<S, P> {
 
     fn try_from(value: CertReqInfo) -> Result<Self, Self::Error> {
         let rdn_sequence = value.subject;
-        rdn_sequence.validate()?;
+        rdn_sequence.validate(None)?;
         let public_key_info = PublicKeyInfo {
             algorithm: value.public_key.algorithm,
             public_key_bitstring: value.public_key.subject_public_key,

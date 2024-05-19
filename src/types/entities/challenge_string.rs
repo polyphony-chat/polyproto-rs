@@ -8,6 +8,7 @@ use der::Length;
 use ser_der::asn1::Ia5String;
 use serde::{Deserialize, Serialize};
 
+use crate::certs::Target;
 use crate::errors::base::ConstraintError;
 use crate::errors::composite::ConversionError;
 use crate::key::PrivateKey;
@@ -61,7 +62,10 @@ impl DerefMut for Challenge {
 }
 
 impl Constrained for Challenge {
-    fn validate(&self) -> Result<(), crate::errors::base::ConstraintError> {
+    fn validate(
+        &self,
+        _target: Option<Target>,
+    ) -> Result<(), crate::errors::base::ConstraintError> {
         if self.challenge.len() < Length::new(32) {
             return Err(ConstraintError::OutOfBounds {
                 lower: 32,
