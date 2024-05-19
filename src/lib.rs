@@ -86,6 +86,17 @@ pub trait Constrained {
 }
 
 #[cfg(test)]
+pub(crate) mod testing_utils {
+    pub(crate) fn init_logger() {
+        std::env::set_var("RUST_LOG", "trace");
+        env_logger::builder()
+            .filter_module("crate", log::LevelFilter::Trace)
+            .try_init()
+            .unwrap_or(());
+    }
+}
+
+#[cfg(test)]
 mod test {
     use der::asn1::Uint;
     use x509_cert::certificate::Profile;
