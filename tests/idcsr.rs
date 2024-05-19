@@ -29,8 +29,6 @@ use x509_cert::request::CertReq;
 use x509_cert::time::{Time, Validity};
 use x509_cert::Certificate;
 
-// TODO: Add test where CSR DC and Cert DC are different(?)
-
 /// The following example uses the same setup as in ed25519_basic.rs, but in its main method, it
 /// creates a certificate signing request (CSR) and writes it to a file. The CSR is created from a
 /// polyproto ID CSR, which is a wrapper around a PKCS #10 CSR.

@@ -79,7 +79,6 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     }
 
     /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
-    // PRETTYFYME: Could be a trait along with to_der, from_pem, to_pem
     pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
         let csr = IdCsr::try_from(CertReq::from_der(bytes)?)?;
         csr.validate(target)?;
