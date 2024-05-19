@@ -16,7 +16,7 @@ use crate::errors::base::{ConstraintError, InvalidInput};
 use crate::errors::composite::ConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
-use crate::Constrained;
+use crate::{ActorConstrained, Constrained, HomeServerConstrained};
 
 use super::capabilities::Capabilities;
 use super::idcsr::IdCsr;
@@ -145,32 +145,28 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     pub fn from_der(bytes: &[u8]) -> Result<Self, ConversionError> {
         IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)
     }
+}
 
-    /// Validates the well-formedness of the [IdCertTbs] and its contents. Fails, if the [Name] or
-    /// [Capabilities] do not meet polyproto validation criteria for home server certs, or if
-    /// the signature fails to be verified.
-    // PRETTYFYME: validate_home_server and validate_actor could be made into a trait?
-    pub fn validate_home_server(&self) -> Result<(), ConversionError> {
+impl<S: Signature, P: PublicKey<S>> ActorConstrained for IdCertTbs<S, P> {
+    fn validate_actor(&self) -> Result<(), ConstraintError> {
         self.validate()?;
-        if !self.capabilities.basic_constraints.ca {
-            return Err(ConversionError::ConstraintError(
-                ConstraintError::Malformed(Some(
-                    "Home server cert must have the CA capability set to true".to_string(),
-                )),
-            ));
+        self.subject.validate_actor()?;
+        if self.capabilities.basic_constraints.ca {
+            return Err(ConstraintError::Malformed(Some(
+                "Actor cert must not be a CA".to_string(),
+            )));
         }
         Ok(())
     }
+}
 
-    /// Validates the well-formedness of the [IdCertTbs] and its contents. Fails, if the [Name] or
-    /// [Capabilities] do not meet polyproto validation criteria for actor certs, or if
-    /// the signature fails to be verified.
-    pub fn validate_actor(&self) -> Result<(), ConversionError> {
+impl<S: Signature, P: PublicKey<S>> HomeServerConstrained for IdCertTbs<S, P> {
+    fn validate_home_server(&self) -> Result<(), ConstraintError> {
         self.validate()?;
-        if self.capabilities.basic_constraints.ca {
-            return Err(ConversionError::ConstraintError(
-                ConstraintError::Malformed(Some("Actor cert must not be a CA".to_string())),
-            ));
+        if !self.capabilities.basic_constraints.ca {
+            return Err(ConstraintError::Malformed(Some(
+                "Home server cert must have the CA capability set to true".to_string(),
+            )));
         }
         Ok(())
     }
