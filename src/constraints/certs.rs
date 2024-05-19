@@ -2,6 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::errors::{
+    ERR_MSG_ACTOR_CANNOT_BE_CA, ERR_MSG_HOME_SERVER_MISSING_CA_ATTR, ERR_MSG_SIGNATURE_MISMATCH,
+};
+
 use super::*;
 
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCsrInner<S, P> {
@@ -13,14 +17,14 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsrInner<S, P> {
                 Target::Actor => {
                     if self.capabilities.basic_constraints.ca {
                         return Err(ConstraintError::Malformed(Some(
-                            "Actor CSR must not be a CA".to_string(),
+                            ERR_MSG_ACTOR_CANNOT_BE_CA.to_string(),
                         )));
                     }
                 }
                 Target::HomeServer => {
                     if !self.capabilities.basic_constraints.ca {
                         return Err(ConstraintError::Malformed(Some(
-                            "Home server CSR must have the CA capability set to true".to_string(),
+                            ERR_MSG_HOME_SERVER_MISSING_CA_ATTR.to_string(),
                         )));
                     }
                 }
@@ -41,7 +45,7 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
             }
         ) {
             Ok(_) => (),
-            Err(_) => return Err(ConstraintError::Malformed(Some("Provided signature does not match computed signature".to_string())))
+            Err(_) => return Err(ConstraintError::Malformed(Some(ERR_MSG_SIGNATURE_MISMATCH.to_string())))
         };
         Ok(())
     }
@@ -63,7 +67,7 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCert<S, P> {
         ) {
             Ok(_) => Ok(()),
             Err(_) => Err(ConstraintError::Malformed(Some(
-                "Provided signature does not match computed signature".to_string(),
+                ERR_MSG_SIGNATURE_MISMATCH.to_string(),
             ))),
         }
     }
@@ -87,14 +91,14 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCertTbs<S, P> {
                 Target::Actor => {
                     if self.capabilities.basic_constraints.ca {
                         return Err(ConstraintError::Malformed(Some(
-                            "Actor cert must not be a CA".to_string(),
+                            ERR_MSG_ACTOR_CANNOT_BE_CA.to_string(),
                         )));
                     }
                 }
                 Target::HomeServer => {
                     if !self.capabilities.basic_constraints.ca {
                         return Err(ConstraintError::Malformed(Some(
-                            "Home server cert must have the CA capability set to true".to_string(),
+                            ERR_MSG_HOME_SERVER_MISSING_CA_ATTR.to_string(),
                         )));
                     }
                 }

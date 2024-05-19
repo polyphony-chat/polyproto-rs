@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::errors::{ERR_MSG_ACTOR_MISSING_SIGNING_CAPS, ERR_MSG_HOME_SERVER_MISSING_CA_ATTR};
+
 use super::*;
 
 impl Constrained for Capabilities {
@@ -42,7 +44,7 @@ impl Constrained for Capabilities {
         // does not matter.
         if !is_ca && !can_sign && !can_commit_content {
             return Err(ConstraintError::Malformed(Some(
-                "Actors require signing capabilities, none found".to_string(),
+                ERR_MSG_ACTOR_MISSING_SIGNING_CAPS.to_string(),
             )));
         }
 
@@ -62,9 +64,10 @@ impl Constrained for Capabilities {
                 )));
             }
             if !key_cert_sign {
-                return Err(ConstraintError::Malformed(Some(
-                    "CA must have KeyCertSign capability".to_string(),
-                )));
+                return Err(ConstraintError::Malformed(Some(format!(
+                    "{} Missing capability \"KeyCertSign\"",
+                    ERR_MSG_HOME_SERVER_MISSING_CA_ATTR
+                ))));
             }
         }
 

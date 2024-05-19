@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::errors::ERR_MSG_DC_UID_MISMATCH;
+
 use super::*;
 
 impl Constrained for Name {
@@ -44,7 +46,7 @@ impl Constrained for Name {
                                 lower: 1,
                                 upper: 1,
                                 actual: num_cn.to_string(),
-                                reason: "Distinguished Names must include exactly one common name attribute.".to_string()
+                                reason: "Distinguished Names must not contain more than one Common Name field".to_string()
                             });
                         }
                     }
@@ -82,7 +84,7 @@ impl Constrained for Name {
                 lower: 1,
                 upper: u8::MAX as i32,
                 actual: "0".to_string(),
-                reason: "Domain Component is missing".to_string(),
+                reason: "Domain Component is missing in Name component".to_string(),
             });
         }
         if num_uid > 1 {
@@ -148,7 +150,7 @@ fn validate_dc_matches_dc_in_uid(
             Some(dc) => dc,
             None => {
                 return Err(ConstraintError::Malformed(Some(
-                    "Domain Components do not equal the domain components in the UID".to_string(),
+                    ERR_MSG_DC_UID_MISMATCH.to_string(),
                 )))
             }
         };
@@ -159,7 +161,7 @@ fn validate_dc_matches_dc_in_uid(
         );
         if component != &equivalent_dc.to_string() {
             return Err(ConstraintError::Malformed(Some(
-                "Domain Components do not equal the domain components in the UID".to_string(),
+                ERR_MSG_DC_UID_MISMATCH.to_string(),
             )));
         }
         index = match index.checked_add(1) {
