@@ -124,6 +124,16 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     pub fn to_pem(self, line_ending: LineEnding) -> Result<String, ConversionError> {
         Ok(CertReq::try_from(self)?.to_pem(line_ending)?)
     }
+
+    /// Returns a byte vector containing the DER encoded [IdCsrInner]. This data is encoded
+    /// in the signature field of the IdCSR, and can be used to verify the signature of the CSR.
+    ///
+    /// This is a shorthand for `self.inner_csr.clone().to_der()`, since intuitively, one might
+    /// try to verify the signature of the CSR by using `self.to_der()`, which will result
+    /// in an error.
+    pub fn signature_data(&self) -> Result<Vec<u8>, ConversionError> {
+        self.inner_csr.clone().to_der()
+    }
 }
 
 /// In the context of PKCS #10, this is a `CertificationRequestInfo`:

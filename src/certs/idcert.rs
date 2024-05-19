@@ -151,6 +151,16 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         self.id_cert_tbs.validate_actor()?;
         Ok(())
     }
+
+    /// Returns a byte vector containing the DER encoded IdCertTbs. This data is encoded
+    /// in the signature field of the certificate, and can be used to verify the signature.
+    ///
+    /// This is a shorthand for `self.id_cert_tbs.clone().to_der()`, since intuitively, one might
+    /// try to verify the signature of the certificate by using `self.to_der()`, which will result
+    /// in an error.
+    pub fn signature_data(&self) -> Result<Vec<u8>, ConversionError> {
+        self.id_cert_tbs.clone().to_der()
+    }
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<IdCert<S, P>> for Certificate {
