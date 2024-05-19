@@ -53,7 +53,10 @@ fn csr_from_pem() {
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
+        &RdnSequence::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap(),
         &priv_key,
         &Capabilities::default_actor(),
     )
@@ -70,7 +73,10 @@ fn csr_from_der() {
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
+        &RdnSequence::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap(),
         &priv_key,
         &Capabilities::default_actor(),
     )

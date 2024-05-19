@@ -56,7 +56,10 @@ fn test_create_actor_cert() {
         .key_usages
         .push(capabilities::KeyUsage::CrlSign);
     let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
+        &RdnSequence::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap(),
         &priv_key,
         &capabilities,
     )
@@ -66,7 +69,7 @@ fn test_create_actor_cert() {
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str(
-            "CN=root,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
+            "CN=root,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
         )
         .unwrap(),
         Validity {
@@ -94,7 +97,10 @@ fn test_create_ca_cert() {
     println!();
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
+        &RdnSequence::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap(),
         &priv_key,
         &Capabilities::default_home_server(),
     )
@@ -104,7 +110,7 @@ fn test_create_ca_cert() {
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str(
-            "CN=root,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
+            "CN=root,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
         )
         .unwrap(),
         Validity {
@@ -139,11 +145,55 @@ fn test_create_invalid_actor_csr() {
         .push(capabilities::KeyUsage::KeyCertSign);
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
+        &RdnSequence::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap(),
         &priv_key,
         &capabilities,
     );
     assert!(csr.is_err());
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn mismatched_dcs_in_csr_and_cert() {
+    let mut csprng = rand::rngs::OsRng;
+    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
+    println!("Private Key is: {:?}", priv_key.key.to_bytes());
+    println!("Public Key is: {:?}", priv_key.public_key.key.to_bytes());
+    println!();
+
+    let csr = polyproto::certs::idcsr::IdCsr::new(
+        &RdnSequence::from_str(
+            "CN=flori,DC=example,DC=com,UID=flori@example.com,uniqueIdentifier=client1",
+        )
+        .unwrap(),
+        &priv_key,
+        &Capabilities::default_home_server(),
+    )
+    .unwrap();
+    let cert = IdCert::from_ca_csr(
+        csr,
+        &priv_key,
+        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        RdnSequence::from_str(
+            "CN=root,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
+        )
+        .unwrap(),
+        Validity {
+            not_before: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
+            ),
+            not_after: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
+            ),
+        },
+    )
+    .unwrap();
+    let cert_data = cert.clone().to_der().unwrap();
+    let data = Certificate::try_from(cert).unwrap().to_der().unwrap();
+    assert_eq!(cert_data, data);
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -153,7 +203,10 @@ fn cert_from_pem() {
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
+        &RdnSequence::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap(),
         &priv_key,
         &Capabilities::default_actor(),
     )
@@ -164,7 +217,7 @@ fn cert_from_pem() {
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str(
-            "CN=root,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
+            "CN=root,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
         )
         .unwrap(),
         Validity {

@@ -2,10 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::vec;
+
 use der::asn1::Ia5String;
 use der::Length;
+use log::debug;
 use regex::Regex;
-use x509_cert::name::Name;
+use x509_cert::name::{Name, RelativeDistinguishedName};
 
 use crate::certs::capabilities::{Capabilities, KeyUsage};
 use crate::certs::idcert::IdCert;
@@ -33,10 +36,13 @@ impl Constrained for Name {
     /// - MAY have "organizational unit" attributes
     /// - MAY have other attributes, which might be ignored by other home servers and other clients.
     fn validate(&self) -> Result<(), ConstraintError> {
+        // PRETTYFYME(bitfl0wer): This function is too long. Refactor it.
         let mut num_cn: u8 = 0;
         let mut num_dc: u8 = 0;
         let mut num_uid: u8 = 0;
         let mut num_unique_identifier: u8 = 0;
+        let mut uid: RelativeDistinguishedName = RelativeDistinguishedName::default();
+        let mut vec_dc: Vec<RelativeDistinguishedName> = Vec::new();
 
         let rdns = &self.0;
         for rdn in rdns.iter() {
@@ -44,6 +50,7 @@ impl Constrained for Name {
                 match item.oid.to_string().as_str() {
                     OID_RDN_UID => {
                         num_uid += 1;
+                        uid = rdn.clone();
                         let fid_regex =
                             Regex::new(r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)")
                                 .expect("Regex failed to compile");
@@ -78,7 +85,10 @@ impl Constrained for Name {
                             });
                         }
                     }
-                    OID_RDN_DOMAIN_COMPONENT => num_dc += 1,
+                    OID_RDN_DOMAIN_COMPONENT => {
+                        num_dc += 1;
+                        vec_dc.push(rdn.clone());
+                    }
                     _ => {}
                 }
             }
@@ -123,6 +133,52 @@ impl Constrained for Name {
                 actual: num_unique_identifier.to_string(),
                 reason: "Actors must have uniqueIdentifier AND UID, only UID found".to_string(),
             });
+        }
+
+        // Only check if we are dealing with an actor
+        if num_uid > 0 && num_unique_identifier > 0 {
+            vec_dc.reverse(); // The order of the DCs is reversed in the [Name] object, starting with the TLD
+
+            // Check if the domain components are equal between the UID and the DCs
+            // First, remove the "username@" from the UID
+            // We can unwrap, because an @ is guaranteed to be included in the string. The regex above
+            // makes sure of that.
+            let position_of_at = uid.to_string().find('@').unwrap();
+            let uid_without_username = uid.to_string().split_at(position_of_at + 1).1.to_string(); // +1 to not include the @
+            let dc_normalized_uid: Vec<&str> = uid_without_username.split('.').collect();
+            dbg!(dc_normalized_uid.clone());
+            let mut index = 0u8;
+            for component in dc_normalized_uid.iter() {
+                debug!("Checking if component \"{}\"...", component);
+                let equivalent_dc = match vec_dc.get(index as usize) {
+                    Some(dc) => dc,
+                    None => {
+                        return Err(ConstraintError::Malformed(Some(
+                            "Domain Components do not equal the domain components in the UID"
+                                .to_string(),
+                        )))
+                    }
+                };
+                let equivalent_dc = equivalent_dc.to_string().split_at(3).1.to_string();
+                debug!(
+                    "...is equal to component \"{}\"...",
+                    equivalent_dc.to_string()
+                );
+                if component != &equivalent_dc.to_string() {
+                    return Err(ConstraintError::Malformed(Some(
+                        "Domain Components do not equal the domain components in the UID"
+                            .to_string(),
+                    )));
+                }
+                index = match index.checked_add(1) {
+                    Some(i) => i,
+                    None => {
+                        return Err(ConstraintError::Malformed(Some(
+                            "More than 255 Domain Components found".to_string(),
+                        )))
+                    }
+                };
+            }
         }
         Ok(())
     }
@@ -284,11 +340,13 @@ mod name_constraints {
 
     use x509_cert::name::Name;
 
+    use crate::testing_utils::init_logger;
     use crate::Constrained;
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn correct() {
+        init_logger();
         let name = Name::from_str(
             "cn=flori,dc=localhost,uid=flori@localhost,uniqueIdentifier=h3g2jt4dhfgj8hjs",
         )
@@ -296,11 +354,34 @@ mod name_constraints {
         name.validate().unwrap();
         let name = Name::from_str("CN=flori,DC=www,DC=polyphony,DC=chat").unwrap();
         name.validate().unwrap();
+        let name = Name::from_str(
+            "cn=flori,dc=some,dc=domain,dc=that,dc=is,dc=quite,dc=long,dc=geez,dc=thats,dc=alotta,dc=subdomains,dc=example,dc=com,uid=flori@some.domain.that.is.quite.long.geez.thats.alotta.subdomains.example.com,uniqueIdentifier=h3g2jt4dhfgj8hjs",
+        )
+        .unwrap();
+        name.validate().unwrap();
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn mismatch_uid_dcs() {
+        init_logger();
+        let name = Name::from_str(
+            "cn=flori,dc=some,dc=domain,dc=that,dc=is,dc=quite,dc=long,dc=geez,dc=alotta,dc=subdomains,dc=example,dc=com,uid=flori@some.domain.that.is.quite.long.geez.thats.alotta.subdomains.example.com,uniqueIdentifier=h3g2jt4dhfgj8hjs",
+        )
+        .unwrap();
+        name.validate().err().unwrap();
+
+        let name = Name::from_str(
+            "cn=flori,dc=some,dc=domain,dc=that,dc=is,dc=quite,dc=long,dc=geez,dc=alotta,dc=subdomains,dc=example,dc=com,uid=flori@domain.that.is.quite.long.geez.thats.alotta.subdomains.example.com,uniqueIdentifier=h3g2jt4dhfgj8hjs",
+        )
+        .unwrap();
+        name.validate().err().unwrap();
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn no_domain_component() {
+        init_logger();
         let name = Name::from_str("CN=flori").unwrap();
         assert!(name.validate().is_err());
     }
@@ -308,6 +389,7 @@ mod name_constraints {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn two_cns() {
+        init_logger();
         let name = Name::from_str("CN=flori,CN=xenia,DC=localhost").unwrap();
         assert!(name.validate().is_err())
     }
@@ -315,6 +397,7 @@ mod name_constraints {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn two_uid_or_uniqueid() {
+        init_logger();
         let name = Name::from_str("CN=flori,CN=xenia,uid=numbaone,uid=numbatwo").unwrap();
         assert!(name.validate().is_err());
         let name =
@@ -326,6 +409,7 @@ mod name_constraints {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn uid_and_no_uniqueid_or_uniqueid_and_no_uid() {
+        init_logger();
         let name = Name::from_str("CN=flori,CN=xenia,uid=numbaone").unwrap();
         assert!(name.validate().is_err());
         let name = Name::from_str("CN=flori,CN=xenia,uniqueIdentifier=numbaone").unwrap();
@@ -334,6 +418,7 @@ mod name_constraints {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn malformed_session_id_fails() {
+        init_logger();
         let name =
             Name::from_str("cn=flori,dc=localhost,uid=flori@localhost,uniqueIdentifier=").unwrap();
         assert!(name.validate().is_err());
@@ -345,11 +430,12 @@ mod name_constraints {
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn malformed_uid_fails() {
+        init_logger();
         let name =
             Name::from_str("cn=flori,dc=localhost,uid=\"flori@\",uniqueIdentifier=3245").unwrap();
         assert!(name.validate().is_err());
         let name =
-            Name::from_str("cn=flori,dc=localhost,uid=\"flori@localhost\",uniqueIdentifier=3245")
+            Name::from_str("cn=flori,dc=localhost,uid=flori@localhost,uniqueIdentifier=3245")
                 .unwrap();
         assert!(name.validate().is_ok());
         let name = Name::from_str("cn=flori,dc=localhost,uid=\"1\",uniqueIdentifier=3245").unwrap();
