@@ -148,7 +148,7 @@ fn test_create_invalid_actor_csr() {
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
-fn cert_from_der() {
+fn cert_from_pem() {
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
 
@@ -177,8 +177,8 @@ fn cert_from_der() {
         },
     )
     .unwrap();
-    let data = cert.clone().to_der().unwrap();
-    let cert_from_der = IdCert::from_der(&data).unwrap();
+    let data = cert.clone().to_pem(der::pem::LineEnding::LF).unwrap();
+    let cert_from_der = IdCert::from_pem(&data).unwrap();
     assert_eq!(cert_from_der, cert)
 }
 

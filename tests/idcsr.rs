@@ -16,6 +16,7 @@ use der::asn1::{BitString, Ia5String, Uint, UtcTime};
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
+use polyproto::certs::idcsr::IdCsr;
 use polyproto::certs::PublicKeyInfo;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
@@ -45,13 +46,11 @@ use x509_cert::Certificate;
 /// openssl x509 -in cert.der -text -noout -inform der
 /// ```
 
-#[test]
-fn id_csr_to_from_pem() {
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn csr_from_pem() {
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
-    println!("Private Key is: {:?}", priv_key.key.to_bytes());
-    println!("Public Key is: {:?}", priv_key.public_key.key.to_bytes());
-    println!();
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
         &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
@@ -59,10 +58,26 @@ fn id_csr_to_from_pem() {
         &Capabilities::default_actor(),
     )
     .unwrap();
-    let csr_pem = csr.clone().to_pem(der::pem::LineEnding::LF).unwrap();
-    let csr_from_pem =
-        polyproto::certs::idcsr::IdCsr::<Ed25519Signature, Ed25519PublicKey>::from_pem(&csr_pem)
-            .unwrap();
+    let data = csr.clone().to_pem(der::pem::LineEnding::LF).unwrap();
+    let csr_from_der = IdCsr::from_pem(&data).unwrap();
+    assert_eq!(csr_from_der, csr)
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn csr_from_der() {
+    let mut csprng = rand::rngs::OsRng;
+    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
+
+    let csr = polyproto::certs::idcsr::IdCsr::new(
+        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
+        &priv_key,
+        &Capabilities::default_actor(),
+    )
+    .unwrap();
+    let data = csr.clone().to_der().unwrap();
+    let csr_from_der = IdCsr::from_der(&data).unwrap();
+    assert_eq!(csr_from_der, csr)
 }
 
 // As mentioned in the README, we start by implementing the signature trait.
