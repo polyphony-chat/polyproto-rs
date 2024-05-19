@@ -58,6 +58,12 @@ impl SessionId {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Target {
+    Actor,
+    HomeServer,
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(u8)]
 /// `PKCS#10` version. From the PKCS specification document (RFC 2986):

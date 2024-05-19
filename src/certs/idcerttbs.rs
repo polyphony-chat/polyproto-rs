@@ -20,7 +20,7 @@ use crate::{ActorConstrained, Constrained, HomeServerConstrained};
 
 use super::capabilities::Capabilities;
 use super::idcsr::IdCsr;
-use super::PublicKeyInfo;
+use super::{PublicKeyInfo, Target};
 
 /// An unsigned polyproto ID-Cert.
 ///
@@ -142,8 +142,16 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     }
 
     /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
-    pub fn from_der(bytes: &[u8]) -> Result<Self, ConversionError> {
-        IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)
+    pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
+        let cert = IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)?;
+        match target {
+            Some(choice) => match choice {
+                Target::Actor => cert.validate_actor()?,
+                Target::HomeServer => cert.validate_home_server()?,
+            },
+            None => cert.validate()?,
+        };
+        Ok(cert)
     }
 }
 

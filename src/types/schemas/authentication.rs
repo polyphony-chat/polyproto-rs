@@ -36,7 +36,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<CreateSessionResponse> for IdCert<S,
     type Error = ConversionError;
 
     fn try_from(value: CreateSessionResponse) -> Result<Self, Self::Error> {
-        Self::from_pem(&value.id_cert)
+        Self::from_pem(&value.id_cert, Some(crate::certs::Target::Actor))
     }
 }
 

@@ -17,7 +17,7 @@ use crate::signature::Signature;
 use crate::{Constrained, ConstraintError};
 
 use super::capabilities::Capabilities;
-use super::{PkcsVersion, PublicKeyInfo};
+use super::{PkcsVersion, PublicKeyInfo, Target};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A polyproto Certificate Signing Request, compatible with [IETF RFC 2986 "PKCS #10"](https://datatracker.ietf.org/doc/html/rfc2986).
@@ -108,8 +108,16 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
 
     /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
     // PRETTYFYME: Could be a trait along with to_der, from_pem, to_pem
-    pub fn from_der(bytes: &[u8]) -> Result<Self, ConversionError> {
-        IdCsr::try_from(CertReq::from_der(bytes)?)
+    pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
+        let csr = IdCsr::try_from(CertReq::from_der(bytes)?)?;
+        match target {
+            Some(choice) => match choice {
+                Target::Actor => csr.validate_actor()?,
+                Target::HomeServer => csr.validate_home_server()?,
+            },
+            None => csr.validate()?,
+        };
+        Ok(csr)
     }
 
     /// Encode this type as DER, returning a byte vector.
@@ -118,8 +126,16 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     }
 
     /// Create an IdCsr from a string containing a PEM encoded PKCS #10 CSR.
-    pub fn from_pem(pem: &str) -> Result<Self, ConversionError> {
-        IdCsr::try_from(CertReq::from_pem(pem)?)
+    pub fn from_pem(pem: &str, target: Option<Target>) -> Result<Self, ConversionError> {
+        let csr = IdCsr::try_from(CertReq::from_pem(pem)?)?;
+        match target {
+            Some(choice) => match choice {
+                Target::Actor => csr.validate_actor()?,
+                Target::HomeServer => csr.validate_home_server()?,
+            },
+            None => csr.validate()?,
+        };
+        Ok(csr)
     }
 
     /// Encode this type as PEM, returning a string.

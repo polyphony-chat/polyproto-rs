@@ -15,9 +15,9 @@ use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 use crate::{ActorConstrained, Constrained, HomeServerConstrained};
 
-use super::equal_domain_components;
 use super::idcerttbs::IdCertTbs;
 use super::idcsr::IdCsr;
+use super::{equal_domain_components, Target};
 
 /// A signed polyproto ID-Cert, consisting of the actual certificate, the CA-generated signature and
 /// metadata about that signature.
@@ -110,9 +110,15 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     }
 
     /// Create an IdCsr from a byte slice containing a DER encoded X.509 Certificate.
-    pub fn from_der(value: &[u8]) -> Result<Self, ConversionError> {
+    pub fn from_der(value: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
         let cert = IdCert::try_from(Certificate::from_der(value)?)?;
-        cert.validate()?;
+        match target {
+            Some(choice) => match choice {
+                Target::Actor => cert.validate_actor()?,
+                Target::HomeServer => cert.validate_home_server()?,
+            },
+            None => todo!(),
+        }
         Ok(cert)
     }
 
@@ -122,9 +128,15 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     }
 
     /// Create an IdCsr from a byte slice containing a PEM encoded X.509 Certificate.
-    pub fn from_pem(pem: &str) -> Result<Self, ConversionError> {
+    pub fn from_pem(pem: &str, target: Option<Target>) -> Result<Self, ConversionError> {
         let cert = IdCert::try_from(Certificate::from_pem(pem)?)?;
-        cert.validate()?;
+        match target {
+            Some(choice) => match choice {
+                Target::Actor => cert.validate_actor()?,
+                Target::HomeServer => cert.validate_home_server()?,
+            },
+            None => cert.validate()?,
+        }
         Ok(cert)
     }
 

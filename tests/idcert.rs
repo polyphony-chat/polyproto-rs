@@ -204,7 +204,7 @@ fn cert_from_pem() {
     )
     .unwrap();
     let data = cert.clone().to_pem(der::pem::LineEnding::LF).unwrap();
-    let cert_from_der = IdCert::from_pem(&data).unwrap();
+    let cert_from_der = IdCert::from_pem(&data, Some(polyproto::certs::Target::Actor)).unwrap();
     assert_eq!(cert_from_der, cert)
 }
 

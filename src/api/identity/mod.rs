@@ -44,6 +44,9 @@ impl HttpClient {
             )
             .await?;
 
-        Ok(IdCert::from_pem(response.text().await?.as_str())?)
+        Ok(IdCert::from_pem(
+            response.text().await?.as_str(),
+            Some(crate::certs::Target::HomeServer),
+        )?)
     }
 }
