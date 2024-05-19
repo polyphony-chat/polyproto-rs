@@ -372,7 +372,7 @@ mod name_constraints {
     use x509_cert::name::Name;
 
     use crate::testing_utils::init_logger;
-    use crate::Constrained;
+    use crate::{ActorConstrained, Constrained};
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
@@ -400,13 +400,13 @@ mod name_constraints {
             "cn=flori,dc=some,dc=domain,dc=that,dc=is,dc=quite,dc=long,dc=geez,dc=alotta,dc=subdomains,dc=example,dc=com,uid=flori@some.domain.that.is.quite.long.geez.thats.alotta.subdomains.example.com,uniqueIdentifier=h3g2jt4dhfgj8hjs",
         )
         .unwrap();
-        name.validate().err().unwrap();
+        name.validate_actor().err().unwrap();
 
         let name = Name::from_str(
             "cn=flori,dc=some,dc=domain,dc=that,dc=is,dc=quite,dc=long,dc=geez,dc=alotta,dc=subdomains,dc=example,dc=com,uid=flori@domain.that.is.quite.long.geez.thats.alotta.subdomains.example.com,uniqueIdentifier=h3g2jt4dhfgj8hjs",
         )
         .unwrap();
-        name.validate().err().unwrap();
+        name.validate_actor().err().unwrap();
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

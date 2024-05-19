@@ -51,7 +51,10 @@ fn main() {
     println!();
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
+        &RdnSequence::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap(),
         &priv_key,
         &Capabilities::default_actor(),
     )
@@ -66,7 +69,7 @@ fn main() {
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str(
-            "CN=root,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
+            "CN=root,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
         )
         .unwrap(),
         Validity {

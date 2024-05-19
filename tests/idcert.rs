@@ -139,7 +139,7 @@ fn mismatched_dcs_in_csr_and_cert() {
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
         &RdnSequence::from_str(
-            "CN=flori,DC=example,DC=com,UID=flori@example.com,uniqueIdentifier=client1",
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyproto.chat,uniqueIdentifier=client1",
         )
         .unwrap(),
         &priv_key,
