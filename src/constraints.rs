@@ -17,9 +17,11 @@ use crate::errors::base::ConstraintError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::{
-    Constrained, OID_RDN_COMMON_NAME, OID_RDN_DOMAIN_COMPONENT, OID_RDN_UID,
+    ActorConstrained, Constrained, OID_RDN_COMMON_NAME, OID_RDN_DOMAIN_COMPONENT, OID_RDN_UID,
     OID_RDN_UNIQUE_IDENTIFIER,
 };
+
+use self::rdn::{validate_rdn_uid, validate_rdn_unique_identifier};
 
 impl Constrained for Name {
     /// [Name] must meet the following criteria to be valid in the context of polyproto:
@@ -34,12 +36,10 @@ impl Constrained for Name {
     /// - MAY have "organizational unit" attributes
     /// - MAY have other attributes, which might be ignored by other home servers and other clients.
     fn validate(&self) -> Result<(), ConstraintError> {
-        // PRETTYFYME(bitfl0wer): This function is too long. Refactor it.
         let mut num_cn: u8 = 0;
         let mut num_dc: u8 = 0;
         let mut num_uid: u8 = 0;
         let mut num_unique_identifier: u8 = 0;
-        let mut uid: RelativeDistinguishedName = RelativeDistinguishedName::default();
         let mut vec_dc: Vec<RelativeDistinguishedName> = Vec::new();
 
         let rdns = &self.0;
@@ -48,29 +48,11 @@ impl Constrained for Name {
                 match item.oid.to_string().as_str() {
                     OID_RDN_UID => {
                         num_uid += 1;
-                        uid = rdn.clone();
-                        let fid_regex =
-                            Regex::new(r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)")
-                                .expect("Regex failed to compile");
-                        let string = String::from_utf8_lossy(item.value.value()).to_string();
-                        if !fid_regex.is_match(&string) {
-                            return Err(ConstraintError::Malformed(Some(
-                                "Provided Federation ID (FID) in uid field seems to be invalid"
-                                    .to_string(),
-                            )));
-                        }
+                        validate_rdn_uid(item)?;
                     }
                     OID_RDN_UNIQUE_IDENTIFIER => {
                         num_unique_identifier += 1;
-                        if let Ok(value) =
-                            Ia5String::new(&String::from_utf8_lossy(item.value.value()).to_string())
-                        {
-                            SessionId::new_validated(value)?;
-                        } else {
-                            return Err(ConstraintError::Malformed(Some(
-                                "Tried to decode SessionID (uniqueIdentifier) as Ia5String and failed".to_string(),
-                            )));
-                        }
+                        validate_rdn_unique_identifier(item)?;
                     }
                     OID_RDN_COMMON_NAME => {
                         num_cn += 1;
@@ -132,53 +114,104 @@ impl Constrained for Name {
                 reason: "Actors must have uniqueIdentifier AND UID, only UID found".to_string(),
             });
         }
+        Ok(())
+    }
+}
 
-        // Only check if we are dealing with an actor
-        if num_uid > 0 && num_unique_identifier > 0 {
-            vec_dc.reverse(); // The order of the DCs is reversed in the [Name] object, starting with the TLD
+impl ActorConstrained for Name {
+    fn validate_actor(&self) -> Result<(), ConstraintError> {
+        self.validate()?;
+        let mut uid: RelativeDistinguishedName = RelativeDistinguishedName::default();
+        let mut vec_dc: Vec<RelativeDistinguishedName> = Vec::new();
 
-            // Check if the domain components are equal between the UID and the DCs
-            // First, remove the "username@" from the UID
-            // We can unwrap, because an @ is guaranteed to be included in the string. The regex above
-            // makes sure of that.
-            let position_of_at = uid.to_string().find('@').unwrap();
-            let uid_without_username = uid.to_string().split_at(position_of_at + 1).1.to_string(); // +1 to not include the @
-            let dc_normalized_uid: Vec<&str> = uid_without_username.split('.').collect();
-            dbg!(dc_normalized_uid.clone());
-            let mut index = 0u8;
-            for component in dc_normalized_uid.iter() {
-                debug!("Checking if component \"{}\"...", component);
-                let equivalent_dc = match vec_dc.get(index as usize) {
-                    Some(dc) => dc,
-                    None => {
-                        return Err(ConstraintError::Malformed(Some(
-                            "Domain Components do not equal the domain components in the UID"
-                                .to_string(),
-                        )))
+        let rdns = &self.0;
+        for rdn in rdns.iter() {
+            for item in rdn.0.iter() {
+                match item.oid.to_string().as_str() {
+                    OID_RDN_UID => {
+                        uid = rdn.clone();
                     }
-                };
-                let equivalent_dc = equivalent_dc.to_string().split_at(3).1.to_string();
-                debug!(
-                    "...is equal to component \"{}\"...",
-                    equivalent_dc.to_string()
-                );
-                if component != &equivalent_dc.to_string() {
+                    OID_RDN_DOMAIN_COMPONENT => {
+                        vec_dc.push(rdn.clone());
+                    }
+                    _ => {}
+                }
+            }
+        }
+        vec_dc.reverse(); // The order of the DCs is reversed in the [Name] object, starting with the TLD
+
+        // Check if the domain components are equal between the UID and the DCs
+        // First, remove the "username@" from the UID
+        // We can unwrap, because an @ is guaranteed to be included in the string. The regex above
+        // makes sure of that.
+        let position_of_at = uid.to_string().find('@').unwrap();
+        let uid_without_username = uid.to_string().split_at(position_of_at + 1).1.to_string(); // +1 to not include the @
+        let dc_normalized_uid: Vec<&str> = uid_without_username.split('.').collect();
+        dbg!(dc_normalized_uid.clone());
+        let mut index = 0u8;
+        for component in dc_normalized_uid.iter() {
+            debug!("Checking if component \"{}\"...", component);
+            let equivalent_dc = match vec_dc.get(index as usize) {
+                Some(dc) => dc,
+                None => {
                     return Err(ConstraintError::Malformed(Some(
                         "Domain Components do not equal the domain components in the UID"
                             .to_string(),
-                    )));
+                    )))
                 }
-                index = match index.checked_add(1) {
-                    Some(i) => i,
-                    None => {
-                        return Err(ConstraintError::Malformed(Some(
-                            "More than 255 Domain Components found".to_string(),
-                        )))
-                    }
-                };
+            };
+            let equivalent_dc = equivalent_dc.to_string().split_at(3).1.to_string();
+            debug!(
+                "...is equal to component \"{}\"...",
+                equivalent_dc.to_string()
+            );
+            if component != &equivalent_dc.to_string() {
+                return Err(ConstraintError::Malformed(Some(
+                    "Domain Components do not equal the domain components in the UID".to_string(),
+                )));
             }
+            index = match index.checked_add(1) {
+                Some(i) => i,
+                None => {
+                    return Err(ConstraintError::Malformed(Some(
+                        "More than 255 Domain Components found".to_string(),
+                    )))
+                }
+            };
         }
         Ok(())
+    }
+}
+
+pub(super) mod rdn {
+    use super::*;
+    use x509_cert::attr::AttributeTypeAndValue;
+
+    pub(super) fn validate_rdn_uid(item: &AttributeTypeAndValue) -> Result<(), ConstraintError> {
+        let fid_regex = Regex::new(r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)")
+            .expect("Regex failed to compile");
+        let string = String::from_utf8_lossy(item.value.value()).to_string();
+        if !fid_regex.is_match(&string) {
+            Err(ConstraintError::Malformed(Some(
+                "Provided Federation ID (FID) in uid field seems to be invalid".to_string(),
+            )))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub(super) fn validate_rdn_unique_identifier(
+        item: &AttributeTypeAndValue,
+    ) -> Result<(), ConstraintError> {
+        if let Ok(value) = Ia5String::new(&String::from_utf8_lossy(item.value.value()).to_string())
+        {
+            SessionId::new_validated(value)?;
+            Ok(())
+        } else {
+            Err(ConstraintError::Malformed(Some(
+                "Tried to decode SessionID (uniqueIdentifier) as Ia5String and failed".to_string(),
+            )))
+        }
     }
 }
 
