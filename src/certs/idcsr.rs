@@ -94,6 +94,8 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// the signature fails to be verified.
     pub fn validate_home_server(&self) -> Result<(), ConversionError> {
         self.validate()?;
+        // TODO: There are missing constraints here. The home server CSR must not have a UID/uniqueIdentifier
+        //       field set, for example.
         if !self.inner_csr.capabilities.basic_constraints.ca {
             return Err(ConversionError::ConstraintError(
                 ConstraintError::Malformed(Some(
