@@ -73,8 +73,13 @@ pub use der;
 pub use spki;
 pub use x509_cert::name::*;
 
-/// Traits implementing [Constrained] can be validated to be well-formed. This does not guarantee
-/// that a validated type will always be *correct* in the context it is in.
+/// Types implementing [Constrained] can be validated to be well-formed. In addition to the [Constrained]
+/// trait, types can also implement [ActorConstrained] and [HomeServerConstrained] to add additional
+/// guarantees about their well-formedness in the context of an actor or home server. If implemented,
+/// these trait methods should be preferred over the [Constrained] trait method.
+///
+/// [Constrained] does not guarantee that a validated type will always be *correct* in the context
+/// it is in.
 ///
 /// ### Example
 ///
@@ -83,6 +88,34 @@ pub use x509_cert::name::*;
 /// given user account.
 pub trait Constrained {
     fn validate(&self) -> Result<(), ConstraintError>;
+}
+
+/// Types implementing [ActorConstrained] act just like types implementing [Constrained], with the
+/// additional constraint that they must be well-formed in the context of an actor.
+///
+/// For example: While [Constrained] might validate that an IdCert is well-formed, [ActorConstrained]
+/// would also check that the IdCert is not a CA certificate, among other things.
+///
+/// ## Implementing [ActorConstrained]
+///
+/// As [ActorConstrained] is supposed to offer a super-set of the guarantees offered by [Constrained],
+/// it is recommended to call [Constrained::validate] in the implementation of [ActorConstrained::validate_actor].
+pub trait ActorConstrained: Constrained {
+    fn validate_actor(&self) -> Result<(), ConstraintError>;
+}
+
+/// Types implementing [HomeServerConstrained] act just like types implementing [Constrained], with the
+/// additional constraint that they must be well-formed in the context of an actor.
+///
+/// For example: While [Constrained] might validate that an IdCert is well-formed, [HomeServerConstrained]
+/// would also check that the IdCert is a CA certificate, among other things.
+///
+/// ## Implementing [HomeServerConstrained]
+///
+/// As [HomeServerConstrained] is supposed to offer a super-set of the guarantees offered by [Constrained],
+/// it is recommended to call [Constrained::validate] in the implementation of [HomeServerConstrained::validate_actor].
+pub trait HomeServerConstrained: Constrained {
+    fn validate_home_server(&self) -> Result<(), ConstraintError>;
 }
 
 #[cfg(test)]
