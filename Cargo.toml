@@ -29,9 +29,11 @@ spki = "0.7.3"
 thiserror = "1.0.59"
 x509-cert = "0.2.5"
 ser_der = { version = "0.1.0-alpha.1", optional = true, features = ["alloc"] }
+log = "0.4.21"
 
 [dev-dependencies]
 ed25519-dalek = { version = "2.1.1", features = ["rand_core", "signature"] }
+env_logger = "0.11.3"
 rand = "0.8.5"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
