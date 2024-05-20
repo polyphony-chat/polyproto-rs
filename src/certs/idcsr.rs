@@ -68,17 +68,22 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
         capabilities: &Capabilities,
         target: Option<Target>,
     ) -> Result<IdCsr<S, P>, ConversionError> {
-        subject.validate(target)?;
-        let inner_csr =
-            IdCsrInner::<S, P>::new(subject, signing_key.pubkey(), capabilities, target)?;
+        let inner_csr = IdCsrInner::<S, P> {
+            version: PkcsVersion::V1,
+            subject: subject.clone(),
+            subject_public_key: signing_key.pubkey().clone(),
+            capabilities: capabilities.clone(),
+            phantom_data: PhantomData,
+        };
         let signature = signing_key.sign(&inner_csr.clone().to_der()?);
         let signature_algorithm = S::algorithm_identifier();
-
-        Ok(IdCsr {
+        let id_csr = IdCsr {
             inner_csr,
             signature_algorithm,
             signature,
-        })
+        };
+        id_csr.validate(target)?;
+        Ok(id_csr)
     }
 
     /// Create an [IdCsr] from a byte slice containing a DER encoded PKCS #10 CSR.
@@ -172,19 +177,17 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
         capabilities: &Capabilities,
         target: Option<Target>,
     ) -> Result<IdCsrInner<S, P>, ConversionError> {
-        subject.validate(target)?;
-        capabilities.validate(target)?;
-
         let subject = subject.clone();
         let subject_public_key_info = public_key.clone();
-
-        Ok(IdCsrInner {
+        let id_csr_inner = IdCsrInner {
             version: PkcsVersion::V1,
             subject,
             subject_public_key: subject_public_key_info,
             capabilities: capabilities.clone(),
             phantom_data: PhantomData,
-        })
+        };
+        id_csr_inner.validate(target)?;
+        Ok(id_csr_inner)
     }
 
     /// Create an [IdCsrInner] from a byte slice containing a DER encoded PKCS #10 CSR.

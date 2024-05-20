@@ -58,7 +58,7 @@ pub struct IdCertTbs<S: Signature, P: PublicKey<S>> {
     /// Capabilities assigned to the subject of the certificate.
     pub capabilities: Capabilities,
     /// PhantomData
-    s: std::marker::PhantomData<S>,
+    pub(crate) s: std::marker::PhantomData<S>,
 }
 
 impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
@@ -71,7 +71,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     ///
     /// The resulting `IdCertTbs` is guaranteed to be well-formed and up to polyproto specification,
     /// for the usage context of an actor certificate.
-    pub(crate) fn from_actor_csr(
+    pub fn from_actor_csr(
         id_csr: IdCsr<S, P>,
         serial_number: Uint,
         signature_algorithm: AlgorithmIdentifierOwned,
@@ -79,13 +79,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         validity: Validity,
     ) -> Result<Self, ConversionError> {
         id_csr.validate(Some(Target::Actor))?;
-        issuer.validate(Some(Target::Actor))?;
-        // Verify if signature of IdCsr matches contents
-        id_csr.inner_csr.subject_public_key.verify_signature(
-            &id_csr.signature,
-            id_csr.inner_csr.clone().to_der()?.as_slice(),
-        )?;
-        Ok(IdCertTbs {
+        let cert_tbs = IdCertTbs {
             serial_number,
             signature_algorithm,
             issuer,
@@ -94,7 +88,9 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
             subject_public_key: id_csr.inner_csr.subject_public_key,
             capabilities: id_csr.inner_csr.capabilities,
             s: std::marker::PhantomData,
-        })
+        };
+        cert_tbs.validate(Some(Target::Actor))?;
+        Ok(cert_tbs)
     }
 
     /// Create a new [IdCertTbs] by passing an [IdCsr] and other supplementary information. Returns
@@ -106,7 +102,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     ///
     /// The resulting `IdCertTbs` is guaranteed to be well-formed and up to polyproto specification,
     /// for the usage context of a home server certificate.
-    pub(crate) fn from_ca_csr(
+    pub fn from_ca_csr(
         id_csr: IdCsr<S, P>,
         serial_number: Uint,
         signature_algorithm: AlgorithmIdentifierOwned,
@@ -114,13 +110,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         validity: Validity,
     ) -> Result<Self, ConversionError> {
         id_csr.validate(Some(Target::HomeServer))?;
-        issuer.validate(Some(Target::HomeServer))?;
-        // Verify if signature of IdCsr matches contents
-        id_csr.inner_csr.subject_public_key.verify_signature(
-            &id_csr.signature,
-            id_csr.inner_csr.clone().to_der()?.as_slice(),
-        )?;
-        Ok(IdCertTbs {
+        let cert_tbs = IdCertTbs {
             serial_number,
             signature_algorithm,
             issuer,
@@ -129,7 +119,9 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
             subject_public_key: id_csr.inner_csr.subject_public_key,
             capabilities: id_csr.inner_csr.capabilities,
             s: std::marker::PhantomData,
-        })
+        };
+        cert_tbs.validate(Some(Target::HomeServer))?;
+        Ok(cert_tbs)
     }
 
     /// Encode this type as DER, returning a byte vector.

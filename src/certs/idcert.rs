@@ -5,21 +5,18 @@
 use der::asn1::Uint;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
-use log::warn;
 use x509_cert::name::Name;
 use x509_cert::time::Validity;
 use x509_cert::Certificate;
 
-use crate::errors::base::InvalidInput;
 use crate::errors::composite::ConversionError;
-use crate::errors::ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 use crate::Constrained;
 
 use super::idcerttbs::IdCertTbs;
 use super::idcsr::IdCsr;
-use super::{equal_domain_components, Target};
+use super::Target;
 
 /// A signed polyproto ID-Cert, consisting of the actual certificate, the CA-generated signature and
 /// metadata about that signature.
@@ -57,19 +54,17 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, ConversionError> {
-        // IdCsr gets validated in IdCertTbs::from_..._csr
         let signature_algorithm = signing_key.algorithm_identifier();
-        if !equal_domain_components(&id_csr.inner_csr.subject, &issuer) {
-            warn!(
-                "{}\nIssuer: {}\nSubject: {}",
-                ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT, issuer, id_csr.inner_csr.subject
-            );
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT.to_string(),
-            )));
-        }
-        let id_cert_tbs =
-            IdCertTbs::from_ca_csr(id_csr, serial_number, signature_algorithm, issuer, validity)?;
+        let id_cert_tbs = IdCertTbs::<S, P> {
+            serial_number,
+            signature_algorithm,
+            issuer,
+            validity,
+            subject: id_csr.inner_csr.subject,
+            subject_public_key: id_csr.inner_csr.subject_public_key,
+            capabilities: id_csr.inner_csr.capabilities,
+            s: std::marker::PhantomData,
+        };
         let signature = signing_key.sign(&id_cert_tbs.clone().to_der()?);
         let cert = IdCert {
             id_cert_tbs,
@@ -95,27 +90,17 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, ConversionError> {
-        // IdCsr gets validated in IdCertTbs::from_..._csr
         let signature_algorithm = signing_key.algorithm_identifier();
-        issuer.validate(Some(Target::Actor))?;
-        if !equal_domain_components(&id_csr.inner_csr.subject, &issuer) {
-            warn!(
-                "{}\nIssuer: {}\nSubject: {}",
-                ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT, issuer, id_csr.inner_csr.subject
-            );
-            return Err(ConversionError::InvalidInput(
-                crate::errors::base::InvalidInput::Malformed(
-                    ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT.to_string(),
-                ),
-            ));
-        }
-        let id_cert_tbs = IdCertTbs::from_actor_csr(
-            id_csr,
+        let id_cert_tbs = IdCertTbs::<S, P> {
             serial_number,
             signature_algorithm,
             issuer,
             validity,
-        )?;
+            subject: id_csr.inner_csr.subject,
+            subject_public_key: id_csr.inner_csr.subject_public_key,
+            capabilities: id_csr.inner_csr.capabilities,
+            s: std::marker::PhantomData,
+        };
         let signature = signing_key.sign(&id_cert_tbs.clone().to_der()?);
         let cert = IdCert {
             id_cert_tbs,
