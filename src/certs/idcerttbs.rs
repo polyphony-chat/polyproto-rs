@@ -68,6 +68,9 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     /// the [BasicConstraints] "ca" flag set to `true`.
     ///
     /// See [IdCertTbs::from_ca_csr()] when trying to create a new CA certificate for home servers.
+    ///
+    /// The resulting `IdCertTbs` is guaranteed to be well-formed and up to polyproto specification,
+    /// for the usage context of an actor certificate.
     pub(crate) fn from_actor_csr(
         id_csr: IdCsr<S, P>,
         serial_number: Uint,
@@ -100,6 +103,9 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     /// the [BasicConstraints] "ca" flag set to `false`.
     ///
     /// See [IdCertTbs::from_actor_csr()] when trying to create a new actor certificate.
+    ///
+    /// The resulting `IdCertTbs` is guaranteed to be well-formed and up to polyproto specification,
+    /// for the usage context of a home server certificate.
     pub(crate) fn from_ca_csr(
         id_csr: IdCsr<S, P>,
         serial_number: Uint,
@@ -131,10 +137,12 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         Ok(TbsCertificate::try_from(self)?.to_der()?)
     }
 
-    /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
-    pub fn from_der(bytes: &[u8], target: Target) -> Result<Self, ConversionError> {
+    /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR. The resulting
+    /// `IdCertTbs` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the certificates' intended usage context is provided.
+    pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
         let cert = IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)?;
-        cert.validate(Some(target))?;
+        cert.validate(target)?;
         Ok(cert)
     }
 }
@@ -144,6 +152,9 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
 {
     type Error = ConversionError;
 
+    /// Tries to convert a [TbsCertificateInner] into an [IdCertTbs]. The Ok() variant of this Result
+    /// is an unverified `IdCertTbs`. If this conversion is called manually, the caller is responsible
+    /// for verifying the `IdCertTbs` using the [Constrained] trait.
     fn try_from(value: TbsCertificateInner<P>) -> Result<Self, Self::Error> {
         value.subject.validate(None)?;
 

@@ -59,6 +59,9 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     ///                    sign the CSR.
     /// - **subject_unique_id**: [Uint], subject (actor) session ID. MUST NOT exceed 32 characters
     ///                          in length.
+    ///
+    /// The resulting `IdCsr` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the CSRs intended usage context is provided.
     pub fn new(
         subject: &Name,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
@@ -140,6 +143,9 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
     /// Creates a new [IdCsrInner].
     ///
     /// Fails, if [Name] or [Capabilities] do not meet polyproto validation criteria.
+    ///
+    /// The resulting `IdCsrInner` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the CSRs intended usage context is provided.
     pub fn new(
         subject: &Name,
         public_key: &P,
@@ -161,7 +167,9 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
         })
     }
 
-    /// Create an IdCsrInner from a byte slice containing a DER encoded PKCS #10 CSR.
+    /// Create an [IdCsrInner] from a byte slice containing a DER encoded PKCS #10 CSR.
+    /// The resulting `IdCsrInner` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the CSRs intended usage context is provided.
     pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
         let csr_inner = IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)?;
         csr_inner.validate(target)?;
@@ -177,6 +185,9 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
 impl<S: Signature, P: PublicKey<S>> TryFrom<CertReq> for IdCsr<S, P> {
     type Error = ConversionError;
 
+    /// Tries to convert a `CertReq` into an `IdCsr`. The Ok() variant of this Result is an
+    /// unverified `IdCsr`. If this conversion is called manually, the caller is responsible for
+    /// verifying the `IdCsr` using the [Constrained] trait.
     fn try_from(value: CertReq) -> Result<Self, Self::Error> {
         Ok(IdCsr {
             inner_csr: IdCsrInner::try_from(value.info)?,
@@ -189,6 +200,9 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<CertReq> for IdCsr<S, P> {
 impl<S: Signature, P: PublicKey<S>> TryFrom<CertReqInfo> for IdCsrInner<S, P> {
     type Error = ConversionError;
 
+    /// Tries to convert a `CertReqInfo` into an `IdCsrInner`. The Ok() variant of this Result is
+    /// an unverified `IdCsrInner`. If this conversion is called manually, the caller is responsible
+    /// for verifying the `IdCsrInner` using the [Constrained] trait.
     fn try_from(value: CertReqInfo) -> Result<Self, Self::Error> {
         let rdn_sequence = value.subject;
         rdn_sequence.validate(None)?;

@@ -47,6 +47,9 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// the [BasicConstraints] "ca" flag set to `false`.
     ///
     /// See [IdCert::from_actor_csr()] when trying to create a new actor certificate.
+    ///
+    /// The resulting `IdCert` is guaranteed to be well-formed and up to polyproto specification,
+    /// for the usage context of a home server certificate.
     pub fn from_ca_csr(
         id_csr: IdCsr<S, P>,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
@@ -82,6 +85,9 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// the [BasicConstraints] "ca" flag set to `false`.
     ///
     /// See [IdCert::from_ca_csr()] when trying to create a new ca certificate.
+    ///
+    /// The resulting `IdCert` is guaranteed to be well-formed and up to polyproto specification,
+    /// for the usage context of an actor certificate.
     pub fn from_actor_csr(
         id_csr: IdCsr<S, P>,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
@@ -120,6 +126,8 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     }
 
     /// Create an IdCsr from a byte slice containing a DER encoded X.509 Certificate.
+    /// The resulting `IdCert` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the certificates' intended usage context is provided.
     pub fn from_der(value: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
         let cert = IdCert::try_from(Certificate::from_der(value)?)?;
         cert.validate(target)?;
@@ -131,7 +139,9 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         Ok(Certificate::try_from(self)?.to_der()?)
     }
 
-    /// Create an IdCsr from a byte slice containing a PEM encoded X.509 Certificate.
+    /// Create an [IdCert] from a byte slice containing a PEM encoded X.509 Certificate.
+    /// The resulting `IdCert` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the certificates' intended usage context is provided.
     pub fn from_pem(pem: &str, target: Option<Target>) -> Result<Self, ConversionError> {
         let cert = IdCert::try_from(Certificate::from_pem(pem)?)?;
         cert.validate(target)?;
@@ -167,7 +177,10 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<IdCert<S, P>> for Certificate {
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<Certificate> for IdCert<S, P> {
     type Error = ConversionError;
-
+    /// Tries to convert a [Certificate] into an [IdCert]. The Ok() variant of this method
+    /// contains the `IdCert` if the conversion was successful. If this conversion is called
+    /// manually, the caller is responsible for verifying the correctness of this `IdCert` using
+    /// the [Constrained] trait.
     fn try_from(value: Certificate) -> Result<Self, Self::Error> {
         let id_cert_tbs = value.tbs_certificate.try_into()?;
         let signature = S::from_bytes(value.signature.raw_bytes());
@@ -175,7 +188,6 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<Certificate> for IdCert<S, P> {
             id_cert_tbs,
             signature,
         };
-        cert.validate(None)?;
         Ok(cert)
     }
 }
