@@ -6,7 +6,7 @@ use crate::certs::idcert::IdCert;
 use crate::errors::composite::ConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
-use crate::types::entities::{Challenge, CompletedChallenge};
+use crate::types::entities::{Challenge, ChallengePayload};
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
@@ -57,26 +57,6 @@ impl TryFrom<GetChallengeResponse> for Challenge {
 
     fn try_from(value: GetChallengeResponse) -> Result<Self, Self::Error> {
         Challenge::new(&value.challenge, value.expires)
-    }
-}
-
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
-/// Completed challenge payload.
-// TODO: Move this to /types/entities or another, more appropriate module.
-pub struct ChallengePayload {
-    /// The challenge string.
-    pub challenge: String,
-    /// The signature of the challenge.
-    pub signature: String,
-}
-
-impl<S: Signature> From<CompletedChallenge<S>> for ChallengePayload {
-    fn from(value: CompletedChallenge<S>) -> Self {
-        Self {
-            challenge: value.challenge.to_string(),
-            signature: value.signature.to_string(),
-        }
     }
 }
 

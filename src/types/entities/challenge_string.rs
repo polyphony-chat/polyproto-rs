@@ -95,3 +95,22 @@ pub struct CompletedChallenge<S: Signature> {
     /// The signature of the challenge.
     pub signature: S,
 }
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+/// Completed challenge payload.
+pub struct ChallengePayload {
+    /// The challenge string.
+    pub challenge: String,
+    /// The signature of the challenge.
+    pub signature: String,
+}
+
+impl<S: Signature> From<CompletedChallenge<S>> for ChallengePayload {
+    fn from(value: CompletedChallenge<S>) -> Self {
+        Self {
+            challenge: value.challenge.to_string(),
+            signature: value.signature.to_string(),
+        }
+    }
+}
