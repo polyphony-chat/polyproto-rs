@@ -49,5 +49,9 @@ fn invalid_federation_id() {
     assert!(FederationId::new("examplecom").is_err());
     assert!(FederationId::new("⾆@example.com").is_err());
     assert!(FederationId::new("example@⾆.com").is_err());
-    assert!(FederationId::new("example@com.⾆").is_err());
+    assert!(FederationId::new("example@😿.com").is_err());
+    assert_eq!(
+        *FederationId::new("example@com.⾆").unwrap(),
+        "example@com".to_string()
+    );
 }
