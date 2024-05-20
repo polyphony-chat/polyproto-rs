@@ -4,8 +4,6 @@
 
 #![allow(unused)]
 
-mod common;
-
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -27,7 +25,7 @@ use x509_cert::request::CertReq;
 use x509_cert::time::{Time, Validity};
 use x509_cert::Certificate;
 
-use common::*;
+use crate::common::*;
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]

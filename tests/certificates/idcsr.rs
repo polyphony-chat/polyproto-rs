@@ -9,12 +9,10 @@
 
 #![allow(unused)]
 
-mod common;
-
 use std::str::FromStr;
 use std::time::Duration;
 
-use common::*;
+use crate::common::*;
 use der::asn1::{BitString, Ia5String, Uint, UtcTime};
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::{self, Capabilities};
