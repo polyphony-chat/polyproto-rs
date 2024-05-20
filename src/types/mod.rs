@@ -4,10 +4,15 @@
 
 use std::ops::{Deref, DerefMut};
 
+use regex::Regex;
+
 use crate::errors::base::ConstraintError;
+use crate::errors::ERR_MSG_FEDERATION_ID_REGEX;
 use crate::Constrained;
 
 pub mod authorization;
+
+pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct FederationId {
@@ -31,11 +36,26 @@ impl DerefMut for FederationId {
 impl FederationId {
     /// Validates input, then creates a new `FederationId`.
     pub fn new(id: &str) -> Result<Self, ConstraintError> {
-        let fid = Self {
-            inner: id.to_string(),
+        let regex = Regex::new(REGEX_FEDERATION_ID).unwrap();
+        let matches = {
+            let mut x = String::new();
+            regex
+                .find_iter(id)
+                .map(|y| y.as_str())
+                .for_each(|y| x.push_str(y));
+            x
         };
-        fid.validate(None)?;
-        Ok(fid)
+        if regex.is_match(&matches) {
+            let fid = Self {
+                inner: matches.to_string(),
+            };
+            fid.validate(None)?;
+            Ok(fid)
+        } else {
+            Err(ConstraintError::Malformed(Some(
+                ERR_MSG_FEDERATION_ID_REGEX.to_string(),
+            )))
+        }
     }
 }
 
