@@ -125,12 +125,20 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         Ok(cert)
     }
 
-    /// Create an IdCsr from a byte slice containing a DER encoded X.509 Certificate.
+    /// Create an [IdCert] from a byte slice containing a DER encoded X.509 Certificate.
     /// The resulting `IdCert` is guaranteed to be well-formed and up to polyproto specification,
     /// if the correct [Target] for the certificates' intended usage context is provided.
     pub fn from_der(value: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
-        let cert = IdCert::try_from(Certificate::from_der(value)?)?;
+        let cert = IdCert::from_der_unchecked(value)?;
         cert.validate(target)?;
+        Ok(cert)
+    }
+
+    /// Create an unchecked [IdCert] from a byte slice containing a DER encoded X.509 Certificate.
+    /// The caller is responsible for verifying the correctness of this `IdCert` using
+    /// the [Constrained] trait before using it.
+    pub fn from_der_unchecked(value: &[u8]) -> Result<Self, ConversionError> {
+        let cert = IdCert::try_from(Certificate::from_der(value)?)?;
         Ok(cert)
     }
 
@@ -143,8 +151,16 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// The resulting `IdCert` is guaranteed to be well-formed and up to polyproto specification,
     /// if the correct [Target] for the certificates' intended usage context is provided.
     pub fn from_pem(pem: &str, target: Option<Target>) -> Result<Self, ConversionError> {
-        let cert = IdCert::try_from(Certificate::from_pem(pem)?)?;
+        let cert = IdCert::from_pem_unchecked(pem)?;
         cert.validate(target)?;
+        Ok(cert)
+    }
+
+    /// Create an unchecked [IdCert] from a byte slice containing a PEM encoded X.509 Certificate.
+    /// The caller is responsible for verifying the correctness of this `IdCert` using
+    /// the [Constrained] trait before using it.
+    pub fn from_pem_unchecked(pem: &str) -> Result<Self, ConversionError> {
+        let cert = IdCert::try_from(Certificate::from_pem(pem)?)?;
         Ok(cert)
     }
 

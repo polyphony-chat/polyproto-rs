@@ -81,10 +81,20 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
         })
     }
 
-    /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
+    /// Create an [IdCsr] from a byte slice containing a DER encoded PKCS #10 CSR.
+    /// The resulting `IdCsr` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the CSRs intended usage context is provided.
     pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
-        let csr = IdCsr::try_from(CertReq::from_der(bytes)?)?;
+        let csr = IdCsr::from_der_unchecked(bytes)?;
         csr.validate(target)?;
+        Ok(csr)
+    }
+
+    /// Create an unchecked [IdCsr] from a byte slice containing a DER encoded PKCS #10 CSR.
+    /// The caller is responsible for verifying the correctness of this `IdCsr` using
+    /// the [Constrained] trait before using it.
+    pub fn from_der_unchecked(bytes: &[u8]) -> Result<Self, ConversionError> {
+        let csr = IdCsr::try_from(CertReq::from_der(bytes)?)?;
         Ok(csr)
     }
 
@@ -93,10 +103,20 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
         Ok(CertReq::try_from(self)?.to_der()?)
     }
 
-    /// Create an IdCsr from a string containing a PEM encoded PKCS #10 CSR.
+    /// Create an [IdCsr] from a string containing a PEM encoded PKCS #10 CSR.
+    /// The resulting `IdCsr` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the CSRs intended usage context is provided.
     pub fn from_pem(pem: &str, target: Option<Target>) -> Result<Self, ConversionError> {
-        let csr = IdCsr::try_from(CertReq::from_pem(pem)?)?;
+        let csr = IdCsr::from_pem_unchecked(pem)?;
         csr.validate(target)?;
+        Ok(csr)
+    }
+
+    /// Create an unchecked [IdCsr] from a string containing a PEM encoded PKCS #10 CSR.
+    /// The caller is responsible for verifying the correctness of this `IdCsr` using
+    /// the [Constrained] trait before using it.
+    pub fn from_pem_unchecked(pem: &str) -> Result<Self, ConversionError> {
+        let csr = IdCsr::try_from(CertReq::from_pem(pem)?)?;
         Ok(csr)
     }
 
@@ -173,6 +193,14 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
     pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
         let csr_inner = IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)?;
         csr_inner.validate(target)?;
+        Ok(csr_inner)
+    }
+
+    /// Create an unchecked [IdCsrInner] from a byte slice containing a DER encoded PKCS #10 CSR.
+    /// The caller is responsible for verifying the correctness of this `IdCsrInner` using
+    /// the [Constrained] trait before using it.
+    pub fn from_der_unchecked(bytes: &[u8]) -> Result<Self, ConversionError> {
+        let csr_inner = IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)?;
         Ok(csr_inner)
     }
 

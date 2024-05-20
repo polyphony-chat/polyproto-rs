@@ -137,12 +137,20 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         Ok(TbsCertificate::try_from(self)?.to_der()?)
     }
 
-    /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR. The resulting
+    /// Create an [IdCertTbs] from a byte slice containing a DER encoded PKCS #10 CSR. The resulting
     /// `IdCertTbs` is guaranteed to be well-formed and up to polyproto specification,
     /// if the correct [Target] for the certificates' intended usage context is provided.
     pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
-        let cert = IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)?;
+        let cert = IdCertTbs::from_der_unchecked(bytes)?;
         cert.validate(target)?;
+        Ok(cert)
+    }
+
+    /// Create an unchecked [IdCertTbs] from a byte slice containing a DER encoded PKCS #10 CSR. The caller is
+    /// responsible for verifying the correctness of this `IdCertTbs` using
+    /// the [Constrained] trait before using it.
+    pub fn from_der_unchecked(bytes: &[u8]) -> Result<Self, ConversionError> {
+        let cert = IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)?;
         Ok(cert)
     }
 }
