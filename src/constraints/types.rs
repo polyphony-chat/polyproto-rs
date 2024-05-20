@@ -4,7 +4,7 @@
 
 use crate::errors::{ERR_MSG_CHALLENGE_STRING_LENGTH, ERR_MSG_FEDERATION_ID_REGEX};
 use crate::types::authorization::ChallengeString;
-use crate::types::FederationId;
+use crate::types::{FederationId, REGEX_FEDERATION_ID};
 use regex::Regex;
 
 use super::*;
@@ -25,7 +25,7 @@ impl Constrained for ChallengeString {
 
 impl Constrained for FederationId {
     fn validate(&self, _target: Option<Target>) -> Result<(), ConstraintError> {
-        let fid_regex = Regex::new(r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)").unwrap();
+        let fid_regex = Regex::new(REGEX_FEDERATION_ID).unwrap();
         match fid_regex.is_match(&self.inner) {
             true => Ok(()),
             false => Err(ConstraintError::Malformed(Some(
