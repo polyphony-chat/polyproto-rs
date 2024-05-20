@@ -2,8 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-pub(crate) mod api;
-pub(crate) mod certificates;
-pub(crate) mod common;
-
-use polyproto::Constrained;
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ChallengeString {
+    pub challenge: String,
+    pub expires: u64,
+}

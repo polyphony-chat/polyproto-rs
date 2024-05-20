@@ -44,7 +44,7 @@ pub enum ConversionError {
     #[error(transparent)]
     IdCertError(#[from] PublicKeyError),
 }
-#[cfg(feature = "routes")]
+#[cfg(feature = "reqwest")]
 #[derive(Error, Debug)]
 pub enum RequestError {
     #[error(transparent)]

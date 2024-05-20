@@ -64,7 +64,7 @@ pub mod errors;
 pub mod key;
 /// Generic polyproto signature traits.
 pub mod signature;
-#[cfg(feature = "routes")]
+#[cfg(feature = "types")]
 /// Types used in polyproto and the polyproto HTTP/REST APIs
 pub mod types;
 

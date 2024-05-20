@@ -11,11 +11,11 @@ rust-version = "1.65.0"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [features]
-default = ["routes", "reqwest"]
+default = ["types"]
 wasm = ["getrandom", "getrandom/js"]
 getrandom = ["dep:getrandom"]
-routes = ["serde"]
-reqwest = ["dep:reqwest", "routes"]
+types = []
+reqwest = ["dep:reqwest", "types", "serde"]
 serde = ["dep:serde", "dep:serde_json", "dep:ser_der"]
 
 [dependencies]

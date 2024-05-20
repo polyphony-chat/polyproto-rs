@@ -14,6 +14,12 @@ pub static ERR_MSG_DC_UID_MISMATCH: &str =
     "The domain components found in the DC and UID fields of the Name object do not match!";
 pub static ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT: &str =
     "The domain components of the issuer and the subject do not match!";
+#[cfg(feature = "types")]
+pub static ERR_MSG_CHALLENGE_STRING_LENGTH: &str =
+    "Challenge strings must be between 32 and 255 bytes long!";
+#[cfg(feature = "types")]
+pub static ERR_MSG_FEDERATION_ID_REGEX: &str =
+    "Federation IDs must match the regex: \\b([a-z0-9._%+-]+)@([a-z0-9-]+(\\.[a-z0-9-]+)*)";
 /// "Base" error types which can be combined into "composite" error types
 pub mod base;
 /// "Composite" error types which consist of one or more "base" error types

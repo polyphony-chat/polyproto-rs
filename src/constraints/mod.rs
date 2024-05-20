@@ -24,6 +24,8 @@ pub mod capabilities;
 pub mod certs;
 pub mod name;
 pub mod session_id;
+#[cfg(feature = "types")]
+pub mod types;
 
 #[cfg(test)]
 mod name_constraints {
