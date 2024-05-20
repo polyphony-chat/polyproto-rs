@@ -7,10 +7,6 @@ use serde_json::from_str;
 
 use crate::errors::composite::RequestError;
 
-pub mod authentication;
-pub mod events;
-pub mod identity;
-
 #[derive(Debug, Default, Clone)]
 pub struct HttpClient {
     client: reqwest::Client,
