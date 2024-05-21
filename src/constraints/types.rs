@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use crate::errors::{ERR_MSG_CHALLENGE_STRING_LENGTH, ERR_MSG_FEDERATION_ID_REGEX};
-use crate::types::authorization::ChallengeString;
+use crate::types::ChallengeString;
 use crate::types::{FederationId, REGEX_FEDERATION_ID};
 use regex::Regex;
 

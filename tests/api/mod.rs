@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::*;
-use polyproto::types::authorization::ChallengeString;
+use polyproto::types::ChallengeString;
 use polyproto::types::FederationId;
 
 #[test]
