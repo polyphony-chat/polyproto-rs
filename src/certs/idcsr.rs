@@ -41,7 +41,7 @@ pub struct IdCsr<S: Signature, P: PublicKey<S>> {
     /// [Signature] value for the `inner_csr`
     pub signature: S,
 }
-
+// TODO: Document that we have a SessionId struct that can be used to create valid SessionIds
 impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// Performs basic input validation and creates a new polyproto ID-Cert CSR, according to
     /// PKCS#10. The CSR is being signed using the subjects' supplied signing key ([PrivateKey])
