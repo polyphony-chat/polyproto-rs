@@ -7,3 +7,26 @@ pub mod federation_id;
 
 pub use challenge_string::*;
 pub use federation_id::*;
+
+pub mod routes {
+    pub struct Route {
+        pub method: http::Method,
+        pub path: &'static str,
+    }
+
+    pub mod core {
+        use super::Route;
+
+        pub static GET_CHALLENGE_STRING: Route = Route {
+            method: http::Method::GET,
+            path: "/.p2/core/v1/challenge",
+        };
+
+        pub static ROTATE_SERVER_IDENTITY_KEY: Route = Route {
+            method: http::Method::PUT,
+            path: "/.p2/core/v1/key/server",
+        };
+
+        // TODO: Other routes
+    }
+}
