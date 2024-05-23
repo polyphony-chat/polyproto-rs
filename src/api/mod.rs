@@ -7,6 +7,8 @@ use serde_json::from_str;
 
 use crate::errors::RequestError;
 
+pub mod core;
+
 #[derive(Debug, Default, Clone)]
 pub struct HttpClient {
     client: reqwest::Client,
@@ -35,6 +37,7 @@ impl HttpClient {
         url: &str,
         body: Option<String>,
     ) -> Result<reqwest::Response, reqwest::Error> {
+        // TODO: Parse url using url lib
         let mut request = self.client.request(method, url);
         request = request.headers(self.headers.clone());
         if let Some(body) = body {
