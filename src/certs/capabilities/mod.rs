@@ -15,9 +15,10 @@ use der::asn1::SetOfVec;
 use x509_cert::attr::{Attribute, Attributes};
 use x509_cert::ext::{Extension, Extensions};
 
-use crate::errors::base::InvalidInput;
-use crate::errors::composite::ConversionError;
-use crate::Constrained;
+use crate::{
+    errors::{ConversionError, InvalidInput},
+    Constrained,
+};
 
 /// Object Identifier for the KeyUsage::DigitalSignature variant.
 pub const OID_KEY_USAGE_DIGITAL_SIGNATURE: &str = "1.3.6.1.5.5.7.3.3";

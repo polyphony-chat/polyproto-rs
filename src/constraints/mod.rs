@@ -12,7 +12,7 @@ use crate::certs::idcert::IdCert;
 use crate::certs::idcerttbs::IdCertTbs;
 use crate::certs::idcsr::{IdCsr, IdCsrInner};
 use crate::certs::{equal_domain_components, SessionId, Target};
-use crate::errors::base::ConstraintError;
+use crate::errors::ConstraintError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::{

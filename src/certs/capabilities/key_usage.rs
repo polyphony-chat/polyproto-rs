@@ -10,8 +10,7 @@ use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
 
-use crate::errors::base::InvalidInput;
-use crate::errors::composite::ConversionError;
+use crate::errors::{ConversionError, InvalidInput};
 
 use super::*;
 

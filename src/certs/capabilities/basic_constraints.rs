@@ -11,8 +11,7 @@ use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
 
-use crate::errors::base::{ConstraintError, InvalidInput};
-use crate::errors::composite::ConversionError;
+use crate::errors::{ConstraintError, InvalidInput, ConversionError};
 
 use super::OID_BASIC_CONSTRAINTS;
 

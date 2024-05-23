@@ -24,3 +24,6 @@ pub static ERR_MSG_FEDERATION_ID_REGEX: &str =
 pub mod base;
 /// "Composite" error types which consist of one or more "base" error types
 pub mod composite;
+
+pub use base::*;
+pub use composite::*;

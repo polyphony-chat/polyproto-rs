@@ -12,7 +12,7 @@ use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 use x509_cert::TbsCertificate;
 
-use crate::errors::composite::ConversionError;
+use crate::errors::ConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::Constrained;

@@ -6,8 +6,7 @@ use std::ops::{Deref, DerefMut};
 
 use regex::Regex;
 
-use crate::errors::base::ConstraintError;
-use crate::errors::ERR_MSG_FEDERATION_ID_REGEX;
+use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX};
 use crate::Constrained;
 
 pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)";

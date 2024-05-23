@@ -5,7 +5,7 @@
 use serde::Deserialize;
 use serde_json::from_str;
 
-use crate::errors::composite::RequestError;
+use crate::errors::RequestError;
 
 #[derive(Debug, Default, Clone)]
 pub struct HttpClient {

@@ -6,5 +6,5 @@ pub mod challenge_string;
 pub mod federation_id;
 
 use crate::certs::Target;
-use crate::errors::base::ConstraintError;
+use crate::errors::ConstraintError;
 use crate::Constrained;

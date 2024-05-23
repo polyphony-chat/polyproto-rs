@@ -9,7 +9,7 @@ use x509_cert::name::Name;
 use x509_cert::time::Validity;
 use x509_cert::Certificate;
 
-use crate::errors::composite::ConversionError;
+use crate::errors::ConversionError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 use crate::Constrained;
