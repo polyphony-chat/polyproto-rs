@@ -17,7 +17,6 @@ use crate::types::ChallengeString;
 
 use super::{HttpClient, HttpResult};
 
-// TODO: Use URL parsing to build the correct URL
 // TODO: MLS routes still missing
 
 impl HttpClient {
