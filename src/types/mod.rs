@@ -9,6 +9,7 @@ pub use challenge_string::*;
 pub use federation_id::*;
 
 pub mod routes {
+    #[derive(Debug, Clone)]
     pub struct Route {
         pub method: http::Method,
         pub path: &'static str,
