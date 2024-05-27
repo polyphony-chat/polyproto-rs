@@ -2,12 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use x509_cert::serial_number::SerialNumber;
 
 use crate::certs::idcert::IdCert;
 use crate::certs::idcsr::IdCsr;
 use crate::certs::{PublicKeyInfo, SessionId};
+use crate::errors::ConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::types::routes::core::v1::*;
@@ -146,22 +148,76 @@ impl HttpClient {
 
 // Core Routes: Registration needed
 impl HttpClient {
+    /// Rotate your keys for a given session. The `session_id`` in the supplied [IdCsr] must
+    /// correspond to the session token used in the authorization-Header.
     pub async fn rotate_session_id_cert<S: Signature, P: PublicKey<S>>(
         &self,
         csr: IdCsr<S, P>,
     ) -> HttpResult<(IdCert<S, P>, String)> {
-        todo!()
+        let request_url = self.url.join(ROTATE_SESSION_IDCERT.path)?;
+        let request_response = self
+            .client
+            .request(ROTATE_SESSION_IDCERT.method.clone(), request_url)
+            .body(csr.to_pem(der::pem::LineEnding::LF)?)
+            .send()
+            .await;
+        let (pem, token) =
+            HttpClient::handle_response::<(String, String)>(request_response).await?;
+        Ok((
+            IdCert::from_pem(pem.as_str(), Some(crate::certs::Target::Actor))?,
+            token,
+        ))
     }
 
+    /// Upload encrypted private key material to the server for later retrieval. The upload size
+    /// must not exceed the server's maximum upload size for this route. This is usually not more
+    /// than 10kb and can be as low as 800 bytes, depending on the server configuration.
     pub async fn upload_encrypted_pkm(&self, data: Vec<EncryptedPkm>) -> HttpResult<()> {
-        todo!()
+        let mut body = Vec::new();
+        for pkm in data.iter() {
+            body.push(json!({
+                "serial_number": pkm.serial_number.to_string(),
+                "encrypted_pkm": pkm.key_data
+            }));
+        }
+        let request_url = self.url.join(UPLOAD_ENCRYPTED_PKM.path)?;
+        self.client
+            .request(UPLOAD_ENCRYPTED_PKM.method.clone(), request_url)
+            .body(json!(body).to_string())
+            .send()
+            .await?;
+        Ok(())
     }
 
+    /// Retrieve encrypted private key material from the server. The serial_numbers, if provided,
+    /// must match the serial numbers of ID-Certs that the client has uploaded key material for.
+    /// If no serial_numbers are provided, the server will return all key material that the client
+    /// has uploaded.
     pub async fn get_encrypted_pkm(
         &self,
         serials: Vec<SerialNumber>,
     ) -> HttpResult<Vec<EncryptedPkm>> {
-        todo!()
+        let request_url = self.url.join(GET_ENCRYPTED_PKM.path)?;
+        let mut body = Vec::new();
+        for serial in serials.iter() {
+            body.push(json!(serial.to_string()));
+        }
+        let request = self
+            .client
+            .request(GET_ENCRYPTED_PKM.method.clone(), request_url)
+            .body(
+                json!({
+                    "serial_numbers": body
+                })
+                .to_string(),
+            );
+        let response =
+            HttpClient::handle_response::<Vec<EncryptedPkmJson>>(request.send().await).await?;
+        let mut vec_pkm = Vec::new();
+        for pkm in response.into_iter() {
+            vec_pkm.push(EncryptedPkm::try_from(pkm)?);
+        }
+        Ok(vec_pkm)
     }
 
     pub async fn delete_encrypted_pkm(&self, serials: Vec<SerialNumber>) -> HttpResult<()> {
@@ -174,9 +230,46 @@ impl HttpClient {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Represents encrypted private key material. The `serial` is used to identify the key
+/// material. The `encrypted_pkm` is the actual encrypted private key material.
 pub struct EncryptedPkm {
-    pub serial: SerialNumber, // TODO[ser_der](bitfl0wer): Impl Serialize, Deserialize for SerialNumber
-    pub encrypted_pkm: String,
+    pub serial_number: SerialNumber,
+    pub key_data: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Stringly typed version of [EncryptedPkm], used for serialization and deserialization.
+/// This is necessary because [SerialNumber] from the `x509_cert` crate does not implement
+/// `Serialize` and `Deserialize`.
+///
+/// Implements `From<EncryptedPkm>` and `TryInto<EncryptedPkmJson>` for conversion between the two
+/// types.
+///
+/// (actually, it does not implement `TryInto<EncryptedPkmJson>`. However, [EncryptedPkm] implements
+/// `TryFrom<EncryptedPkmJson>`, but you get the idea.)
+pub struct EncryptedPkmJson {
+    pub serial_number: String,
+    pub key_data: String,
+}
+
+impl From<EncryptedPkm> for EncryptedPkmJson {
+    fn from(pkm: EncryptedPkm) -> Self {
+        Self {
+            serial_number: pkm.serial_number.to_string(),
+            key_data: pkm.key_data,
+        }
+    }
+}
+
+impl TryFrom<EncryptedPkmJson> for EncryptedPkm {
+    type Error = ConversionError;
+
+    fn try_from(pkm: EncryptedPkmJson) -> Result<Self, Self::Error> {
+        Ok(Self {
+            serial_number: SerialNumber::new(pkm.serial_number.as_bytes())?,
+            key_data: pkm.key_data,
+        })
+    }
 }
 
 #[cfg(test)]
