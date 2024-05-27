@@ -205,12 +205,7 @@ impl HttpClient {
         let request = self
             .client
             .request(GET_ENCRYPTED_PKM.method.clone(), request_url)
-            .body(
-                json!({
-                    "serial_numbers": body
-                })
-                .to_string(),
-            );
+            .body(json!(body).to_string());
         let response =
             HttpClient::handle_response::<Vec<EncryptedPkmJson>>(request.send().await).await?;
         let mut vec_pkm = Vec::new();
@@ -220,12 +215,30 @@ impl HttpClient {
         Ok(vec_pkm)
     }
 
+    /// Delete encrypted private key material from the server. The serials must match the
+    /// serial numbers of ID-Certs that the client has uploaded key material for.
     pub async fn delete_encrypted_pkm(&self, serials: Vec<SerialNumber>) -> HttpResult<()> {
-        todo!()
+        let request_url = self.url.join(DELETE_ENCRYPTED_PKM.path)?;
+        let mut body = Vec::new();
+        for serial in serials.iter() {
+            body.push(json!(serial.to_string()));
+        }
+        self.client
+            .request(DELETE_ENCRYPTED_PKM.method.clone(), request_url)
+            .body(json!(body).to_string())
+            .send()
+            .await?;
+        Ok(())
     }
 
-    pub async fn get_pkm_upload_size_limit(&self, url: &str) -> HttpResult<u64> {
-        todo!()
+    /// Retrieve the maximum upload size for encrypted private key material, in bytes.
+    pub async fn get_pkm_upload_size_limit(&self) -> HttpResult<u64> {
+        let request = self.client.request(
+            GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT.method.clone(),
+            self.url.join(GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT.path)?,
+        );
+        let response = request.send().await;
+        HttpClient::handle_response::<u64>(response).await
     }
 }
 
