@@ -4,6 +4,8 @@
 
 use std::str::FromStr;
 
+use http::response;
+use serde_json::json;
 use url::Url;
 use x509_cert::serial_number::SerialNumber;
 
@@ -52,24 +54,59 @@ impl HttpClient {
             .send()
             .await;
         let pem = HttpClient::handle_response::<String>(request_response).await?;
-        Ok(IdCert::from_pem(pem.as_str(), None)?)
+        Ok(IdCert::from_pem(
+            pem.as_str(),
+            Some(crate::certs::Target::HomeServer),
+        )?)
     }
 
+    /// Request the server's public [IdCert]. Specify a unix timestamp to get the IdCert which was
+    /// valid at that time. If no timestamp is provided, the current IdCert is returned.
     pub async fn get_server_id_cert<S: Signature, P: PublicKey<S>>(
         &self,
         url: &str,
+        unix_time: Option<u64>,
     ) -> HttpResult<IdCert<S, P>> {
-        todo!()
+        let request_url = HttpClient::normalize_url(url, GET_SERVER_PUBLIC_IDCERT.path)?;
+        let mut request = self
+            .client
+            .request(GET_SERVER_PUBLIC_IDCERT.method.clone(), request_url);
+        if let Some(time) = unix_time {
+            request = request.body(format!("{{\"timestamp\": {}}}", time).to_string());
+        }
+        let response = request.send().await;
+        let pem = HttpClient::handle_response::<String>(response).await?;
+        Ok(IdCert::from_pem(
+            pem.as_str(),
+            Some(crate::certs::Target::HomeServer),
+        )?)
     }
 
-    pub async fn get_server_public_key_info(&self, url: &str) -> HttpResult<PublicKeyInfo> {
-        todo!()
+    /// Request the server's [PublicKeyInfo].
+    pub async fn get_server_public_key_info(
+        &self,
+        url: &str,
+        unix_time: Option<u64>,
+    ) -> HttpResult<PublicKeyInfo> {
+        let request_url = HttpClient::normalize_url(url, GET_SERVER_PUBLIC_KEY.path)?;
+        let mut request = self
+            .client
+            .request(GET_SERVER_PUBLIC_KEY.method.clone(), request_url);
+        if let Some(time) = unix_time {
+            request = request.body(json!({ "timestamp": time }).to_string());
+        }
+        let response = request.send().await;
+        let pem = HttpClient::handle_response::<String>(response).await?;
+        Ok(PublicKeyInfo::from_pem(pem.as_str())?)
     }
 
     pub async fn get_actor_id_certs<S: Signature, P: PublicKey<S>>(
         &self,
         url: &str,
+        fids: &[String],
     ) -> HttpResult<Vec<IdCert<S, P>>> {
+        let request_url = HttpClient::normalize_url(url, GET_ACTOR_IDCERTS.path)?;
+
         todo!()
     }
 
