@@ -4,38 +4,74 @@
 
 use serde::Deserialize;
 use serde_json::from_str;
+use url::Url;
 
 use crate::errors::RequestError;
 
 pub mod core;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
+/// A client for making HTTP requests to a polyproto home server.
+///
+/// # Example
+///
+/// ```rs
+/// let mut header_map = reqwest::header::HeaderMap::new();
+/// header_map.insert("Authorization", "nx8r902hjkxlo2n8n72x0");
+/// let client = HttpClient::new("https://example.com").unwrap();
+/// client.headers(header_map);
+///
+/// let challenge: ChallengeString = client.get_challenge_string().await.unwrap();
+/// ```
 pub struct HttpClient {
     client: reqwest::Client,
     headers: reqwest::header::HeaderMap,
+    pub(crate) url: Url,
 }
 
 pub type HttpResult<T> = Result<T, RequestError>;
 
 impl HttpClient {
-    pub fn new() -> Self {
+    /// Creates a new instance of the client with no further configuration. A client initialized
+    /// with this method can not be used for any requests that require authentication.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The base URL of a polyproto home server.
+    pub fn new(url: &str) -> HttpResult<Self> {
         let client = reqwest::Client::new();
         let headers = reqwest::header::HeaderMap::new();
-        Self { client, headers }
+        let url = Url::parse(url)?;
+
+        Ok(Self {
+            client,
+            headers,
+            url,
+        })
     }
 
-    /// Creates a new instance of the client with the provided headers.
-    pub fn with_headers(mut self, headers: reqwest::header::HeaderMap) -> Self {
+    /// Sets the headers for the client.
+    pub fn headers(&mut self, headers: reqwest::header::HeaderMap) {
         self.headers = headers;
-        self
+    }
+
+    /// Returns the URL
+    pub fn url(&self) -> String {
+        self.url.to_string()
+    }
+
+    /// Sets the base URL of the client.
+    pub fn set_url(&mut self, url: &str) -> HttpResult<()> {
+        self.url = Url::parse(url)?;
+        Ok(())
     }
 
     /// Sends a request and returns the response.
-    pub async fn request(
+    pub async fn request<T: Into<reqwest::Body>>(
         &self,
         method: reqwest::Method,
         url: &str,
-        body: Option<String>,
+        body: Option<T>,
     ) -> Result<reqwest::Response, reqwest::Error> {
         // TODO: Parse url using url lib
         let mut request = self.client.request(method, url);
