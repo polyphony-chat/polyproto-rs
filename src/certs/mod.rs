@@ -49,6 +49,12 @@ impl DerefMut for SessionId {
     }
 }
 
+impl std::fmt::Display for SessionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.session_id.fmt(f)
+    }
+}
+
 impl SessionId {
     #[allow(clippy::new_ret_no_self)]
     /// Creates a new [SessionId] which can be converted into an [Attribute] using `.as_attribute()`,
