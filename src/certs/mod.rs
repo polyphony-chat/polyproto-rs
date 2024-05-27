@@ -5,9 +5,12 @@
 use std::ops::{Deref, DerefMut};
 
 use der::asn1::{BitString, Ia5String};
+use der::pem::LineEnding;
+use der::{Decode, DecodePem, Encode, EncodePem};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 use x509_cert::name::Name;
 
+use crate::errors::ConversionError;
 use crate::{Constrained, ConstraintError, OID_RDN_DOMAIN_COMPONENT};
 
 /// Additional capabilities ([x509_cert::ext::Extensions] or [x509_cert::attr::Attributes], depending
@@ -90,6 +93,32 @@ pub struct PublicKeyInfo {
     pub algorithm: AlgorithmIdentifierOwned,
     /// The public key, represented as a [BitString].
     pub public_key_bitstring: BitString,
+}
+
+impl PublicKeyInfo {
+    /// Create a new [PublicKeyInfo] from the provided DER encoded data. The data must be a valid,
+    /// DER encoded PKCS #10 `SubjectPublicKeyInfo` structure. The caller is responsible for
+    /// verifying the correctness of the resulting data before using it.
+    pub fn from_der(value: &str) -> Result<Self, ConversionError> {
+        Ok(SubjectPublicKeyInfoOwned::from_der(value.as_bytes())?.into())
+    }
+
+    /// Create a new [PublicKeyInfo] from the provided PEM encoded data. The data must be a valid,
+    /// PEM encoded PKCS #10 `SubjectPublicKeyInfo` structure. The caller is responsible for
+    /// verifying the correctness of the resulting data before using it.
+    pub fn from_pem(value: &str) -> Result<Self, ConversionError> {
+        Ok(SubjectPublicKeyInfoOwned::from_pem(value.as_bytes())?.into())
+    }
+
+    /// Encode this type as DER, returning a byte vector.
+    pub fn to_der(&self) -> Result<Vec<u8>, ConversionError> {
+        Ok(SubjectPublicKeyInfoOwned::from(self.clone()).to_der()?)
+    }
+
+    /// Encode this type as PEM, returning a string.
+    pub fn to_pem(&self, line_ending: LineEnding) -> Result<String, ConversionError> {
+        Ok(SubjectPublicKeyInfoOwned::from(self.clone()).to_pem(line_ending)?)
+    }
 }
 
 impl From<SubjectPublicKeyInfoOwned> for PublicKeyInfo {
