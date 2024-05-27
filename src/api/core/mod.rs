@@ -7,25 +7,31 @@ use std::str::FromStr;
 use url::Url;
 use x509_cert::serial_number::SerialNumber;
 
-use crate::api::core::core::v1::GET_CHALLENGE_STRING;
 use crate::certs::idcert::IdCert;
 use crate::certs::idcsr::IdCsr;
 use crate::certs::{PublicKeyInfo, SessionId};
 use crate::key::PublicKey;
 use crate::signature::Signature;
+use crate::types::routes::core::v1::*;
 use crate::types::ChallengeString;
 
 use super::{HttpClient, HttpResult};
 
-use crate::types::routes::*;
 // TODO: Use URL parsing to build the correct URL
 // TODO: MLS routes still missing
 
+impl HttpClient {
+    fn normalize_url(url: &str, path: &str) -> Result<String, url::ParseError> {
+        let parsed_url = Url::from_str(url)?;
+        Ok(parsed_url.join(path)?.to_string())
+    }
+}
+
 // Core Routes: No registration needed
 impl HttpClient {
+    /// Request a [ChallengeString] from the server.
     pub async fn get_challenge_string(&self, url: &str) -> HttpResult<ChallengeString> {
-        let parsed_url = Url::from_str(url)?;
-        let request_url = parsed_url.join(GET_CHALLENGE_STRING.path)?.to_string();
+        let request_url = HttpClient::normalize_url(url, GET_CHALLENGE_STRING.path)?;
         let request_response = self
             .client
             .request(GET_CHALLENGE_STRING.method.clone(), request_url)
@@ -34,11 +40,20 @@ impl HttpClient {
         HttpClient::handle_response(request_response).await
     }
 
+    /// Request the server to rotate its identity key and return the new [IdCert]. This route is
+    /// only available to server administrators.
     pub async fn rotate_server_identity_key<S: Signature, P: PublicKey<S>>(
         &self,
         url: &str,
     ) -> HttpResult<IdCert<S, P>> {
-        todo!()
+        let request_url = HttpClient::normalize_url(url, ROTATE_SERVER_IDENTITY_KEY.path)?;
+        let request_response = self
+            .client
+            .request(ROTATE_SERVER_IDENTITY_KEY.method.clone(), request_url)
+            .send()
+            .await;
+        let pem = HttpClient::handle_response::<String>(request_response).await?;
+        Ok(IdCert::from_pem(pem.as_str(), None)?)
     }
 
     pub async fn get_server_id_cert<S: Signature, P: PublicKey<S>>(
