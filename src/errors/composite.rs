@@ -53,6 +53,8 @@ pub enum RequestError {
     DeserializationError(#[from] serde_json::Error),
     #[error("Failed to convert response into expected type")]
     ConversionError(#[from] ConversionError),
+    #[error(transparent)]
+    UrlError(#[from] url::ParseError),
 }
 
 impl From<der::Error> for ConversionError {
