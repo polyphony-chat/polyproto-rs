@@ -2,16 +2,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use std::os::unix;
 use std::str::FromStr;
 
-use http::response;
+use http::{request, response};
 use serde_json::json;
 use url::Url;
 use x509_cert::serial_number::SerialNumber;
 
 use crate::certs::idcert::IdCert;
 use crate::certs::idcsr::IdCsr;
-use crate::certs::{PublicKeyInfo, SessionId};
+use crate::certs::{PublicKeyInfo, SessionId, Target};
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::types::routes::core::v1::*;
@@ -72,7 +73,7 @@ impl HttpClient {
             .client
             .request(GET_SERVER_PUBLIC_IDCERT.method.clone(), request_url);
         if let Some(time) = unix_time {
-            request = request.body(format!("{{\"timestamp\": {}}}", time).to_string());
+            request = request.body(json!({ "timestamp": time }).to_string());
         }
         let response = request.send().await;
         let pem = HttpClient::handle_response::<String>(response).await?;
@@ -82,7 +83,9 @@ impl HttpClient {
         )?)
     }
 
-    /// Request the server's [PublicKeyInfo].
+    /// Request the server's [PublicKeyInfo]. Specify a unix timestamp to get the public key which
+    /// the home server used at that time. If no timestamp is provided, the current public key is
+    /// returned.
     pub async fn get_server_public_key_info(
         &self,
         url: &str,
@@ -100,26 +103,59 @@ impl HttpClient {
         Ok(PublicKeyInfo::from_pem(pem.as_str())?)
     }
 
+    /// Request the [IdCert]s of an actor. Specify the federation ID of the actor to get the IdCerts
+    /// of that actor. Returns a vector of IdCerts which were valid for the actor at the specified
+    /// time. If no timestamp is provided, the current IdCerts are returned.
     pub async fn get_actor_id_certs<S: Signature, P: PublicKey<S>>(
         &self,
         url: &str,
-        fids: &[String],
+        fid: &str,
+        unix_time: Option<u64>,
     ) -> HttpResult<Vec<IdCert<S, P>>> {
-        let request_url = HttpClient::normalize_url(url, GET_ACTOR_IDCERTS.path)?;
-
-        todo!()
+        let request_url =
+            HttpClient::normalize_url(url, &format!("{}?{}", GET_ACTOR_IDCERTS.path, fid))?;
+        let mut request = self
+            .client
+            .request(GET_ACTOR_IDCERTS.method.clone(), request_url);
+        if let Some(time) = unix_time {
+            request = request.body(json!({ "timestamp": time }).to_string());
+        }
+        let response = request.send().await;
+        let pems = HttpClient::handle_response::<Vec<String>>(response).await?;
+        let mut vec_idcert = Vec::new();
+        for pem in pems.into_iter() {
+            vec_idcert.push(IdCert::<S, P>::from_pem(
+                pem.as_str(),
+                Some(crate::certs::Target::Actor),
+            )?)
+        }
+        Ok(vec_idcert)
     }
 
+    /// Inform a foreign server about a new [IdCert] for a session.
     pub async fn update_session_id_cert<S: Signature, P: PublicKey<S>>(
         &self,
         url: &str,
         new_cert: IdCert<S, P>,
     ) -> HttpResult<()> {
-        todo!()
+        let request_url = HttpClient::normalize_url(url, UPDATE_SESSION_IDCERT.path)?;
+        self.client
+            .request(UPDATE_SESSION_IDCERT.method.clone(), request_url)
+            .body(new_cert.to_pem(der::pem::LineEnding::LF)?)
+            .send()
+            .await?;
+        Ok(())
     }
 
+    /// Tell a server to delete a session, revoking the session token.
     pub async fn delete_session(&self, url: &str, session_id: &SessionId) -> HttpResult<()> {
-        todo!()
+        let request_url =
+            HttpClient::normalize_url(url, &format!("{}{}", DELETE_SESSION.path, session_id))?;
+        self.client
+            .request(DELETE_SESSION.method.clone(), request_url)
+            .send()
+            .await?;
+        Ok(())
     }
 }
 
