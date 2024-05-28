@@ -11,7 +11,10 @@ use crate::errors::RequestError;
 pub mod core;
 
 #[derive(Debug, Clone)]
-/// A client for making HTTP requests to a polyproto home server.
+/// A client for making HTTP requests to a polyproto home server. Stores headers such as the
+/// authentication token, and the base URL of the server. Both the headers and the URL can be
+/// modified after the client is created. However, the intended use case is to create one client
+/// per actor, and use it for all requests made by that actor.
 ///
 /// # Example
 ///
@@ -24,7 +27,7 @@ pub mod core;
 /// let challenge: ChallengeString = client.get_challenge_string().await.unwrap();
 /// ```
 pub struct HttpClient {
-    client: reqwest::Client,
+    pub client: reqwest::Client,
     headers: reqwest::header::HeaderMap,
     pub(crate) url: Url,
 }
@@ -32,8 +35,8 @@ pub struct HttpClient {
 pub type HttpResult<T> = Result<T, RequestError>;
 
 impl HttpClient {
-    /// Creates a new instance of the client with no further configuration. A client initialized
-    /// with this method can not be used for any requests that require authentication.
+    /// Creates a new instance of the client with no further configuration. To access routes which
+    /// require authentication, you must set the authentication header using the `headers` method.
     ///
     /// # Arguments
     ///
