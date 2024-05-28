@@ -75,14 +75,14 @@ impl HttpClient {
         method: reqwest::Method,
         url: &str,
         body: Option<T>,
-    ) -> Result<reqwest::Response, reqwest::Error> {
-        // TODO: Parse url using url lib
+    ) -> HttpResult<reqwest::Response> {
+        Url::parse(url)?;
         let mut request = self.client.request(method, url);
         request = request.headers(self.headers.clone());
         if let Some(body) = body {
             request = request.body(body);
         }
-        request.send().await
+        Ok(request.send().await?)
     }
 
     /// Sends a request, handles the response, and returns the deserialized object.
