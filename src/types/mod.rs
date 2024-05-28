@@ -15,6 +15,7 @@ pub mod routes {
         pub path: &'static str,
     }
 
+    #[cfg(not(tarpaulin_include))]
     pub mod core {
         pub mod v1 {
             use super::super::Route;
