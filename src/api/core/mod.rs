@@ -110,8 +110,8 @@ impl HttpClient {
         let response = request.send().await;
         let pems = HttpClient::handle_response::<Vec<IdCertExtJson>>(response).await?;
         let mut vec_idcert = Vec::new();
-        for pem in pems.into_iter() {
-            vec_idcert.push(IdCertExt::try_from(pem)?);
+        for json in pems.into_iter() {
+            vec_idcert.push(IdCertExt::try_from(json)?);
         }
         Ok(vec_idcert)
     }
