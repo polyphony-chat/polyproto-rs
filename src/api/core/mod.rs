@@ -97,7 +97,7 @@ impl HttpClient {
         &self,
         fid: &str,
         unix_time: Option<u64>,
-    ) -> HttpResult<Vec<IdCert<S, P>>> {
+    ) -> HttpResult<Vec<IdCertExt<S, P>>> {
         let request_url = self
             .url
             .join(&format!("{}?{}", GET_ACTOR_IDCERTS.path, fid))?;
@@ -108,13 +108,10 @@ impl HttpClient {
             request = request.body(json!({ "timestamp": time }).to_string());
         }
         let response = request.send().await;
-        let pems = HttpClient::handle_response::<Vec<String>>(response).await?;
+        let pems = HttpClient::handle_response::<Vec<IdCertExtJson>>(response).await?;
         let mut vec_idcert = Vec::new();
         for pem in pems.into_iter() {
-            vec_idcert.push(IdCert::<S, P>::from_pem(
-                pem.as_str(),
-                Some(crate::certs::Target::Actor),
-            )?)
+            vec_idcert.push(IdCertExt::try_from(pem)?);
         }
         Ok(vec_idcert)
     }
@@ -281,6 +278,43 @@ impl TryFrom<EncryptedPkmJson> for EncryptedPkm {
         Ok(Self {
             serial_number: SerialNumber::new(pkm.serial_number.as_bytes())?,
             key_data: pkm.key_data,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Represents an [IdCert] with an additional field `invalidated` which indicates whether the
+/// certificate has been invalidated. This type is used in the API as a response to the
+/// `GET /.p2/core/v1/idcert/actor/:fid`
+/// route. Can be converted to and (try)from [IdCertExtJson].
+pub struct IdCertExt<S: Signature, P: PublicKey<S>> {
+    pub id_cert: IdCert<S, P>,
+    pub invalidated: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+/// Stringly typed version of [IdCertExt], used for serialization and deserialization.
+pub struct IdCertExtJson {
+    pub id_cert: String,
+    pub invalidated: bool,
+}
+
+impl<S: Signature, P: PublicKey<S>> From<IdCertExt<S, P>> for IdCertExtJson {
+    fn from(id_cert: IdCertExt<S, P>) -> Self {
+        Self {
+            id_cert: id_cert.id_cert.to_pem(der::pem::LineEnding::LF).unwrap(),
+            invalidated: id_cert.invalidated,
+        }
+    }
+}
+
+impl<S: Signature, P: PublicKey<S>> TryFrom<IdCertExtJson> for IdCertExt<S, P> {
+    type Error = ConversionError;
+
+    fn try_from(id_cert: IdCertExtJson) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id_cert: IdCert::from_pem(id_cert.id_cert.as_str(), Some(crate::certs::Target::Actor))?,
+            invalidated: id_cert.invalidated,
         })
     }
 }
