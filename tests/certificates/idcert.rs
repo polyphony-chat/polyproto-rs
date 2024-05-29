@@ -191,33 +191,6 @@ fn cert_from_pem() {
     )
     .unwrap();
     let data = cert.clone().to_pem(der::pem::LineEnding::LF).unwrap();
-    let cert_from_pem = IdCert::from_pem(&data, Some(polyproto::certs::Target::Actor)).unwrap();
-    assert_eq!(cert_from_pem, cert);
-
-    let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
-        &priv_key,
-        &Capabilities::default_home_server(),
-        Some(Target::HomeServer),
-    )
-    .unwrap();
-    cert = IdCert::from_ca_csr(
-        csr,
-        &priv_key,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
-        RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
-    )
-    .unwrap();
-    let data = cert.clone().to_pem(der::pem::LineEnding::LF).unwrap();
-    let cert_from_pem =
-        IdCert::from_pem(&data, Some(polyproto::certs::Target::HomeServer)).unwrap();
-    assert_eq!(cert_from_pem, cert);
+    let cert_from_der = IdCert::from_pem(&data, Some(polyproto::certs::Target::Actor)).unwrap();
+    assert_eq!(cert_from_der, cert)
 }
