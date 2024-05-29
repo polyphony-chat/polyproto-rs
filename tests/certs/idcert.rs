@@ -172,7 +172,7 @@ fn cert_from_pem() {
     )
     .unwrap();
 
-    let mut cert = IdCert::from_actor_csr(
+    let cert = IdCert::from_actor_csr(
         csr,
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
@@ -191,12 +191,47 @@ fn cert_from_pem() {
     )
     .unwrap();
     let data = cert.clone().to_pem(der::pem::LineEnding::LF).unwrap();
-    let cert_from_der = IdCert::from_pem(&data, Some(polyproto::certs::Target::Actor)).unwrap();
-    assert_eq!(cert_from_der, cert)
+    let cert_from_pem = IdCert::from_pem(&data, Some(polyproto::certs::Target::Actor)).unwrap();
+    log::trace!(
+        "Cert from pem key usages: {:#?}",
+        cert_from_pem.id_cert_tbs.capabilities.key_usage.key_usages
+    );
+    assert_eq!(cert_from_pem, cert);
+
+    let csr = polyproto::certs::idcsr::IdCsr::new(
+        &RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
+        &priv_key,
+        &Capabilities::default_home_server(),
+        Some(Target::HomeServer),
+    )
+    .unwrap();
+    let cert = IdCert::from_ca_csr(
+        csr,
+        &priv_key,
+        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
+        Validity {
+            not_before: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
+            ),
+            not_after: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
+            ),
+        },
+    )
+    .unwrap();
+    let data = cert.clone().to_pem(der::pem::LineEnding::LF).unwrap();
+    let cert_from_pem =
+        IdCert::from_pem(&data, Some(polyproto::certs::Target::HomeServer)).unwrap();
+    log::trace!(
+        "Cert from pem key usages: {:#?}",
+        cert_from_pem.id_cert_tbs.capabilities.key_usage.key_usages
+    );
+    assert_eq!(cert_from_pem, cert);
 }
 
 #[test]
-fn test_bitstings() {
+fn test_bitstrings() {
     init_logger();
     let data = 255u8.to_be_bytes();
     let bitstring = BitString::new(0, data).unwrap();
@@ -213,7 +248,11 @@ fn test_bitstings() {
     );
     //assert_eq!(bitstring, bitstring_from_any_value); // NOT THE SAME!
     let bitstring_from_any_der = BitString::from_der(&any.to_der().unwrap()).unwrap();
-    log::debug!("Bitstring from Any to_der(): {:#?}", bitstring_from_any_der);
+    log::debug!("Bitstring from Any to_der(): {:#?}", bitstring_from_any_der); // ok
+    log::debug!(
+        "Raw bitstring from any to der: {:?}",
+        bitstring_from_any_der.raw_bytes()
+    );
     log::debug!("raw der bitstring {:?}", bitstring.to_der().unwrap());
     log::debug!("raw bitstring {:?}", bitstring.raw_bytes()); // Raw bytes is [255], don't use this
 }

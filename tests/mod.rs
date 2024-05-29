@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 pub(crate) mod api;
-pub(crate) mod certificates;
+pub(crate) mod certs;
 pub(crate) mod common;
 
 use polyproto::Constrained;
