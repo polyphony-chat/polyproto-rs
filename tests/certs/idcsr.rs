@@ -47,8 +47,19 @@ fn csr_from_pem() {
     )
     .unwrap();
     let data = csr.clone().to_pem(der::pem::LineEnding::LF).unwrap();
-    let csr_from_der = IdCsr::from_pem(&data, Some(polyproto::certs::Target::Actor)).unwrap();
-    assert_eq!(csr_from_der, csr)
+    let csr_from_pem = IdCsr::from_pem(&data, Some(polyproto::certs::Target::Actor)).unwrap();
+    assert_eq!(csr_from_pem, csr);
+
+    let csr = polyproto::certs::idcsr::IdCsr::new(
+        &RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
+        &priv_key,
+        &Capabilities::default_home_server(),
+        Some(Target::HomeServer),
+    )
+    .unwrap();
+    let data = csr.clone().to_pem(der::pem::LineEnding::LF).unwrap();
+    let csr_from_pem = IdCsr::from_pem(&data, Some(polyproto::certs::Target::HomeServer)).unwrap();
+    assert_eq!(csr_from_pem, csr);
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -99,5 +110,16 @@ fn csr_from_der() {
     .unwrap();
     let data = csr.clone().to_der().unwrap();
     let csr_from_der = IdCsr::from_der(&data, Some(polyproto::certs::Target::Actor)).unwrap();
-    assert_eq!(csr_from_der, csr)
+    assert_eq!(csr_from_der, csr);
+
+    let csr = polyproto::certs::idcsr::IdCsr::new(
+        &RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
+        &priv_key,
+        &Capabilities::default_home_server(),
+        Some(Target::HomeServer),
+    )
+    .unwrap();
+    let data = csr.clone().to_der().unwrap();
+    let csr_from_der = IdCsr::from_der(&data, Some(polyproto::certs::Target::HomeServer)).unwrap();
+    assert_eq!(csr_from_der, csr);
 }
