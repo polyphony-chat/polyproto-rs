@@ -44,6 +44,7 @@ impl HttpClient {
             .send()
             .await;
         let pem = HttpClient::handle_response::<String>(request_response).await?;
+        log::debug!("Received IdCert: \n{}", pem);
         Ok(IdCert::from_pem(
             pem.as_str(),
             Some(crate::certs::Target::HomeServer),
