@@ -210,7 +210,7 @@ fn test_bitstings() {
         "Bitstring from Any value(): {:#?}",
         bitstring_from_any_value
     );
-    //assert_eq!(bitstring, bitstring_from_any_value);
+    //assert_eq!(bitstring, bitstring_from_any_value); // NOT THE SAME!
     log::debug!("raw der bitstring {:?}", bitstring.to_der().unwrap());
     log::debug!("raw bitstring {:?}", bitstring.raw_bytes()); // Raw bytes is [255], don't use this
 }
