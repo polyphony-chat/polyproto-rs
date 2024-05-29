@@ -145,7 +145,7 @@ fn validate_dc_matches_dc_in_uid(
     let mut index = 0u8;
     // Iterate over the DCs in the UID and check if they are equal to the DCs in the DCs
     for component in dc_normalized_uid.iter() {
-        debug!("Checking if component \"{}\"...", component);
+        trace!("Checking if component \"{}\"...", component);
         let equivalent_dc = match vec_dc.get(index as usize) {
             Some(dc) => dc,
             None => {
@@ -155,7 +155,7 @@ fn validate_dc_matches_dc_in_uid(
             }
         };
         let equivalent_dc = equivalent_dc.to_string().split_at(3).1.to_string();
-        debug!(
+        trace!(
             "...is equal to component \"{}\"...",
             equivalent_dc.to_string()
         );
@@ -176,7 +176,7 @@ fn validate_dc_matches_dc_in_uid(
     Ok(())
 }
 
-use log::debug;
+use log::trace;
 use x509_cert::attr::AttributeTypeAndValue;
 
 fn validate_rdn_uid(item: &AttributeTypeAndValue) -> Result<(), ConstraintError> {
