@@ -66,19 +66,49 @@ fn to_bitstring() {
 #[test]
 fn from_bitstring() {
     let bitstring = BitString::new(7, [128, 255]).unwrap();
-    let key_usages = KeyUsages::from_bitstring(bitstring).unwrap();
-    assert_eq!(
-        key_usages.key_usages,
-        vec![
-            KeyUsage::DigitalSignature,
-            KeyUsage::ContentCommitment,
-            KeyUsage::KeyEncipherment,
-            KeyUsage::DataEncipherment,
-            KeyUsage::KeyAgreement,
-            KeyUsage::KeyCertSign,
-            KeyUsage::CrlSign,
-            KeyUsage::EncipherOnly,
-            KeyUsage::DecipherOnly
-        ]
-    );
+    let mut key_usages = KeyUsages::from_bitstring(bitstring).unwrap();
+    key_usages.key_usages.sort();
+    let mut expected = [
+        KeyUsage::DigitalSignature,
+        KeyUsage::ContentCommitment,
+        KeyUsage::KeyEncipherment,
+        KeyUsage::DataEncipherment,
+        KeyUsage::KeyAgreement,
+        KeyUsage::KeyCertSign,
+        KeyUsage::CrlSign,
+        KeyUsage::EncipherOnly,
+        KeyUsage::DecipherOnly,
+    ];
+    expected.sort();
+    assert_eq!(key_usages.key_usages, expected);
+
+    let bitstring = BitString::new(7, [128, 0]).unwrap();
+    let mut key_usages = KeyUsages::from_bitstring(bitstring).unwrap();
+    key_usages.key_usages.sort();
+    let mut expected = [KeyUsage::DecipherOnly];
+    expected.sort();
+    assert_eq!(key_usages.key_usages, expected);
+
+    let bitstring = BitString::new(0, [128]).unwrap();
+    let mut key_usages = KeyUsages::from_bitstring(bitstring).unwrap();
+    key_usages.key_usages.sort();
+    let mut expected = [KeyUsage::DigitalSignature];
+    expected.sort();
+    assert_eq!(key_usages.key_usages, expected);
+
+    let bitstring = BitString::new(0, [255]).unwrap();
+    let mut key_usages = KeyUsages::from_bitstring(bitstring).unwrap();
+    key_usages.key_usages.sort();
+    let mut expected = [
+        KeyUsage::DigitalSignature,
+        KeyUsage::ContentCommitment,
+        KeyUsage::KeyEncipherment,
+        KeyUsage::DataEncipherment,
+        KeyUsage::KeyAgreement,
+        KeyUsage::KeyCertSign,
+        KeyUsage::CrlSign,
+        KeyUsage::EncipherOnly,
+    ];
+    expected.sort();
+    assert_eq!(key_usages.key_usages, expected);
 }
