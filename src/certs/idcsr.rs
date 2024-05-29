@@ -57,8 +57,9 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     ///   - Organizational Unit: Optional. May be repeated.
     /// - **signing_key**: Subject signing key. Will NOT be included in the certificate. Is used to
     ///                    sign the CSR.
-    /// - **subject_unique_id**: [Uint], subject (actor) session ID. MUST NOT exceed 32 characters
-    ///                          in length.
+    /// - **capabilities**: The capabilities requested by the subject.
+    /// - **target**: The [Target] for which the CSR is intended. This is used to validate the CSR
+    ///               against the polyproto specification.
     ///
     /// The resulting `IdCsr` is guaranteed to be well-formed and up to polyproto specification,
     /// if the correct [Target] for the CSRs intended usage context is provided.
@@ -171,6 +172,9 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
     ///
     /// The resulting `IdCsrInner` is guaranteed to be well-formed and up to polyproto specification,
     /// if the correct [Target] for the CSRs intended usage context is provided.
+    ///
+    /// It is recommended to use [IdCsr::new] instead of this function, as it performs additional
+    /// validation and signing of the CSR.
     pub fn new(
         subject: &Name,
         public_key: &P,
