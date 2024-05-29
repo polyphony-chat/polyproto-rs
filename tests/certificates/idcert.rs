@@ -8,7 +8,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use der::asn1::{BitString, Ia5String, Uint, UtcTime};
-use der::Encode;
+use der::{Decode, Encode};
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::{self, Capabilities};
 use polyproto::certs::idcert::IdCert;
@@ -193,4 +193,24 @@ fn cert_from_pem() {
     let data = cert.clone().to_pem(der::pem::LineEnding::LF).unwrap();
     let cert_from_der = IdCert::from_pem(&data, Some(polyproto::certs::Target::Actor)).unwrap();
     assert_eq!(cert_from_der, cert)
+}
+
+#[test]
+fn test_bitstings() {
+    init_logger();
+    let data = 255u8.to_be_bytes();
+    let bitstring = BitString::new(0, data).unwrap();
+    log::debug!("Bitstring: {:#?}", bitstring);
+    let der = bitstring.to_der().unwrap();
+    let any = der::Any::from_der(&der).unwrap();
+    log::debug!("Any: {:#?}", any);
+    log::debug!("Bitstring: {:#?}", BitString::from_der(&der).unwrap());
+    let bitstring_from_any_value = BitString::from_bytes(any.value()).unwrap(); // Doesn't work!
+    log::debug!(
+        "Bitstring from Any value(): {:#?}",
+        bitstring_from_any_value
+    );
+    //assert_eq!(bitstring, bitstring_from_any_value);
+    log::debug!("raw der bitstring {:?}", bitstring.to_der().unwrap());
+    log::debug!("raw bitstring {:?}", bitstring.raw_bytes()); // Raw bytes is [255], don't use this
 }
