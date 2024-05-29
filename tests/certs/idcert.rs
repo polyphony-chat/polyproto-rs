@@ -230,29 +230,78 @@ fn cert_from_pem() {
     assert_eq!(cert_from_pem, cert);
 }
 
-#[test]
-fn test_bitstrings() {
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn cert_from_der() {
     init_logger();
-    let data = 255u8.to_be_bytes();
-    let bitstring = BitString::new(0, data).unwrap();
-    log::debug!("Bitstring: {:#?}", bitstring);
-    let der = bitstring.to_der().unwrap();
-    let any = der::Any::from_der(&der).unwrap();
-    log::debug!("Any: {:#?}", any);
-    log::debug!("Any as bytes: {:#?}", any.to_der().unwrap());
-    log::debug!("Bitstring: {:#?}", BitString::from_der(&der).unwrap());
-    let bitstring_from_any_value = BitString::from_bytes(any.value()).unwrap(); // Doesn't work!
-    log::debug!(
-        "Bitstring from Any value(): {:#?}",
-        bitstring_from_any_value
+    let mut csprng = rand::rngs::OsRng;
+    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
+
+    let csr = polyproto::certs::idcsr::IdCsr::new(
+        &RdnSequence::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap(),
+        &priv_key,
+        &Capabilities::default_actor(),
+        Some(Target::Actor),
+    )
+    .unwrap();
+
+    let cert = IdCert::from_actor_csr(
+        csr,
+        &priv_key,
+        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        RdnSequence::from_str(
+            "CN=root,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
+        )
+        .unwrap(),
+        Validity {
+            not_before: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
+            ),
+            not_after: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
+            ),
+        },
+    )
+    .unwrap();
+    let data = cert.clone().to_der().unwrap();
+    let cert_from_der = IdCert::from_der(&data, Some(polyproto::certs::Target::Actor)).unwrap();
+    log::trace!(
+        "Cert from pem key usages: {:#?}",
+        cert_from_der.id_cert_tbs.capabilities.key_usage.key_usages
     );
-    //assert_eq!(bitstring, bitstring_from_any_value); // NOT THE SAME!
-    let bitstring_from_any_der = BitString::from_der(&any.to_der().unwrap()).unwrap();
-    log::debug!("Bitstring from Any to_der(): {:#?}", bitstring_from_any_der); // ok
-    log::debug!(
-        "Raw bitstring from any to der: {:?}",
-        bitstring_from_any_der.raw_bytes()
+    assert_eq!(cert_from_der, cert);
+
+    let csr = polyproto::certs::idcsr::IdCsr::new(
+        &RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
+        &priv_key,
+        &Capabilities::default_home_server(),
+        Some(Target::HomeServer),
+    )
+    .unwrap();
+    let cert = IdCert::from_ca_csr(
+        csr,
+        &priv_key,
+        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
+        Validity {
+            not_before: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
+            ),
+            not_after: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
+            ),
+        },
+    )
+    .unwrap();
+    let data = cert.clone().to_der().unwrap();
+    let cert_from_der =
+        IdCert::from_der(&data, Some(polyproto::certs::Target::HomeServer)).unwrap();
+    log::trace!(
+        "Cert from pem key usages: {:#?}",
+        cert_from_der.id_cert_tbs.capabilities.key_usage.key_usages
     );
-    log::debug!("raw der bitstring {:?}", bitstring.to_der().unwrap());
-    log::debug!("raw bitstring {:?}", bitstring.raw_bytes()); // Raw bytes is [255], don't use this
+    assert_eq!(cert_from_der, cert);
 }
