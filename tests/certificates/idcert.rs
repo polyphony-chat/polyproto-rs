@@ -204,6 +204,7 @@ fn test_bitstings() {
     let der = bitstring.to_der().unwrap();
     let any = der::Any::from_der(&der).unwrap();
     log::debug!("Any: {:#?}", any);
+    log::debug!("Any as bytes: {:#?}", any.to_der().unwrap());
     log::debug!("Bitstring: {:#?}", BitString::from_der(&der).unwrap());
     let bitstring_from_any_value = BitString::from_bytes(any.value()).unwrap(); // Doesn't work!
     log::debug!(
@@ -211,6 +212,8 @@ fn test_bitstings() {
         bitstring_from_any_value
     );
     //assert_eq!(bitstring, bitstring_from_any_value); // NOT THE SAME!
+    let bitstring_from_any_der = BitString::from_der(&any.to_der().unwrap()).unwrap();
+    log::debug!("Bitstring from Any to_der(): {:#?}", bitstring_from_any_der);
     log::debug!("raw der bitstring {:?}", bitstring.to_der().unwrap());
     log::debug!("raw bitstring {:?}", bitstring.raw_bytes()); // Raw bytes is [255], don't use this
 }

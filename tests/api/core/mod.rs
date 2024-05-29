@@ -6,9 +6,9 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use der::asn1::{Uint, UtcTime};
+use httptest::matchers::request;
 use httptest::matchers::request::method_path;
-use httptest::matchers::{eq, json_decoded, request};
-use httptest::responders::{json_encoded, status_code};
+use httptest::responders::json_encoded;
 use httptest::*;
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;

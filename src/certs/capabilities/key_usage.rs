@@ -253,7 +253,7 @@ impl TryFrom<Attribute> for KeyUsages {
             }
         };
         let inner_value = value.values.get(0).expect("Illegal state. Please report this error to https://github.com/polyphony-chat/polyproto");
-        KeyUsages::from_bitstring(BitString::from_der(inner_value.value())?)
+        KeyUsages::from_bitstring(BitString::from_der(&inner_value.to_der()?)?)
     }
 }
 
@@ -270,7 +270,7 @@ impl TryFrom<Extension> for KeyUsages {
             )));
         }
         let any = Any::from_der(value.extn_value.as_bytes())?;
-        KeyUsages::from_bitstring(BitString::from_bytes(any.value())?)
+        KeyUsages::from_bitstring(BitString::from_der(&any.to_der()?)?)
     }
 }
 

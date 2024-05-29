@@ -15,12 +15,10 @@ use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 
 pub fn init_logger() {
-    std::env::set_var("RUST_LOG", "trace");
-    env_logger::builder()
-        .filter_module("crate", log::LevelFilter::Trace)
-        .is_test(true)
-        .try_init()
-        .unwrap_or(());
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "trace");
+    }
+    env_logger::builder().is_test(true).try_init().unwrap_or(());
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
