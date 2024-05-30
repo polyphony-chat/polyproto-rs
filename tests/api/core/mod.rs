@@ -13,7 +13,10 @@ use httptest::*;
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
-use polyproto::types::routes::core::v1::{GET_CHALLENGE_STRING, ROTATE_SERVER_IDENTITY_KEY};
+use polyproto::key::PublicKey;
+use polyproto::types::routes::core::v1::{
+    GET_CHALLENGE_STRING, GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY,
+};
 use polyproto::Name;
 use serde_json::json;
 use x509_cert::time::{Time, Validity};
@@ -91,4 +94,35 @@ async fn rotate_server_identity_key() {
         .await
         .unwrap();
     assert_eq!(cert.to_pem(der::pem::LineEnding::LF).unwrap(), cert_pem);
+}
+
+#[tokio::test]
+async fn get_server_public_key() {
+    init_logger();
+    let mut csprng = rand::rngs::OsRng;
+    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
+    let public_key_info = priv_key.public_key.public_key_info();
+    let pem = public_key_info.to_pem(der::pem::LineEnding::LF).unwrap();
+    log::debug!("Generated Public Key:\n{}", pem);
+    let server = Server::run();
+    server.expect(
+        Expectation::matching(method_path(
+            GET_SERVER_PUBLIC_KEY.method.as_str(),
+            GET_SERVER_PUBLIC_KEY.path,
+        ))
+        .respond_with(json_encoded(json!(public_key_info
+            .to_pem(der::pem::LineEnding::LF)
+            .unwrap()))),
+    );
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    let public_key = client.get_server_public_key_info(None).await.unwrap();
+    log::debug!(
+        "Received Public Key:\n{}",
+        public_key.to_pem(der::pem::LineEnding::LF).unwrap()
+    );
+    assert_eq!(
+        public_key.public_key_bitstring,
+        priv_key.public_key.public_key_info().public_key_bitstring
+    );
 }
