@@ -20,8 +20,10 @@ running.
 things may break or change at any point in time.**
 
 This crate extends upon types offered by [der](https://crates.io/crates/der) and
-[spki](https://crates.io/crates/spki). As such, these crates are required dependencies for
-projects looking to implement polyproto.
+[spki](https://crates.io/crates/spki). This crate exports both of these crates' types and traits
+under the `der` and `spki` modules, respectively. It is also possible to use polyproto together
+with the `x509_cert` crate, as all the polyproto certificate types are compatible with the
+certificate types from that crate.
 
 Start by implementing the trait [crate::signature::Signature] for a signature algorithm of your
 choice. Popular crates for cryptography and signature algorithms supply their own `PublicKey` and
@@ -41,17 +43,26 @@ implementing polyproto by transforming the
 [polyproto specification](https://docs.polyphony.chat/Protocol%20Specifications/core/) into
 well-defined yet adaptable Rust types.
 
-```toml
-[dependencies]
-polyproto = { version = "0", features = ["wasm"] }
-```
+## Safety
+
+Please refer to the documentation of individual functions for information on which safety guarantees
+they provide. Methods returning certificates, certificate requests and other types where the
+validity and correctness of the data has a chance of impacting the security of a system always
+mention the safety guarantees they provide in their respective documentation.
+
+This crate has not undergone any security audits.
 
 ## WebAssembly
 
 This crate is designed to work with the `wasm32-unknown-unknown` target. To compile for `wasm`, you
 will have to use the `wasm` feature:
 
-## reqwest
+```toml
+[dependencies]
+polyproto = { version = "0", features = ["wasm"] }
+```
+
+## HTTP API client through reqwest
 
 By default, this crate uses `reqwest` for HTTP requests. `reqwest` is an optional dependency, and
 you can disable it by using polyproto with `default-features = false` in your `Cargo.toml`:
