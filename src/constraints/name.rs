@@ -18,6 +18,7 @@ impl Constrained for Name {
     ///     - uniqueIdentifier is the [SessionId] of the actor.
     /// - MAY have "organizational unit" attributes
     /// - MAY have other attributes, which might be ignored by other home servers and other clients.
+    // I apologize. This is horrible. I'll redo it eventually. Depression made me do it. -bitfl0wer
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
         let mut num_cn: u8 = 0;
         let mut num_dc: u8 = 0;
@@ -25,6 +26,7 @@ impl Constrained for Name {
         let mut num_unique_identifier: u8 = 0;
         let mut vec_dc: Vec<RelativeDistinguishedName> = Vec::new();
         let mut uid: RelativeDistinguishedName = RelativeDistinguishedName::default();
+        let mut cn: RelativeDistinguishedName = RelativeDistinguishedName::default();
 
         let rdns = &self.0;
         for rdn in rdns.iter() {
@@ -41,6 +43,7 @@ impl Constrained for Name {
                     }
                     OID_RDN_COMMON_NAME => {
                         num_cn += 1;
+                        cn = rdn.clone();
                         if num_cn > 1 {
                             return Err(ConstraintError::OutOfBounds {
                                 lower: 1,
@@ -62,7 +65,9 @@ impl Constrained for Name {
         vec_dc.reverse();
         if let Some(target) = target {
             match target {
-                Target::Actor => validate_dc_matches_dc_in_uid(vec_dc, uid)?,
+                Target::Actor => {
+                    validate_dc_matches_dc_in_uid(&vec_dc, &uid)?;
+                }
                 Target::HomeServer => {
                     if num_uid > 0 || num_unique_identifier > 0 {
                         return Err(ConstraintError::OutOfBounds {
@@ -76,9 +81,11 @@ impl Constrained for Name {
                 }
             };
         } else if num_uid != 0 {
-            validate_dc_matches_dc_in_uid(vec_dc, uid)?;
+            validate_dc_matches_dc_in_uid(&vec_dc, &uid)?;
         }
-
+        if num_uid != 0 && num_cn != 0 {
+            validate_uid_username_matches_cn(&uid, &cn)?;
+        }
         if num_dc == 0 {
             return Err(ConstraintError::OutOfBounds {
                 lower: 1,
@@ -126,8 +133,8 @@ impl Constrained for Name {
 
 /// Check if the domain components are equal between the UID and the DCs
 fn validate_dc_matches_dc_in_uid(
-    vec_dc: Vec<RelativeDistinguishedName>,
-    uid: RelativeDistinguishedName,
+    vec_dc: &[RelativeDistinguishedName],
+    uid: &RelativeDistinguishedName,
 ) -> Result<(), ConstraintError> {
     // Find the position of the @ in the UID
     let position_of_at = match uid.to_string().find('@') {
@@ -179,6 +186,8 @@ fn validate_dc_matches_dc_in_uid(
 use log::trace;
 use x509_cert::attr::AttributeTypeAndValue;
 
+/// Validate the UID field in the RDN. This performs a regex check to see if the UID is a valid
+/// Federation ID (FID).
 fn validate_rdn_uid(item: &AttributeTypeAndValue) -> Result<(), ConstraintError> {
     let fid_regex = Regex::new(r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)")
         .expect("Regex failed to compile");
@@ -192,6 +201,8 @@ fn validate_rdn_uid(item: &AttributeTypeAndValue) -> Result<(), ConstraintError>
     }
 }
 
+/// Validate the uniqueIdentifier field in the RDN. This performs a check to see if the provided
+/// input is a valid [SessionId].
 fn validate_rdn_unique_identifier(item: &AttributeTypeAndValue) -> Result<(), ConstraintError> {
     if let Ok(value) = Ia5String::new(&String::from_utf8_lossy(item.value.value()).to_string()) {
         SessionId::new_validated(value)?;
@@ -200,5 +211,74 @@ fn validate_rdn_unique_identifier(item: &AttributeTypeAndValue) -> Result<(), Co
         Err(ConstraintError::Malformed(Some(
             "Tried to decode SessionID (uniqueIdentifier) as Ia5String and failed".to_string(),
         )))
+    }
+}
+
+/// Validate that the UID username matches the Common Name
+fn validate_uid_username_matches_cn(
+    uid: &RelativeDistinguishedName,
+    cn: &RelativeDistinguishedName,
+) -> Result<(), ConstraintError> {
+    // Find the position of the @ in the UID
+    let uid_str = uid.to_string().split_off(4);
+    let cn_str = cn.to_string().split_off(3);
+    let position_of_at = match uid_str.find('@') {
+        Some(pos) => pos,
+        None => {
+            return Err(ConstraintError::Malformed(Some(
+                "UID does not contain an @".to_string(),
+            )))
+        }
+    };
+    // Split the UID at the @
+    let uid_username_only = uid_str.to_string().split_at(position_of_at).0.to_string();
+    match uid_username_only == cn_str {
+        true => Ok(()),
+        false => Err(ConstraintError::Malformed(Some(
+            "UID username does not match the Common Name".to_string(),
+        ))),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::str::FromStr;
+
+    use crate::testing_utils::init_logger;
+
+    use super::*;
+
+    #[test]
+    fn test_dc_matches_dc_in_uid() {
+        // TODO
+    }
+
+    #[test]
+    fn cn_has_to_match_uid_name() {
+        init_logger();
+        let cn = Name::from_str("cn=bitfl0wer").unwrap();
+        let uid = Name::from_str("uid=flori@localhost").unwrap();
+        assert!(
+            validate_uid_username_matches_cn(uid.0.first().unwrap(), cn.0.first().unwrap())
+                .is_err()
+        );
+        let cn = Name::from_str("cn=flori").unwrap();
+        assert!(
+            validate_uid_username_matches_cn(uid.0.first().unwrap(), cn.0.first().unwrap()).is_ok()
+        );
+        let good_name = Name::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap();
+        let bad_name = Name::from_str(
+            "CN=bitfl0wer,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap();
+        assert!(good_name.validate(None).is_ok());
+        assert!(bad_name.validate(None).is_err());
+        assert!(bad_name.validate(Some(Target::Actor)).is_err());
+        assert!(bad_name.validate(Some(Target::HomeServer)).is_err());
+        assert!(good_name.validate(Some(Target::Actor)).is_ok());
+        assert!(good_name.validate(Some(Target::HomeServer)).is_err());
     }
 }
