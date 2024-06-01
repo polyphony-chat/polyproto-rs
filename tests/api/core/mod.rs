@@ -7,15 +7,16 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use der::asn1::{Uint, UtcTime};
 use httptest::matchers::request::method_path;
-use httptest::matchers::{eq, json_decoded, request};
+use httptest::matchers::{eq, json_decoded, matches, request};
 use httptest::responders::json_encoded;
 use httptest::*;
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
+use polyproto::certs::SessionId;
 use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
-    GET_CHALLENGE_STRING, GET_SERVER_PUBLIC_IDCERT, GET_SERVER_PUBLIC_KEY,
+    GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING, GET_SERVER_PUBLIC_IDCERT, GET_SERVER_PUBLIC_KEY,
     ROTATE_SERVER_IDENTITY_KEY,
 };
 use polyproto::Name;
@@ -191,4 +192,181 @@ async fn get_server_id_cert() {
         .await
         .unwrap();
     assert_eq!(cert.to_pem(der::pem::LineEnding::LF).unwrap(), cert_pem);
+}
+
+#[tokio::test]
+async fn get_actor_id_certs() {
+    init_logger();
+    let mut csprng = rand::rngs::OsRng;
+    let subject = Name::from_str(
+        "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+    )
+    .unwrap();
+    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
+    let id_csr = IdCsr::<Ed25519Signature, Ed25519PublicKey>::new(
+        &subject,
+        &priv_key,
+        &Capabilities::default_actor(),
+        Some(polyproto::certs::Target::Actor),
+    )
+    .unwrap();
+    let id_certs = {
+        let mut vec: Vec<IdCert<Ed25519Signature, Ed25519PublicKey>> = Vec::new();
+        for _ in 0..5 {
+            let cert = IdCert::from_actor_csr(
+                id_csr.clone(),
+                &priv_key,
+                Uint::new(&[8]).unwrap(),
+                subject.clone(),
+                Validity {
+                    not_before: Time::UtcTime(
+                        UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
+                    ),
+                    not_after: Time::UtcTime(
+                        UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
+                    ),
+                },
+            )
+            .unwrap();
+            vec.push(cert);
+        }
+        vec
+    };
+
+    let certs_pem: Vec<String> = id_certs
+        .into_iter()
+        .map(|cert| cert.to_pem(der::pem::LineEnding::LF).unwrap())
+        .collect();
+
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(GET_ACTOR_IDCERTS.method.as_str()),
+            request::path(matches(format!("^{}.*$", GET_ACTOR_IDCERTS.path))),
+            request::body(json_decoded(eq(json!({
+                "timestamp": 12345,
+                "session_id": "cool_session_id"
+            }))))
+        ])
+        .respond_with(json_encoded(json!([{
+            "id_cert": certs_pem[0],
+            "invalidated": false
+        }]))),
+    );
+
+    let certs = client
+        .get_actor_id_certs::<Ed25519Signature, Ed25519PublicKey>(
+            "flori@polyphony.chat",
+            Some(12345),
+            Some(&SessionId::new_validated("cool_session_id").unwrap()),
+        )
+        .await
+        .unwrap();
+    assert_eq!(certs.len(), 1);
+    assert_eq!(
+        certs[0]
+            .id_cert
+            .clone()
+            .to_pem(der::pem::LineEnding::LF)
+            .unwrap(),
+        certs_pem[0]
+    );
+    assert!(!certs[0].invalidated);
+
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(GET_ACTOR_IDCERTS.method.as_str()),
+            request::path(matches(format!("^{}.*$", GET_ACTOR_IDCERTS.path))),
+        ])
+        .respond_with(json_encoded(json!([{
+            "id_cert": certs_pem[0],
+            "invalidated": false
+        }]))),
+    );
+    let certs = client
+        .get_actor_id_certs::<Ed25519Signature, Ed25519PublicKey>(
+            "flori@polyphony.chat",
+            Some(12345),
+            Some(&SessionId::new_validated("cool_session_id").unwrap()),
+        )
+        .await
+        .unwrap();
+    assert_eq!(certs.len(), 1);
+    assert_eq!(
+        certs[0]
+            .id_cert
+            .clone()
+            .to_pem(der::pem::LineEnding::LF)
+            .unwrap(),
+        certs_pem[0]
+    );
+    assert!(!certs[0].invalidated);
+
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(GET_ACTOR_IDCERTS.method.as_str()),
+            request::path(matches(format!("^{}.*$", GET_ACTOR_IDCERTS.path))),
+            request::body(json_decoded(eq(json!({
+                "timestamp": 12345            }))))
+        ])
+        .respond_with(json_encoded(json!([{
+            "id_cert": certs_pem[0],
+            "invalidated": false
+        }]))),
+    );
+
+    let certs = client
+        .get_actor_id_certs::<Ed25519Signature, Ed25519PublicKey>(
+            "flori@polyphony.chat",
+            Some(12345),
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(certs.len(), 1);
+    assert_eq!(
+        certs[0]
+            .id_cert
+            .clone()
+            .to_pem(der::pem::LineEnding::LF)
+            .unwrap(),
+        certs_pem[0]
+    );
+    assert!(!certs[0].invalidated);
+
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(GET_ACTOR_IDCERTS.method.as_str()),
+            request::path(matches(format!("^{}.*$", GET_ACTOR_IDCERTS.path))),
+            request::body(json_decoded(eq(json!({
+                "session_id": "cool_session_id"
+            }))))
+        ])
+        .respond_with(json_encoded(json!([{
+            "id_cert": certs_pem[0],
+            "invalidated": false
+        }]))),
+    );
+
+    let certs = client
+        .get_actor_id_certs::<Ed25519Signature, Ed25519PublicKey>(
+            "flori@polyphony.chat",
+            None,
+            Some(&SessionId::new_validated("cool_session_id").unwrap()),
+        )
+        .await
+        .unwrap();
+    assert_eq!(certs.len(), 1);
+    assert_eq!(
+        certs[0]
+            .id_cert
+            .clone()
+            .to_pem(der::pem::LineEnding::LF)
+            .unwrap(),
+        certs_pem[0]
+    );
+    assert!(!certs[0].invalidated);
 }
