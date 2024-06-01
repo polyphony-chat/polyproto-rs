@@ -145,6 +145,13 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         let cert = IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)?;
         Ok(cert)
     }
+
+    /// Checks if the IdCertTbs was valid at a given UNIX time. Does not validate the certificate
+    /// against the polyproto specification.
+    pub(crate) fn valid_at(&self, time: u64) -> bool {
+        time >= self.validity.not_before.to_unix_duration().as_secs()
+            && time <= self.validity.not_after.to_unix_duration().as_secs()
+    }
 }
 
 impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>

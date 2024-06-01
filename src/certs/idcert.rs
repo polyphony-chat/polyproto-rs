@@ -163,6 +163,13 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     pub fn signature_data(&self) -> Result<Vec<u8>, ConversionError> {
         self.id_cert_tbs.clone().to_der()
     }
+
+    /// Performs validation of the certificate. This includes checking the signature, the
+    /// validity period, the issuer, subject, [Capabilities] and every other constraint required
+    /// by the polyproto specification.
+    pub fn valid_at(&self, time: u64, target: Option<Target>) -> bool {
+        self.id_cert_tbs.valid_at(time) && self.validate(target).is_ok()
+    }
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<IdCert<S, P>> for Certificate {
