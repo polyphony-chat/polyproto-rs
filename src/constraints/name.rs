@@ -204,14 +204,8 @@ fn validate_rdn_uid(item: &AttributeTypeAndValue) -> Result<(), ConstraintError>
 /// Validate the uniqueIdentifier field in the RDN. This performs a check to see if the provided
 /// input is a valid [SessionId].
 fn validate_rdn_unique_identifier(item: &AttributeTypeAndValue) -> Result<(), ConstraintError> {
-    if let Ok(value) = Ia5String::new(&String::from_utf8_lossy(item.value.value()).to_string()) {
-        SessionId::new_validated(value)?;
-        Ok(())
-    } else {
-        Err(ConstraintError::Malformed(Some(
-            "Tried to decode SessionID (uniqueIdentifier) as Ia5String and failed".to_string(),
-        )))
-    }
+    SessionId::new_validated(&String::from_utf8_lossy(item.value.value()))?;
+    Ok(())
 }
 
 /// Validate that the UID username matches the Common Name

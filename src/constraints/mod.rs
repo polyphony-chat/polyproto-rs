@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use der::asn1::Ia5String;
 use der::Length;
 use regex::Regex;
 use x509_cert::name::{Name, RelativeDistinguishedName};
@@ -192,31 +191,23 @@ mod name_constraints {
 #[cfg(test)]
 mod session_id_constraints {
 
-    use der::asn1::Ia5String;
-
     use crate::certs::SessionId;
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn zero_long_session_id_fails() {
-        assert!(SessionId::new_validated(Ia5String::new("".as_bytes()).unwrap()).is_err())
+        assert!(SessionId::new_validated("").is_err())
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn thirtytwo_length_session_id_is_ok() {
-        assert!(SessionId::new_validated(
-            Ia5String::new("11111111111111111111111111222222".as_bytes()).unwrap()
-        )
-        .is_ok())
+        assert!(SessionId::new_validated("11111111111111111111111111222222").is_ok())
     }
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn thirtythree_length_session_id_fails() {
-        assert!(SessionId::new_validated(
-            Ia5String::new("111111111111111111111111112222223".as_bytes()).unwrap()
-        )
-        .is_err())
+        assert!(SessionId::new_validated("111111111111111111111111112222223").is_err())
     }
 }
