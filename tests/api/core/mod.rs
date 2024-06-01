@@ -2,28 +2,25 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use std::str::FromStr;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use der::asn1::{Uint, UtcTime};
 use httptest::matchers::request::method_path;
 use httptest::matchers::{eq, json_decoded, matches, request};
 use httptest::responders::json_encoded;
 use httptest::*;
-use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
-use polyproto::certs::idcsr::IdCsr;
 use polyproto::certs::SessionId;
 use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
     GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING, GET_SERVER_PUBLIC_IDCERT, GET_SERVER_PUBLIC_KEY,
     ROTATE_SERVER_IDENTITY_KEY,
 };
-use polyproto::Name;
 use serde_json::json;
-use x509_cert::time::{Time, Validity};
 
-use crate::common::{init_logger, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
+use crate::common::{
+    actor_id_cert, home_server_id_cert, init_logger, Ed25519PrivateKey, Ed25519PublicKey,
+    Ed25519Signature,
+};
 
 /// Correctly format the server URL for the test.
 fn server_url(server: &Server) -> String {
@@ -55,31 +52,7 @@ async fn get_challenge_string() {
 
 async fn rotate_server_identity_key() {
     init_logger();
-    let mut csprng = rand::rngs::OsRng;
-    let subject = Name::from_str("CN=root,DC=polyphony,DC=chat").unwrap();
-    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
-    let id_csr = IdCsr::<Ed25519Signature, Ed25519PublicKey>::new(
-        &subject,
-        &priv_key,
-        &Capabilities::default_home_server(),
-        Some(polyproto::certs::Target::HomeServer),
-    )
-    .unwrap();
-    let id_cert = IdCert::from_ca_csr(
-        id_csr,
-        &priv_key,
-        Uint::new(&[8]).unwrap(),
-        subject,
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
-    )
-    .unwrap();
+    let id_cert = home_server_id_cert();
     let cert_pem = id_cert.to_pem(der::pem::LineEnding::LF).unwrap();
     let server = Server::run();
     server.expect(
@@ -132,31 +105,7 @@ async fn get_server_public_key() {
 #[tokio::test]
 async fn get_server_id_cert() {
     init_logger();
-    let mut csprng = rand::rngs::OsRng;
-    let subject = Name::from_str("CN=root,DC=polyphony,DC=chat").unwrap();
-    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
-    let id_csr = IdCsr::<Ed25519Signature, Ed25519PublicKey>::new(
-        &subject,
-        &priv_key,
-        &Capabilities::default_home_server(),
-        Some(polyproto::certs::Target::HomeServer),
-    )
-    .unwrap();
-    let id_cert = IdCert::from_ca_csr(
-        id_csr,
-        &priv_key,
-        Uint::new(&[8]).unwrap(),
-        subject,
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
-    )
-    .unwrap();
+    let id_cert = home_server_id_cert();
     let cert_pem = id_cert.to_pem(der::pem::LineEnding::LF).unwrap();
     let server = Server::run();
     server.expect(
@@ -197,37 +146,10 @@ async fn get_server_id_cert() {
 #[tokio::test]
 async fn get_actor_id_certs() {
     init_logger();
-    let mut csprng = rand::rngs::OsRng;
-    let subject = Name::from_str(
-        "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
-    )
-    .unwrap();
-    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
-    let id_csr = IdCsr::<Ed25519Signature, Ed25519PublicKey>::new(
-        &subject,
-        &priv_key,
-        &Capabilities::default_actor(),
-        Some(polyproto::certs::Target::Actor),
-    )
-    .unwrap();
     let id_certs = {
         let mut vec: Vec<IdCert<Ed25519Signature, Ed25519PublicKey>> = Vec::new();
         for _ in 0..5 {
-            let cert = IdCert::from_actor_csr(
-                id_csr.clone(),
-                &priv_key,
-                Uint::new(&[8]).unwrap(),
-                subject.clone(),
-                Validity {
-                    not_before: Time::UtcTime(
-                        UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-                    ),
-                    not_after: Time::UtcTime(
-                        UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-                    ),
-                },
-            )
-            .unwrap();
+            let cert = actor_id_cert("flori");
             vec.push(cert);
         }
         vec
@@ -369,4 +291,9 @@ async fn get_actor_id_certs() {
         certs_pem[0]
     );
     assert!(!certs[0].invalidated);
+}
+
+#[tokio::test]
+async fn update_session_id_cert() {
+    init_logger();
 }

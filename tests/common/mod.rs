@@ -3,22 +3,105 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use std::str::FromStr;
+use std::time::Duration;
 
-use der::asn1::BitString;
+use der::asn1::{BitString, Uint, UtcTime};
 use ed25519_dalek::ed25519::signature::Signer;
 use ed25519_dalek::{Signature as Ed25519DalekSignature, SigningKey, VerifyingKey};
+use polyproto::certs::capabilities::Capabilities;
+use polyproto::certs::idcert::IdCert;
+use polyproto::certs::idcsr::IdCsr;
 use polyproto::certs::PublicKeyInfo;
 use polyproto::errors::composite::ConversionError;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
+use polyproto::Name;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
+use x509_cert::time::{Time, Validity};
 
 pub fn init_logger() {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "trace");
     }
     env_logger::builder().is_test(true).try_init().unwrap_or(());
+}
+
+pub fn actor_subject(cn: &str) -> Name {
+    Name::from_str(&format!(
+        "CN={},DC=polyphony,DC=chat,UID={}@polyphony.chat,uniqueIdentifier=client1",
+        cn, cn
+    ))
+    .unwrap()
+}
+
+pub fn home_server_subject() -> Name {
+    Name::from_str("DC=polyphony,DC=chat").unwrap()
+}
+
+pub fn gen_priv_key() -> Ed25519PrivateKey {
+    Ed25519PrivateKey::gen_keypair(&mut rand::rngs::OsRng)
+}
+
+pub fn actor_id_cert(cn: &str) -> IdCert<Ed25519Signature, Ed25519PublicKey> {
+    let priv_key = gen_priv_key();
+    IdCert::from_actor_csr(
+        actor_csr(cn, &priv_key),
+        &priv_key,
+        Uint::new(&[8]).unwrap(),
+        actor_subject(cn),
+        Validity {
+            not_before: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
+            ),
+            not_after: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
+            ),
+        },
+    )
+    .unwrap()
+}
+
+pub fn actor_csr(
+    cn: &str,
+    priv_key: &Ed25519PrivateKey,
+) -> IdCsr<Ed25519Signature, Ed25519PublicKey> {
+    IdCsr::new(
+        &actor_subject(cn),
+        priv_key,
+        &Capabilities::default_actor(),
+        Some(polyproto::certs::Target::Actor),
+    )
+    .unwrap()
+}
+
+pub fn home_server_id_cert() -> IdCert<Ed25519Signature, Ed25519PublicKey> {
+    let priv_key = gen_priv_key();
+    IdCert::from_ca_csr(
+        home_server_csr(&priv_key),
+        &priv_key,
+        Uint::new(&[8]).unwrap(),
+        home_server_subject(),
+        Validity {
+            not_before: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
+            ),
+            not_after: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
+            ),
+        },
+    )
+    .unwrap()
+}
+
+pub fn home_server_csr(priv_key: &Ed25519PrivateKey) -> IdCsr<Ed25519Signature, Ed25519PublicKey> {
+    IdCsr::new(
+        &home_server_subject(),
+        priv_key,
+        &Capabilities::default_home_server(),
+        Some(polyproto::certs::Target::HomeServer),
+    )
+    .unwrap()
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
