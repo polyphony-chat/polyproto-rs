@@ -98,15 +98,25 @@ impl HttpClient {
         &self,
         fid: &str,
         unix_time: Option<u64>,
+        session_id: Option<&SessionId>,
     ) -> HttpResult<Vec<IdCertExt<S, P>>> {
         let request_url = self
             .url
-            .join(&format!("{}?{}", GET_ACTOR_IDCERTS.path, fid))?;
+            .join(&format!("{}{}", GET_ACTOR_IDCERTS.path, fid))?;
         let mut request = self
             .client
             .request(GET_ACTOR_IDCERTS.method.clone(), request_url);
-        if let Some(time) = unix_time {
-            request = request.body(json!({ "timestamp": time }).to_string());
+        let body = match (unix_time, session_id) {
+            // PRETTYFYME
+            (Some(time), Some(session)) => {
+                Some(json!({ "timestamp": time, "session_id": session.to_string() }))
+            }
+            (Some(time), None) => Some(json!({"timestamp": time})),
+            (None, Some(session)) => Some(json!({"session_id": session.to_string()})),
+            (None, None) => None,
+        };
+        if let Some(body) = body {
+            request = request.body(body.to_string());
         }
         let response = request.send().await;
         let pems = HttpClient::handle_response::<Vec<IdCertExtJson>>(response).await?;
