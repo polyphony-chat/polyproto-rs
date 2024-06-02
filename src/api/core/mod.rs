@@ -143,11 +143,11 @@ impl HttpClient {
 
     /// Tell a server to delete a session, revoking the session token.
     pub async fn delete_session(&self, session_id: &SessionId) -> HttpResult<()> {
-        let request_url = self
-            .url
-            .join(&format!("{}{}", DELETE_SESSION.path, session_id))?;
+        let request_url = self.url.join(DELETE_SESSION.path)?;
+        let body = json!({ "session_id": session_id.to_string() });
         self.client
             .request(DELETE_SESSION.method.clone(), request_url)
+            .body(body.to_string())
             .send()
             .await?;
         Ok(())
