@@ -4,6 +4,8 @@
 
 use crate::errors::ERR_MSG_DC_UID_MISMATCH;
 
+use x509_cert::attr::AttributeTypeAndValue;
+
 use super::*;
 
 impl Constrained for Name {
@@ -20,6 +22,7 @@ impl Constrained for Name {
     /// - MAY have other attributes, which might be ignored by other home servers and other clients.
     // I apologize. This is horrible. I'll redo it eventually. Depression made me do it. -bitfl0wer
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
+        log::trace!("[Name::validate()] Validating Name: {}", self.to_string());
         let mut num_cn: u8 = 0;
         let mut num_dc: u8 = 0;
         let mut num_uid: u8 = 0;
@@ -30,18 +33,31 @@ impl Constrained for Name {
 
         let rdns = &self.0;
         for rdn in rdns.iter() {
+            log::trace!(
+                "[Name::validate()] Determining OID of RDN {} and performing appropriate validation",
+                rdn.to_string()
+            );
             for item in rdn.0.iter() {
                 match item.oid.to_string().as_str() {
                     OID_RDN_UID => {
+                        log::trace!("[Name::validate()] Found UID in RDN: {}", item.to_string());
                         num_uid += 1;
                         uid = rdn.clone();
                         validate_rdn_uid(item)?;
                     }
                     OID_RDN_UNIQUE_IDENTIFIER => {
+                        log::trace!(
+                            "[Name::validate()] Found uniqueIdentifier in RDN: {}",
+                            item.to_string()
+                        );
                         num_unique_identifier += 1;
                         validate_rdn_unique_identifier(item)?;
                     }
                     OID_RDN_COMMON_NAME => {
+                        log::trace!(
+                            "[Name::validate()] Found Common Name in RDN: {}",
+                            item.to_string()
+                        );
                         num_cn += 1;
                         cn = rdn.clone();
                         if num_cn > 1 {
@@ -49,15 +65,24 @@ impl Constrained for Name {
                                 lower: 1,
                                 upper: 1,
                                 actual: num_cn.to_string(),
-                                reason: "Distinguished Names must not contain more than one Common Name field".to_string()
+                                reason: "[Name::validate()] Distinguished Names must not contain more than one Common Name field".to_string()
                             });
                         }
                     }
                     OID_RDN_DOMAIN_COMPONENT => {
+                        log::trace!(
+                            "[Name::validate()] Found Domain Component in RDN: {}",
+                            item.to_string()
+                        );
                         num_dc += 1;
                         vec_dc.push(rdn.clone());
                     }
-                    _ => {}
+                    _ => {
+                        log::trace!(
+                            "[Name::validate()] Found unknown/non-validated component in RDN: {}",
+                            item.to_string()
+                        );
+                    }
                 }
             }
         }
@@ -66,6 +91,14 @@ impl Constrained for Name {
         if let Some(target) = target {
             match target {
                 Target::Actor => {
+                    log::trace!(
+                        "[Name::validate()] Validating DC {:?} matches DC in UID {}",
+                        vec_dc
+                            .iter()
+                            .map(|dc| dc.to_string())
+                            .collect::<Vec<String>>(),
+                        uid.to_string()
+                    );
                     validate_dc_matches_dc_in_uid(&vec_dc, &uid)?;
                 }
                 Target::HomeServer => {
@@ -83,7 +116,13 @@ impl Constrained for Name {
         } else if num_uid != 0 {
             validate_dc_matches_dc_in_uid(&vec_dc, &uid)?;
         }
+        log::trace!(
+            "Encountered {} UID components and {} Common Name components",
+            num_uid,
+            num_cn
+        );
         if num_uid != 0 && num_cn != 0 {
+            log::trace!("Validating UID username matches Common Name");
             validate_uid_username_matches_cn(&uid, &cn)?;
         }
         if num_dc == 0 {
@@ -140,9 +179,13 @@ fn validate_dc_matches_dc_in_uid(
     let position_of_at = match uid.to_string().find('@') {
         Some(pos) => pos,
         None => {
+            log::warn!(
+                "[validate_dc_matches_dc_in_uid] UID {} does not contain an @",
+                uid.to_string()
+            );
             return Err(ConstraintError::Malformed(Some(
                 "UID does not contain an @".to_string(),
-            )))
+            )));
         }
     };
     // Split the UID at the @
@@ -152,7 +195,6 @@ fn validate_dc_matches_dc_in_uid(
     let mut index = 0u8;
     // Iterate over the DCs in the UID and check if they are equal to the DCs in the DCs
     for component in dc_normalized_uid.iter() {
-        trace!("Checking if component \"{}\"...", component);
         let equivalent_dc = match vec_dc.get(index as usize) {
             Some(dc) => dc,
             None => {
@@ -162,10 +204,6 @@ fn validate_dc_matches_dc_in_uid(
             }
         };
         let equivalent_dc = equivalent_dc.to_string().split_at(3).1.to_string();
-        trace!(
-            "...is equal to component \"{}\"...",
-            equivalent_dc.to_string()
-        );
         if component != &equivalent_dc.to_string() {
             return Err(ConstraintError::Malformed(Some(
                 ERR_MSG_DC_UID_MISMATCH.to_string(),
@@ -182,9 +220,6 @@ fn validate_dc_matches_dc_in_uid(
     }
     Ok(())
 }
-
-use log::trace;
-use x509_cert::attr::AttributeTypeAndValue;
 
 /// Validate the UID field in the RDN. This performs a regex check to see if the UID is a valid
 /// Federation ID (FID).
@@ -219,18 +254,29 @@ fn validate_uid_username_matches_cn(
     let position_of_at = match uid_str.find('@') {
         Some(pos) => pos,
         None => {
+            log::warn!(
+                "[validate_dc_matches_dc_in_uid] UID \"{}\" does not contain an @",
+                uid.to_string()
+            );
             return Err(ConstraintError::Malformed(Some(
                 "UID does not contain an @".to_string(),
-            )))
+            )));
         }
     };
     // Split the UID at the @
     let uid_username_only = uid_str.to_string().split_at(position_of_at).0.to_string();
     match uid_username_only == cn_str {
         true => Ok(()),
-        false => Err(ConstraintError::Malformed(Some(
-            "UID username does not match the Common Name".to_string(),
-        ))),
+        false => {
+            log::warn!(
+                "[validate_uid_username_matches_cn] UID username \"{}\" does not match the Common Name \"{}\"",
+                uid_username_only,
+                cn_str
+            );
+            Err(ConstraintError::Malformed(Some(
+                "UID username does not match the Common Name".to_string(),
+            )))
+        }
     }
 }
 

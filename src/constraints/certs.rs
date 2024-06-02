@@ -13,7 +13,15 @@ use super::*;
 
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCsrInner<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
+        log::trace!(
+            "[IdCsrInner::validate()] validating capabilities for target: {:?}",
+            target
+        );
         self.capabilities.validate(target)?;
+        log::trace!(
+            "[IdCsrInner::validate()] validating subject for target: {:?}",
+            target
+        );
         self.subject.validate(target)?;
         if let Some(target) = target {
             match target {
@@ -39,16 +47,26 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsrInner<S, P> {
 
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
+        log::trace!(
+            "[IdCsr::validate()] validating inner CSR with target {:?}",
+            target
+        );
         self.inner_csr.validate(target)?;
+        log::trace!("[IdCsr::validate()] verifying signature");
         match self.inner_csr.subject_public_key.verify_signature(
             &self.signature,
             match &self.inner_csr.clone().to_der() {
                 Ok(data) => data,
-                Err(_) => return Err(ConstraintError::Malformed(Some("DER conversion failure when converting inner IdCsr to DER. IdCsr is likely malformed".to_string())))
+                Err(_) => {
+                    log::warn!("[IdCsr::validate()] DER conversion failure when converting inner IdCsr to DER. IdCsr is likely malformed");
+                    return Err(ConstraintError::Malformed(Some("DER conversion failure when converting inner IdCsr to DER. IdCsr is likely malformed".to_string())))}
             }
         ) {
             Ok(_) => (),
-            Err(_) => return Err(ConstraintError::Malformed(Some(ERR_MSG_SIGNATURE_MISMATCH.to_string())))
+            Err(_) => {
+                log::warn!(
+                    "[IdCsr::validate()] {}", ERR_MSG_SIGNATURE_MISMATCH);
+                return Err(ConstraintError::Malformed(Some(ERR_MSG_SIGNATURE_MISMATCH.to_string())))}
         };
         Ok(())
     }
@@ -56,12 +74,19 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
 
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCert<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
+        log::trace!(
+            "[IdCert::validate()] validating inner IdCertTbs with target {:?}",
+            target
+        );
         self.id_cert_tbs.validate(target)?;
+        log::trace!("[IdCert::validate()] verifying signature");
         match self.id_cert_tbs.subject_public_key.verify_signature(
             &self.signature,
             match &self.id_cert_tbs.clone().to_der() {
                 Ok(data) => data,
                 Err(_) => {
+                    log::warn!(
+                        "[IdCert::validate()] DER conversion failure when converting inner IdCertTbs to DER");
                     return Err(ConstraintError::Malformed(Some(
                         "DER conversion failure when converting inner IdCertTbs to DER".to_string(),
                     )));
@@ -69,18 +94,36 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCert<S, P> {
             },
         ) {
             Ok(_) => Ok(()),
-            Err(_) => Err(ConstraintError::Malformed(Some(
-                ERR_MSG_SIGNATURE_MISMATCH.to_string(),
-            ))),
+            Err(_) => {
+                log::warn!("[IdCert::validate()] {}", ERR_MSG_SIGNATURE_MISMATCH);
+                Err(ConstraintError::Malformed(Some(
+                    ERR_MSG_SIGNATURE_MISMATCH.to_string(),
+                )))
+            }
         }
     }
 }
 
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCertTbs<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
+        log::trace!(
+            "[IdCertTbs::validate()] validating capabilities for target: {:?}",
+            target
+        );
         self.capabilities.validate(target)?;
         self.issuer.validate(target)?;
         self.subject.validate(target)?;
+        log::trace!(
+            "[IdCertTbs::validate()] checking if domain components of issuer and subject are equal"
+        );
+        log::trace!(
+            "[IdCertTbs::validate()] Issuer: {}",
+            self.issuer.to_string()
+        );
+        log::trace!(
+            "[IdCertTbs::validate()] Subject: {}",
+            self.subject.to_string()
+        );
         match equal_domain_components(&self.issuer, &self.subject) {
             true => debug!("Domain components of issuer and subject are equal"),
             false => {

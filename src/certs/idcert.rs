@@ -90,7 +90,14 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, ConversionError> {
+        log::trace!("[IdCert::from_actor_csr()] creating actor certificate");
         let signature_algorithm = signing_key.algorithm_identifier();
+        log::trace!("[IdCert::from_actor_csr()] creating IdCertTbs");
+        log::trace!("[IdCert::from_actor_csr()] Issuer: {}", issuer.to_string());
+        log::trace!(
+            "[IdCert::from_actor_csr()] Subject: {}",
+            id_csr.inner_csr.subject.to_string()
+        );
         let id_cert_tbs = IdCertTbs::<S, P> {
             serial_number,
             signature_algorithm,
@@ -101,11 +108,16 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             capabilities: id_csr.inner_csr.capabilities,
             s: std::marker::PhantomData,
         };
+        log::trace!("[IdCert::from_actor_csr()] creating Signature");
         let signature = signing_key.sign(&id_cert_tbs.clone().to_der()?);
         let cert = IdCert {
             id_cert_tbs,
             signature,
         };
+        log::trace!(
+            "[IdCert::from_actor_csr()] validating certificate with target {:?}",
+            Some(Target::Actor)
+        );
         cert.validate(Some(Target::Actor))?;
         Ok(cert)
     }
