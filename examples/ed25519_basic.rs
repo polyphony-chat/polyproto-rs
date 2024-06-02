@@ -19,8 +19,6 @@ use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 use thiserror::Error;
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
 fn main() {
     let mut csprng = rand::rngs::OsRng;
     // Generate a key pair
@@ -59,10 +57,6 @@ fn main() {
             .is_ok()
     )
 }
-
-#[cfg(not(target_arch = "wasm32"))]
-#[cfg(not(test))]
-fn main() {}
 
 // As mentioned in the README, we start by implementing the signature trait.
 
@@ -215,4 +209,9 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
             key: VerifyingKey::from_bytes(&signature_array).unwrap(),
         })
     }
+}
+
+#[test]
+fn test_example() {
+    main()
 }

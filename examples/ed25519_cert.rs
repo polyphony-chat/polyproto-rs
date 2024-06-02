@@ -41,8 +41,6 @@ use x509_cert::Certificate;
 /// openssl x509 -in cert.der -text -noout -inform der
 /// ```
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
 fn main() {
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
@@ -62,8 +60,7 @@ fn main() {
     .unwrap();
     let data = csr.clone().to_der().unwrap();
     let file_name_with_extension = "cert.csr";
-    #[cfg(not(target_arch = "wasm32"))]
-    std::fs::write(file_name_with_extension, &data).unwrap();
+    std::fs::write(file_name_with_extension, data).unwrap();
 
     let cert = IdCert::from_actor_csr(
         csr,
@@ -83,12 +80,8 @@ fn main() {
     let data = Certificate::try_from(cert).unwrap().to_der().unwrap();
     let file_name_with_extension = "cert.der";
     #[cfg(not(target_arch = "wasm32"))]
-    std::fs::write(file_name_with_extension, &data).unwrap();
+    std::fs::write(file_name_with_extension, data).unwrap();
 }
-
-#[cfg(not(target_arch = "wasm32"))]
-#[cfg(not(test))]
-fn main() {}
 
 // As mentioned in the README, we start by implementing the signature trait.
 
@@ -238,4 +231,9 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
             key: VerifyingKey::from_bytes(&signature_array).unwrap(),
         })
     }
+}
+
+#[test]
+fn test_example() {
+    main()
 }

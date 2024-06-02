@@ -12,7 +12,7 @@ use der::{Decode, Encode};
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
-use polyproto::certs::PublicKeyInfo;
+use polyproto::certs::{PublicKeyInfo, Target};
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use rand::rngs::OsRng;
@@ -34,13 +34,15 @@ use x509_cert::Certificate;
 /// openssl req -in cert.csr -verify -inform der
 /// ```
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
 fn main() {
     let mut csprng = rand::rngs::OsRng;
-    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
-    println!("Private Key is: {:?}", priv_key.key.to_bytes());
-    println!("Public Key is: {:?}", priv_key.public_key.key.to_bytes());
+    let priv_key_actor = Ed25519PrivateKey::gen_keypair(&mut csprng);
+    let priv_key_home_server = Ed25519PrivateKey::gen_keypair(&mut csprng);
+    println!("Private Key is: {:?}", priv_key_actor.key.to_bytes());
+    println!(
+        "Public Key is: {:?}",
+        priv_key_actor.public_key.key.to_bytes()
+    );
     println!();
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
@@ -48,7 +50,7 @@ fn main() {
             "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
         )
         .unwrap(),
-        &priv_key,
+        &priv_key_actor,
         &Capabilities::default_actor(),
         Some(polyproto::certs::Target::Actor),
     )
@@ -57,11 +59,11 @@ fn main() {
     let data = csr.clone().to_der().unwrap();
     let file_name_with_extension = "cert.csr";
     #[cfg(not(target_arch = "wasm32"))]
-    std::fs::write(file_name_with_extension, &data).unwrap();
+    std::fs::write(file_name_with_extension, data).unwrap();
 
     let cert = IdCert::from_actor_csr(
         csr,
-        &priv_key,
+        &priv_key_home_server,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         Validity {
@@ -75,13 +77,10 @@ fn main() {
     )
     .unwrap();
     let data = cert.clone().to_der().unwrap();
-    let cert_from_der = IdCert::from_der(&data, Some(polyproto::certs::Target::Actor)).unwrap();
+    let cert_from_der =
+        IdCert::from_der(&data, Target::Actor, 15, &priv_key_home_server.public_key).unwrap();
     assert_eq!(cert_from_der, cert)
 }
-
-#[cfg(not(target_arch = "wasm32"))]
-#[cfg(not(test))]
-fn main() {}
 
 // As mentioned in the README, we start by implementing the signature trait.
 
@@ -228,4 +227,9 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
             key: VerifyingKey::from_bytes(&signature_array).unwrap(),
         })
     }
+}
+
+#[test]
+fn test_example() {
+    main()
 }
