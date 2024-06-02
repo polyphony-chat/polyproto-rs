@@ -63,10 +63,7 @@ fn main() {
         csr,
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
-        RdnSequence::from_str(
-            "CN=root,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
-        )
-        .unwrap(),
+        RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         Validity {
             not_before: Time::UtcTime(
                 UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),

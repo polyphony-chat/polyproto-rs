@@ -14,6 +14,8 @@ pub static ERR_MSG_DC_UID_MISMATCH: &str =
     "The domain components found in the DC and UID fields of the Name object do not match!";
 pub static ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT: &str =
     "The domain components of the issuer and the subject do not match!";
+pub static ERR_CERTIFICATE_TO_DER_ERROR: &str =
+    "The certificate seems to be malformed, as it cannot be converted to DER.";
 #[cfg(feature = "types")]
 pub static ERR_MSG_CHALLENGE_STRING_LENGTH: &str =
     "Challenge strings must be between 32 and 255 bytes long!";

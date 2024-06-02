@@ -56,7 +56,7 @@ pub fn actor_id_cert(cn: &str) -> IdCert<Ed25519Signature, Ed25519PublicKey> {
         actor_csr(cn, &priv_key),
         &priv_key,
         Uint::new(&[8]).unwrap(),
-        actor_subject(cn),
+        home_server_subject(),
         Validity {
             not_before: Time::UtcTime(
                 UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),

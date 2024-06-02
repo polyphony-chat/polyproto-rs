@@ -9,16 +9,12 @@ use super::base::{ConstraintError, InvalidInput};
 
 #[derive(Error, Debug, PartialEq, Clone)]
 pub enum InvalidCert {
-    #[error("The signature does not match the contents of the certificate")]
-    InvalidSignature,
-    #[error("The subject presented on the certificate is malformed or otherwise invalid")]
-    InvalidSubject(ConstraintError),
-    #[error("The issuer presented on the certificate is malformed or otherwise invalid")]
-    InvalidIssuer(ConstraintError),
+    #[error(transparent)]
+    InvalidSignature(#[from] PublicKeyError),
+    #[error(transparent)]
+    InvalidProperties(#[from] ConstraintError),
     #[error("The validity period of the certificate is invalid, or the certificate is expired")]
     InvalidValidity,
-    #[error("The capabilities presented on the certificate are invalid or otherwise malformed")]
-    InvalidCapabilities(ConstraintError),
 }
 
 #[derive(Error, Debug, PartialEq, Hash, Clone)]
@@ -42,7 +38,7 @@ pub enum ConversionError {
     #[error("Critical extension cannot be converted")]
     UnknownCriticalExtension { oid: ObjectIdentifier },
     #[error(transparent)]
-    IdCertError(#[from] PublicKeyError),
+    InvalidCert(#[from] InvalidCert),
 }
 #[cfg(feature = "reqwest")]
 #[derive(Error, Debug)]

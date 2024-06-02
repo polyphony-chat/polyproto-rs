@@ -9,7 +9,7 @@ use x509_cert::name::Name;
 use x509_cert::time::Validity;
 use x509_cert::Certificate;
 
-use crate::errors::ConversionError;
+use crate::errors::{ConstraintError, ConversionError, InvalidCert, ERR_CERTIFICATE_TO_DER_ERROR};
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 use crate::Constrained;
@@ -40,13 +40,24 @@ pub struct IdCert<S: Signature, P: PublicKey<S>> {
 impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// Create a new [IdCert] by passing an [IdCsr] and other supplementary information. Returns
     /// an error, if the provided IdCsr or issuer [Name] do not pass [Constrained] verification,
-    /// i.e. if they are not up to polyproto specification. Also fails if the provided IdCsr has
-    /// the [BasicConstraints] "ca" flag set to `false`.
+    /// i.e. if they are not up to polyproto specification.
     ///
     /// See [IdCert::from_actor_csr()] when trying to create a new actor certificate.
     ///
+    /// ## Safety guarantees
+    ///
     /// The resulting `IdCert` is guaranteed to be well-formed and up to polyproto specification,
-    /// for the usage context of a home server certificate.
+    /// for the usage context of a home server certificate. Assuming that cryptography has been
+    /// implemented correctly, the certificate is also guaranteed to have a valid signature. For a
+    /// more detailed list of guarantees, see [IdCert::full_home_server()].
+    ///
+    /// ## Parameters
+    ///
+    /// - `id_csr`: The [IdCsr] to create the new certificate from.
+    /// - `signing_key`: The home server's private key, used to sign the new certificate.
+    /// - `serial_number`: The serial number that should be assigned to the new certificate.
+    /// - `issuer`: The [Name] of the issuer of the resulting certificate.
+    /// - `validity`: The [Validity] period of the resulting certificate.
     pub fn from_ca_csr(
         id_csr: IdCsr<S, P>,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
@@ -76,13 +87,24 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
 
     /// Create a new [IdCert] by passing an [IdCsr] and other supplementary information. Returns
     /// an error, if the provided IdCsr or issuer [Name] do not pass [Constrained] verification,
-    /// i.e. if they are not up to polyproto specification. Also fails if the provided IdCsr has
-    /// the [BasicConstraints] "ca" flag set to `false`.
+    /// i.e. if they are not up to polyproto specification.
     ///
     /// See [IdCert::from_ca_csr()] when trying to create a new ca certificate.
     ///
+    /// ## Safety guarantees
+    ///
     /// The resulting `IdCert` is guaranteed to be well-formed and up to polyproto specification,
-    /// for the usage context of an actor certificate.
+    /// for the usage context of an actor certificate. Assuming that cryptography has been
+    /// implemented correctly, the certificate is also guaranteed to have a valid signature. For a
+    /// more detailed list of guarantees, see [IdCert::full_verify_actor()].
+    ///
+    /// ## Parameters
+    ///
+    /// - `id_csr`: The [IdCsr] to create the new certificate from.
+    /// - `signing_key`: The home server's private key, used to sign the new certificate.
+    /// - `serial_number`: The serial number that should be assigned to the new certificate.
+    /// - `issuer`: The [Name] of the issuer of the resulting certificate.
+    /// - `validity`: The [Validity] period of the resulting certificate.
     pub fn from_actor_csr(
         id_csr: IdCsr<S, P>,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
@@ -123,11 +145,30 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     }
 
     /// Create an [IdCert] from a byte slice containing a DER encoded X.509 Certificate.
-    /// The resulting `IdCert` is guaranteed to be well-formed and up to polyproto specification,
-    /// if the correct [Target] for the certificates' intended usage context is provided.
-    pub fn from_der(value: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
-        let cert = IdCert::from_der_unchecked(value)?;
-        cert.validate(target)?;
+    /// The resulting `IdCert` has the same validity guarantees as when using [IdCert::full_verify_actor()]
+    /// or [IdCert::full_verify_home_server()].
+    pub fn from_der(
+        value: &[u8],
+        target: Target,
+        time: u64,
+        home_server_public_key: &P,
+    ) -> Result<Self, InvalidCert> {
+        let cert = match IdCert::from_der_unchecked(value) {
+            Ok(cert) => cert,
+            Err(e) => {
+                return Err(InvalidCert::InvalidProperties(ConstraintError::Malformed(
+                    Some(e.to_string()),
+                )))
+            }
+        };
+        match target {
+            Target::Actor => {
+                cert.full_verify_actor(time, home_server_public_key)?;
+            }
+            Target::HomeServer => {
+                cert.full_verify_home_server(time)?;
+            }
+        }
         Ok(cert)
     }
 
@@ -145,17 +186,36 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     }
 
     /// Create an [IdCert] from a byte slice containing a PEM encoded X.509 Certificate.
-    /// The resulting `IdCert` is guaranteed to be well-formed and up to polyproto specification,
-    /// if the correct [Target] for the certificates' intended usage context is provided.
-    pub fn from_pem(pem: &str, target: Option<Target>) -> Result<Self, ConversionError> {
-        let cert = IdCert::from_pem_unchecked(pem)?;
-        cert.validate(target)?;
+    /// The resulting `IdCert` has the same validity guarantees as when using [IdCert::full_verify_actor()]
+    /// or [IdCert::full_verify_home_server()].
+    pub fn from_pem(
+        pem: &str,
+        target: Target,
+        time: u64,
+        home_server_public_key: &P,
+    ) -> Result<Self, InvalidCert> {
+        let cert = match IdCert::from_pem_unchecked(pem) {
+            Ok(cert) => cert,
+            Err(e) => {
+                return Err(InvalidCert::InvalidProperties(ConstraintError::Malformed(
+                    Some(e.to_string()),
+                )))
+            }
+        };
+        match target {
+            Target::Actor => {
+                cert.full_verify_actor(time, home_server_public_key)?;
+            }
+            Target::HomeServer => {
+                cert.full_verify_home_server(time)?;
+            }
+        }
         Ok(cert)
     }
 
     /// Create an unchecked [IdCert] from a byte slice containing a PEM encoded X.509 Certificate.
     /// The caller is responsible for verifying the correctness of this `IdCert` using
-    /// the [Constrained] trait before using it.
+    /// either [IdCert::full_verify_actor()] or [IdCert::full_verify_home_server()] before using it.
     pub fn from_pem_unchecked(pem: &str) -> Result<Self, ConversionError> {
         let cert = IdCert::try_from(Certificate::from_pem(pem)?)?;
         Ok(cert)
@@ -176,11 +236,73 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         self.id_cert_tbs.clone().to_der()
     }
 
-    /// Performs validation of the certificate. This includes checking the signature, the
-    /// validity period, the issuer, subject, [Capabilities] and every other constraint required
-    /// by the polyproto specification.
-    pub fn valid_at(&self, time: u64, target: Option<Target>) -> bool {
-        self.id_cert_tbs.valid_at(time) && self.validate(target).is_ok()
+    /// Checks, if the certificate is valid at a given time. Does not check if the certificate is
+    /// well-formed, up to polyproto specification or if the signature is correct. If you need to
+    /// verify these properties, use either [IdCert::full_verify_actor()] or [IdCert::full_verify_home_server()]
+    /// instead.
+    pub fn valid_at(&self, time: u64) -> bool {
+        self.id_cert_tbs.valid_at(time)
+    }
+
+    /// Performs verification of the certificate, checking for the following properties:
+    ///
+    /// - The certificate is valid at the given `time`
+    /// - The signature of the certificate is correct
+    /// - The certificate is well-formed and up to polyproto specification
+    /// - All parts that make up the certificate are well-formed and up to polyproto specification
+    pub fn full_verify_actor(
+        &self,
+        time: u64,
+        home_server_public_key: &P,
+    ) -> Result<(), InvalidCert> {
+        if !self.valid_at(time) {
+            return Err(InvalidCert::InvalidValidity);
+        }
+        log::trace!("[IdCert::full_verify_actor(&self)] verifying signature (actor certificate)");
+        let der = match self.id_cert_tbs.clone().to_der() {
+            Ok(der) => der,
+            Err(_) => {
+                log::warn!(
+                    "[IdCert::full_verify_actor(&self)] {}",
+                    ERR_CERTIFICATE_TO_DER_ERROR
+                );
+                return Err(InvalidCert::InvalidProperties(ConstraintError::Malformed(
+                    Some(ERR_CERTIFICATE_TO_DER_ERROR.to_string()),
+                )));
+            }
+        };
+        Ok(home_server_public_key.verify_signature(&self.signature, &der)?)
+    }
+
+    /// Performs verification of the certificate, checking for the following properties:
+    ///
+    /// - The certificate is valid at the given `time`
+    /// - The signature of the certificate is correct
+    /// - The certificate is well-formed and up to polyproto specification
+    /// - All parts that make up the certificate are well-formed and up to polyproto specification
+    pub fn full_verify_home_server(&self, time: u64) -> Result<(), InvalidCert> {
+        if !self.valid_at(time) {
+            return Err(InvalidCert::InvalidValidity);
+        }
+        let der = match self.id_cert_tbs.clone().to_der() {
+            Ok(data) => data,
+            Err(_) => {
+                log::warn!(
+                    "[IdCert::full_verify_home_server(&self)] {}",
+                    ERR_CERTIFICATE_TO_DER_ERROR
+                );
+                return Err(InvalidCert::InvalidProperties(ConstraintError::Malformed(
+                    Some(ERR_CERTIFICATE_TO_DER_ERROR.to_string()),
+                )));
+            }
+        };
+        log::trace!(
+            "[IdCert::full_verify_home_server(&self)] verifying signature (self-signed IdCert)"
+        );
+        Ok(self
+            .id_cert_tbs
+            .subject_public_key
+            .verify_signature(&self.signature, &der)?)
     }
 }
 

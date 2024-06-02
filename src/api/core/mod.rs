@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use std::time::UNIX_EPOCH;
+
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use x509_cert::serial_number::SerialNumber;
@@ -9,7 +11,7 @@ use x509_cert::serial_number::SerialNumber;
 use crate::certs::idcert::IdCert;
 use crate::certs::idcsr::IdCsr;
 use crate::certs::{PublicKeyInfo, SessionId};
-use crate::errors::ConversionError;
+use crate::errors::{ConversionError, RequestError};
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::types::routes::core::v1::*;
@@ -18,6 +20,13 @@ use crate::types::ChallengeString;
 use super::{HttpClient, HttpResult};
 
 // TODO: MLS routes still missing
+
+pub fn current_unix_time() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
 
 // Core Routes: No registration needed
 impl HttpClient {
@@ -34,6 +43,11 @@ impl HttpClient {
 
     /// Request the server to rotate its identity key and return the new [IdCert]. This route is
     /// only available to server administrators.
+    ///
+    /// ## Safety guarantees
+    ///
+    /// The resulting [IdCert] is verified and has the same safety guarantees as specified under
+    /// [IdCert::full_verify_home_server()], as this method calls that method internally.
     pub async fn rotate_server_identity_key<S: Signature, P: PublicKey<S>>(
         &self,
     ) -> HttpResult<IdCert<S, P>> {
@@ -45,14 +59,26 @@ impl HttpClient {
             .await;
         let pem = HttpClient::handle_response::<String>(request_response).await?;
         log::debug!("Received IdCert: \n{}", pem);
-        Ok(IdCert::from_pem(
-            pem.as_str(),
-            Some(crate::certs::Target::HomeServer),
-        )?)
+        let id_cert = IdCert::<S, P>::from_pem_unchecked(&pem)?;
+        match id_cert.full_verify_home_server(
+            std::time::SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        ) {
+            Ok(_) => (),
+            Err(e) => return Err(RequestError::ConversionError(e.into())),
+        };
+        Ok(id_cert)
     }
 
     /// Request the server's public [IdCert]. Specify a unix timestamp to get the IdCert which was
     /// valid at that time. If no timestamp is provided, the current IdCert is returned.
+    ///
+    /// ## Safety guarantees
+    ///
+    /// The resulting [IdCert] is verified and has the same safety guarantees as specified under
+    /// [IdCert::full_verify_home_server()], as this method calls that method internally.
     pub async fn get_server_id_cert<S: Signature, P: PublicKey<S>>(
         &self,
         unix_time: Option<u64>,
@@ -66,10 +92,12 @@ impl HttpClient {
         }
         let response = request.send().await;
         let pem = HttpClient::handle_response::<String>(response).await?;
-        Ok(IdCert::from_pem(
-            pem.as_str(),
-            Some(crate::certs::Target::HomeServer),
-        )?)
+        let id_cert = IdCert::<S, P>::from_pem_unchecked(&pem)?;
+        match id_cert.full_verify_home_server(unix_time.unwrap_or(current_unix_time())) {
+            Ok(_) => (),
+            Err(e) => return Err(RequestError::ConversionError(e.into())),
+        };
+        Ok(id_cert)
     }
 
     /// Request the server's [PublicKeyInfo]. Specify a unix timestamp to get the public key which
@@ -94,6 +122,11 @@ impl HttpClient {
     /// Request the [IdCert]s of an actor. Specify the federation ID of the actor to get the IdCerts
     /// of that actor. Returns a vector of IdCerts which were valid for the actor at the specified
     /// time. If no timestamp is provided, the current IdCerts are returned.
+    ///
+    /// ## Safety guarantees
+    ///
+    /// The resulting [IdCert]s are not verified. The caller is responsible for verifying the correctness
+    /// of these `IdCert`s using [IdCert::full_verify_actor()] before using them.
     pub async fn get_actor_id_certs<S: Signature, P: PublicKey<S>>(
         &self,
         fid: &str,
@@ -156,8 +189,15 @@ impl HttpClient {
 
 // Core Routes: Registration needed
 impl HttpClient {
-    /// Rotate your keys for a given session. The `session_id`` in the supplied [IdCsr] must
+    /// Rotate your keys for a given session. The `session_id` in the supplied [IdCsr] must
     /// correspond to the session token used in the authorization-Header.
+    ///
+    /// Returns the new [IdCert] and a token which can be used to authenticate future requests.
+    ///
+    /// ## Safety guarantees
+    ///
+    /// The resulting [IdCert] is not verified. The caller is responsible for verifying the correctness
+    /// of this `IdCert` using either [IdCert::full_verify_actor()] or [IdCert::full_verify_home_server()].
     pub async fn rotate_session_id_cert<S: Signature, P: PublicKey<S>>(
         &self,
         csr: IdCsr<S, P>,
@@ -171,7 +211,7 @@ impl HttpClient {
             .await;
         let response_value = HttpClient::handle_response::<Value>(request_response).await?;
         let id_cert = if let Some(cert) = response_value.get("id_cert") {
-            IdCert::<S, P>::from_pem(cert.as_str().unwrap(), Some(crate::certs::Target::Actor))?
+            IdCert::<S, P>::from_pem_unchecked(cert.to_string().as_str())?
         } else {
             return Err(crate::errors::RequestError::ConversionError(
                 crate::errors::InvalidInput::Malformed("Found no id_cert in response.".to_string())
@@ -336,7 +376,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<IdCertExtJson> for IdCertExt<S, P> {
 
     fn try_from(id_cert: IdCertExtJson) -> Result<Self, Self::Error> {
         Ok(Self {
-            id_cert: IdCert::from_pem(id_cert.id_cert.as_str(), Some(crate::certs::Target::Actor))?,
+            id_cert: IdCert::from_pem_unchecked(id_cert.id_cert.as_str())?,
             invalidated: id_cert.invalidated,
         })
     }

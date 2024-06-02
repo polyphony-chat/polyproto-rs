@@ -79,28 +79,7 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCert<S, P> {
             target
         );
         self.id_cert_tbs.validate(target)?;
-        log::trace!("[IdCert::validate()] verifying signature");
-        match self.id_cert_tbs.subject_public_key.verify_signature(
-            &self.signature,
-            match &self.id_cert_tbs.clone().to_der() {
-                Ok(data) => data,
-                Err(_) => {
-                    log::warn!(
-                        "[IdCert::validate()] DER conversion failure when converting inner IdCertTbs to DER");
-                    return Err(ConstraintError::Malformed(Some(
-                        "DER conversion failure when converting inner IdCertTbs to DER".to_string(),
-                    )));
-                }
-            },
-        ) {
-            Ok(_) => Ok(()),
-            Err(_) => {
-                log::warn!("[IdCert::validate()] {}", ERR_MSG_SIGNATURE_MISMATCH);
-                Err(ConstraintError::Malformed(Some(
-                    ERR_MSG_SIGNATURE_MISMATCH.to_string(),
-                )))
-            }
-        }
+        Ok(())
     }
 }
 
@@ -111,7 +90,8 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCertTbs<S, P> {
             target
         );
         self.capabilities.validate(target)?;
-        self.issuer.validate(target)?;
+        dbg!(self.issuer.to_string());
+        self.issuer.validate(Some(Target::HomeServer))?;
         self.subject.validate(target)?;
         log::trace!(
             "[IdCertTbs::validate()] checking if domain components of issuer and subject are equal"

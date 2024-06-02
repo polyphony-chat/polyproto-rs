@@ -160,15 +160,17 @@ impl From<PublicKeyInfo> for SubjectPublicKeyInfoOwned {
 pub fn equal_domain_components(name_1: &Name, name_2: &Name) -> bool {
     let mut domain_components_1 = Vec::new();
     let mut domain_components_2 = Vec::new();
-    for (component_1, component_2) in name_1.0.iter().zip(name_2.0.iter()) {
-        for subcomponent_1 in component_1.0.iter() {
-            if subcomponent_1.oid.to_string().as_str() == OID_RDN_DOMAIN_COMPONENT {
-                domain_components_1.push(subcomponent_1);
+    for rdn in name_1.0.iter() {
+        for ava in rdn.0.iter() {
+            if ava.oid.to_string().as_str() == OID_RDN_DOMAIN_COMPONENT {
+                domain_components_1.push(String::from_utf8_lossy(ava.value.value()));
             }
         }
-        for subcomponent_2 in component_2.0.iter() {
-            if subcomponent_2.oid.to_string().as_str() == OID_RDN_DOMAIN_COMPONENT {
-                domain_components_2.push(subcomponent_2);
+    }
+    for rdn in name_2.0.iter() {
+        for ava in rdn.0.iter() {
+            if ava.oid.to_string().as_str() == OID_RDN_DOMAIN_COMPONENT {
+                domain_components_2.push(String::from_utf8_lossy(ava.value.value()));
             }
         }
     }

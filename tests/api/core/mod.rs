@@ -2,10 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use std::str::FromStr;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use der::asn1::{Uint, UtcTime};
+use der::asn1::Uint;
 use httptest::matchers::request::method_path;
 use httptest::matchers::{eq, json_decoded, matches, request};
 use httptest::responders::{json_encoded, status_code};
@@ -20,12 +19,10 @@ use polyproto::types::routes::core::v1::{
     GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT,
     UPDATE_SESSION_IDCERT,
 };
-use polyproto::Name;
 use serde_json::json;
-use x509_cert::time::{Time, Validity};
 
 use crate::common::{
-    actor_csr, actor_id_cert, actor_subject, default_validity, gen_priv_key, home_server_id_cert,
+    actor_id_cert, actor_subject, default_validity, gen_priv_key, home_server_id_cert,
     home_server_subject, init_logger, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature,
 };
 
@@ -357,7 +354,7 @@ async fn rotate_session_id_cert() {
     .unwrap();
     let id_cert = IdCert::from_actor_csr(
         id_csr.clone(),
-        &gen_priv_key(),
+        &actor_signing_key,
         Uint::new(&[8]).unwrap(),
         home_server_subject(),
         default_validity(),

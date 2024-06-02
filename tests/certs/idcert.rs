@@ -55,10 +55,7 @@ fn test_create_actor_cert() {
         csr,
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
-        RdnSequence::from_str(
-            "CN=root,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
-        )
-        .unwrap(),
+        RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         Validity {
             not_before: Time::UtcTime(
                 UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
@@ -135,10 +132,7 @@ fn mismatched_dcs_in_csr_and_cert() {
         csr,
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
-        RdnSequence::from_str(
-            "CN=root,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
-        )
-        .unwrap(),
+        RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         Validity {
             not_before: Time::UtcTime(
                 UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
@@ -159,14 +153,15 @@ fn mismatched_dcs_in_csr_and_cert() {
 fn cert_from_pem() {
     init_logger();
     let mut csprng = rand::rngs::OsRng;
-    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
+    let priv_key_actor = Ed25519PrivateKey::gen_keypair(&mut csprng);
+    let priv_key_home_server = Ed25519PrivateKey::gen_keypair(&mut csprng);
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
         &RdnSequence::from_str(
             "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
         )
         .unwrap(),
-        &priv_key,
+        &priv_key_actor,
         &Capabilities::default_actor(),
         Some(Target::Actor),
     )
@@ -174,12 +169,9 @@ fn cert_from_pem() {
 
     let cert = IdCert::from_actor_csr(
         csr,
-        &priv_key,
+        &priv_key_home_server,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
-        RdnSequence::from_str(
-            "CN=root,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
-        )
-        .unwrap(),
+        RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         Validity {
             not_before: Time::UtcTime(
                 UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
@@ -191,7 +183,13 @@ fn cert_from_pem() {
     )
     .unwrap();
     let data = cert.clone().to_pem(der::pem::LineEnding::LF).unwrap();
-    let cert_from_pem = IdCert::from_pem(&data, Some(polyproto::certs::Target::Actor)).unwrap();
+    let cert_from_pem = IdCert::from_pem(
+        &data,
+        polyproto::certs::Target::Actor,
+        10,
+        &priv_key_home_server.public_key,
+    )
+    .unwrap();
     log::trace!(
         "Cert from pem key usages: {:#?}",
         cert_from_pem.id_cert_tbs.capabilities.key_usage.key_usages
@@ -200,14 +198,14 @@ fn cert_from_pem() {
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
         &RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
-        &priv_key,
+        &priv_key_actor,
         &Capabilities::default_home_server(),
         Some(Target::HomeServer),
     )
     .unwrap();
     let cert = IdCert::from_ca_csr(
         csr,
-        &priv_key,
+        &priv_key_home_server,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
         Validity {
@@ -221,8 +219,13 @@ fn cert_from_pem() {
     )
     .unwrap();
     let data = cert.clone().to_pem(der::pem::LineEnding::LF).unwrap();
-    let cert_from_pem =
-        IdCert::from_pem(&data, Some(polyproto::certs::Target::HomeServer)).unwrap();
+    let cert_from_pem = IdCert::from_pem(
+        &data,
+        polyproto::certs::Target::Actor,
+        10,
+        &priv_key_home_server.public_key,
+    )
+    .unwrap();
     log::trace!(
         "Cert from pem key usages: {:#?}",
         cert_from_pem.id_cert_tbs.capabilities.key_usage.key_usages
@@ -235,14 +238,15 @@ fn cert_from_pem() {
 fn cert_from_der() {
     init_logger();
     let mut csprng = rand::rngs::OsRng;
-    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
+    let priv_key_actor = Ed25519PrivateKey::gen_keypair(&mut csprng);
+    let priv_key_home_server = Ed25519PrivateKey::gen_keypair(&mut csprng);
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
         &RdnSequence::from_str(
             "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
         )
         .unwrap(),
-        &priv_key,
+        &priv_key_actor,
         &Capabilities::default_actor(),
         Some(Target::Actor),
     )
@@ -250,12 +254,9 @@ fn cert_from_der() {
 
     let cert = IdCert::from_actor_csr(
         csr,
-        &priv_key,
+        &priv_key_home_server,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
-        RdnSequence::from_str(
-            "CN=root,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
-        )
-        .unwrap(),
+        RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         Validity {
             not_before: Time::UtcTime(
                 UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
@@ -267,7 +268,13 @@ fn cert_from_der() {
     )
     .unwrap();
     let data = cert.clone().to_der().unwrap();
-    let cert_from_der = IdCert::from_der(&data, Some(polyproto::certs::Target::Actor)).unwrap();
+    let cert_from_der = IdCert::from_der(
+        &data,
+        polyproto::certs::Target::Actor,
+        10,
+        &priv_key_home_server.public_key,
+    )
+    .unwrap();
     log::trace!(
         "Cert from pem key usages: {:#?}",
         cert_from_der.id_cert_tbs.capabilities.key_usage.key_usages
@@ -276,14 +283,14 @@ fn cert_from_der() {
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
         &RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
-        &priv_key,
+        &priv_key_actor,
         &Capabilities::default_home_server(),
         Some(Target::HomeServer),
     )
     .unwrap();
     let cert = IdCert::from_ca_csr(
         csr,
-        &priv_key,
+        &priv_key_home_server,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
         Validity {
@@ -297,8 +304,13 @@ fn cert_from_der() {
     )
     .unwrap();
     let data = cert.clone().to_der().unwrap();
-    let cert_from_der =
-        IdCert::from_der(&data, Some(polyproto::certs::Target::HomeServer)).unwrap();
+    let cert_from_der = IdCert::from_der(
+        &data,
+        polyproto::certs::Target::Actor,
+        10,
+        &priv_key_home_server.public_key,
+    )
+    .unwrap();
     log::trace!(
         "Cert from pem key usages: {:#?}",
         cert_from_der.id_cert_tbs.capabilities.key_usage.key_usages
