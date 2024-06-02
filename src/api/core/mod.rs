@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use x509_cert::serial_number::SerialNumber;
 
 use crate::certs::idcert::IdCert;
@@ -169,12 +169,24 @@ impl HttpClient {
             .body(csr.to_pem(der::pem::LineEnding::LF)?)
             .send()
             .await;
-        let (pem, token) =
-            HttpClient::handle_response::<(String, String)>(request_response).await?;
-        Ok((
-            IdCert::from_pem(pem.as_str(), Some(crate::certs::Target::Actor))?,
-            token,
-        ))
+        let response_value = HttpClient::handle_response::<Value>(request_response).await?;
+        let id_cert = if let Some(cert) = response_value.get("id_cert") {
+            IdCert::<S, P>::from_pem(cert.as_str().unwrap(), Some(crate::certs::Target::Actor))?
+        } else {
+            return Err(crate::errors::RequestError::ConversionError(
+                crate::errors::InvalidInput::Malformed("Found no id_cert in response.".to_string())
+                    .into(),
+            ));
+        };
+        let token = if let Some(token) = response_value.get("token") {
+            token.as_str().unwrap().to_string()
+        } else {
+            return Err(crate::errors::RequestError::ConversionError(
+                crate::errors::InvalidInput::Malformed("Found no token in response.".to_string())
+                    .into(),
+            ));
+        };
+        Ok((id_cert, token))
     }
 
     /// Upload encrypted private key material to the server for later retrieval. The upload size
