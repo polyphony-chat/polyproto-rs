@@ -2,24 +2,31 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::str::FromStr;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use der::asn1::{Uint, UtcTime};
 use httptest::matchers::request::method_path;
 use httptest::matchers::{eq, json_decoded, matches, request};
 use httptest::responders::{json_encoded, status_code};
 use httptest::*;
+use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
+use polyproto::certs::idcsr::IdCsr;
 use polyproto::certs::SessionId;
 use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
     DELETE_SESSION, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING, GET_SERVER_PUBLIC_IDCERT,
-    GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY, UPDATE_SESSION_IDCERT,
+    GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT,
+    UPDATE_SESSION_IDCERT,
 };
+use polyproto::Name;
 use serde_json::json;
+use x509_cert::time::{Time, Validity};
 
 use crate::common::{
-    actor_id_cert, home_server_id_cert, init_logger, Ed25519PrivateKey, Ed25519PublicKey,
-    Ed25519Signature,
+    actor_csr, actor_id_cert, actor_subject, default_validity, gen_priv_key, home_server_id_cert,
+    home_server_subject, init_logger, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature,
 };
 
 /// Correctly format the server URL for the test.
@@ -333,6 +340,46 @@ async fn delete_session() {
     let client = polyproto::api::HttpClient::new(&url).unwrap();
     client
         .delete_session(&SessionId::new_validated("cool_session_id").unwrap())
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn rotate_session_id_cert() {
+    init_logger();
+    let actor_signing_key = gen_priv_key();
+    let id_csr = IdCsr::new(
+        &actor_subject("flori"),
+        &actor_signing_key,
+        &Capabilities::default_actor(),
+        Some(polyproto::certs::Target::Actor),
+    )
+    .unwrap();
+    let id_cert = IdCert::from_actor_csr(
+        id_csr.clone(),
+        &gen_priv_key(),
+        Uint::new(&[8]).unwrap(),
+        home_server_subject(),
+        default_validity(),
+    )
+    .unwrap();
+    let csr_pem = id_csr.clone().to_pem(der::pem::LineEnding::LF).unwrap();
+    let server = Server::run();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(ROTATE_SESSION_IDCERT.method.to_string()),
+            request::path(ROTATE_SESSION_IDCERT.path),
+            request::body(csr_pem)
+        ])
+        .respond_with(json_encoded(json!({
+            "id_cert": id_cert.to_pem(der::pem::LineEnding::LF).unwrap(),
+            "token": "meow"
+        }))),
+    );
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    client
+        .rotate_session_id_cert::<Ed25519Signature, Ed25519PublicKey>(id_csr)
         .await
         .unwrap();
 }
