@@ -35,6 +35,13 @@ pub fn actor_subject(cn: &str) -> Name {
     .unwrap()
 }
 
+pub fn default_validity() -> Validity {
+    Validity {
+        not_before: Time::UtcTime(UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap()),
+        not_after: Time::UtcTime(UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap()),
+    }
+}
+
 pub fn home_server_subject() -> Name {
     Name::from_str("DC=polyphony,DC=chat").unwrap()
 }
