@@ -6,14 +6,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use httptest::matchers::request::method_path;
 use httptest::matchers::{eq, json_decoded, matches, request};
-use httptest::responders::json_encoded;
+use httptest::responders::{json_encoded, status_code};
 use httptest::*;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::SessionId;
 use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
     GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING, GET_SERVER_PUBLIC_IDCERT, GET_SERVER_PUBLIC_KEY,
-    ROTATE_SERVER_IDENTITY_KEY,
+    ROTATE_SERVER_IDENTITY_KEY, UPDATE_SESSION_IDCERT,
 };
 use serde_json::json;
 
@@ -296,4 +296,21 @@ async fn get_actor_id_certs() {
 #[tokio::test]
 async fn update_session_id_cert() {
     init_logger();
+    let id_cert = actor_id_cert("flori");
+    let cert_pem = id_cert.clone().to_pem(der::pem::LineEnding::LF).unwrap();
+    let server = Server::run();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(UPDATE_SESSION_IDCERT.method.to_string()),
+            request::path(UPDATE_SESSION_IDCERT.path),
+            request::body(cert_pem)
+        ])
+        .respond_with(status_code(201)),
+    );
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    client
+        .update_session_id_cert::<Ed25519Signature, Ed25519PublicKey>(id_cert)
+        .await
+        .unwrap();
 }
