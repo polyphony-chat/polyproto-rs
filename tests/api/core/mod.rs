@@ -2,13 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
-use der::asn1::Uint;
+use der::asn1::{GeneralizedTime, Uint};
 use httptest::matchers::request::method_path;
 use httptest::matchers::{eq, json_decoded, matches, request};
 use httptest::responders::{json_encoded, status_code};
 use httptest::*;
+use polyproto::api::core::current_unix_time;
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
@@ -20,6 +19,7 @@ use polyproto::types::routes::core::v1::{
     UPDATE_SESSION_IDCERT,
 };
 use serde_json::json;
+use x509_cert::time::Validity;
 
 use crate::common::{
     actor_id_cert, actor_subject, default_validity, gen_priv_key, home_server_id_cert,
@@ -53,10 +53,39 @@ async fn get_challenge_string() {
 }
 
 #[tokio::test]
-
 async fn rotate_server_identity_key() {
     init_logger();
-    let id_cert = home_server_id_cert();
+    let home_server_signing_key = gen_priv_key();
+    let id_csr = IdCsr::new(
+        &home_server_subject(),
+        &home_server_signing_key,
+        &Capabilities::default_home_server(),
+        Some(polyproto::certs::Target::HomeServer),
+    )
+    .unwrap();
+    let id_cert = IdCert::from_ca_csr(
+        id_csr,
+        &home_server_signing_key,
+        Uint::new(9u64.to_be_bytes().as_slice()).unwrap(),
+        home_server_subject(),
+        Validity {
+            not_before: x509_cert::time::Time::GeneralTime(
+                GeneralizedTime::from_unix_duration(std::time::Duration::new(
+                    current_unix_time() - 1000,
+                    0,
+                ))
+                .unwrap(),
+            ),
+            not_after: x509_cert::time::Time::GeneralTime(
+                GeneralizedTime::from_unix_duration(std::time::Duration::new(
+                    current_unix_time() + 1000,
+                    0,
+                ))
+                .unwrap(),
+            ),
+        },
+    )
+    .unwrap();
     let cert_pem = id_cert.to_pem(der::pem::LineEnding::LF).unwrap();
     let server = Server::run();
     server.expect(
@@ -112,36 +141,19 @@ async fn get_server_id_cert() {
     let id_cert = home_server_id_cert();
     let cert_pem = id_cert.to_pem(der::pem::LineEnding::LF).unwrap();
     let server = Server::run();
-    server.expect(
-        Expectation::matching(method_path(
-            GET_SERVER_PUBLIC_IDCERT.method.as_str(),
-            GET_SERVER_PUBLIC_IDCERT.path,
-        ))
-        .respond_with(json_encoded(json!(cert_pem))),
-    );
-
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new(&url).unwrap();
-    let cert = client
-        .get_server_id_cert::<Ed25519Signature, Ed25519PublicKey>(None)
-        .await
-        .unwrap();
-    assert_eq!(cert.to_pem(der::pem::LineEnding::LF).unwrap(), cert_pem);
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
     server.expect(
         Expectation::matching(all_of![
             request::method(GET_SERVER_PUBLIC_IDCERT.method.as_str()),
             request::path(GET_SERVER_PUBLIC_IDCERT.path),
-            request::body(json_decoded(eq(json!({"timestamp": timestamp})))),
+            request::body(json_decoded(eq(json!({"timestamp": 10})))),
         ])
         .respond_with(json_encoded(json!(cert_pem))),
     );
 
     let cert = client
-        .get_server_id_cert::<Ed25519Signature, Ed25519PublicKey>(Some(timestamp))
+        .get_server_id_cert::<Ed25519Signature, Ed25519PublicKey>(Some(10))
         .await
         .unwrap();
     assert_eq!(cert.to_pem(der::pem::LineEnding::LF).unwrap(), cert_pem);
@@ -345,6 +357,7 @@ async fn delete_session() {
 async fn rotate_session_id_cert() {
     init_logger();
     let actor_signing_key = gen_priv_key();
+    let home_server_signing_key = gen_priv_key();
     let id_csr = IdCsr::new(
         &actor_subject("flori"),
         &actor_signing_key,
@@ -354,7 +367,7 @@ async fn rotate_session_id_cert() {
     .unwrap();
     let id_cert = IdCert::from_actor_csr(
         id_csr.clone(),
-        &actor_signing_key,
+        &home_server_signing_key,
         Uint::new(&[8]).unwrap(),
         home_server_subject(),
         default_validity(),

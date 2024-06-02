@@ -5,7 +5,7 @@
 use std::time::UNIX_EPOCH;
 
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::json;
 use x509_cert::serial_number::SerialNumber;
 
 use crate::certs::idcert::IdCert;
@@ -209,24 +209,9 @@ impl HttpClient {
             .body(csr.to_pem(der::pem::LineEnding::LF)?)
             .send()
             .await;
-        let response_value = HttpClient::handle_response::<Value>(request_response).await?;
-        let id_cert = if let Some(cert) = response_value.get("id_cert") {
-            IdCert::<S, P>::from_pem_unchecked(cert.to_string().as_str())?
-        } else {
-            return Err(crate::errors::RequestError::ConversionError(
-                crate::errors::InvalidInput::Malformed("Found no id_cert in response.".to_string())
-                    .into(),
-            ));
-        };
-        let token = if let Some(token) = response_value.get("token") {
-            token.as_str().unwrap().to_string()
-        } else {
-            return Err(crate::errors::RequestError::ConversionError(
-                crate::errors::InvalidInput::Malformed("Found no token in response.".to_string())
-                    .into(),
-            ));
-        };
-        Ok((id_cert, token))
+        let response_value = HttpClient::handle_response::<IdCertToken>(request_response).await?;
+        let id_cert = IdCert::<S, P>::from_pem_unchecked(&response_value.id_cert.to_string())?;
+        Ok((id_cert, response_value.token))
     }
 
     /// Upload encrypted private key material to the server for later retrieval. The upload size
@@ -380,6 +365,12 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<IdCertExtJson> for IdCertExt<S, P> {
             invalidated: id_cert.invalidated,
         })
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub struct IdCertToken {
+    pub id_cert: String,
+    pub token: String,
 }
 
 #[cfg(test)]
