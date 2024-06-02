@@ -12,8 +12,8 @@ use polyproto::certs::idcert::IdCert;
 use polyproto::certs::SessionId;
 use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
-    GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING, GET_SERVER_PUBLIC_IDCERT, GET_SERVER_PUBLIC_KEY,
-    ROTATE_SERVER_IDENTITY_KEY, UPDATE_SESSION_IDCERT,
+    DELETE_SESSION, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING, GET_SERVER_PUBLIC_IDCERT,
+    GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY, UPDATE_SESSION_IDCERT,
 };
 use serde_json::json;
 
@@ -311,6 +311,28 @@ async fn update_session_id_cert() {
     let client = polyproto::api::HttpClient::new(&url).unwrap();
     client
         .update_session_id_cert::<Ed25519Signature, Ed25519PublicKey>(id_cert)
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn delete_session() {
+    init_logger();
+    let server = Server::run();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(DELETE_SESSION.method.to_string()),
+            request::path(DELETE_SESSION.path),
+            request::body(json_decoded(eq(json!({
+                "session_id": "cool_session_id"
+            }))))
+        ])
+        .respond_with(status_code(204)),
+    );
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    client
+        .delete_session(&SessionId::new_validated("cool_session_id").unwrap())
         .await
         .unwrap();
 }
