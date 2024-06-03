@@ -4,7 +4,6 @@
 
 use std::time::UNIX_EPOCH;
 
-use ser_der::asn1::Ia5String;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use x509_cert::serial_number::SerialNumber;
@@ -300,14 +299,6 @@ impl HttpClient {
         let response = request.send().await;
         HttpClient::handle_response::<u64>(response).await
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-/// Represents encrypted private key material. The `serial` is used to identify the key
-/// material. The `encrypted_pkm` is the actual encrypted private key material.
-pub struct EncryptedPkm {
-    pub serial_number: Ia5String,
-    pub key_data: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
