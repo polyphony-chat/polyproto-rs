@@ -4,10 +4,10 @@
 
 use std::ops::{Deref, DerefMut};
 
+#[cfg(feature = "serde")]
+use crate::types::serde::der::asn1::Ia5String;
 #[cfg(not(feature = "serde"))]
 use der::asn1::Ia5String;
-#[cfg(feature = "serde")]
-use ser_der::asn1::Ia5String;
 
 use der::asn1::BitString;
 use der::pem::LineEnding;
