@@ -62,7 +62,7 @@ pub mod asn1 {
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
             formatter.write_str(
-                "A concatenation of characters from the IA5 character set in &str format.",
+                "A concatenation of characters from the IA5 character set in &str format",
             )
         }
 
