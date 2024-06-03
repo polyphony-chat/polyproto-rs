@@ -4,10 +4,14 @@
 
 use std::ops::{Deref, DerefMut};
 
+#[cfg(not(feature = "serde"))]
+use der::asn1::Ia5String;
+#[cfg(feature = "serde")]
+use ser_der::asn1::Ia5String;
+
 use der::asn1::BitString;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
-use ser_der::asn1::Ia5String;
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 use x509_cert::name::Name;
 
