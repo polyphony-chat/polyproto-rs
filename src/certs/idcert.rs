@@ -29,6 +29,15 @@ use super::Target;
 /// - **S**: The [Signature] and - by extension - [SignatureAlgorithm] this certificate was
 ///   signed with.
 /// - **P**: A [PublicKey] type P which can be used to verify [Signature]s of type S.
+///
+/// ## Verifying an ID-Cert
+///
+/// To verify an ID-Cert, you can use the [full_verify_actor()] or [full_verify_home_server()] methods.
+/// These methods will check if the certificate is valid at a given time, if the signature is correct,
+/// and if the certificate is well-formed and up to polyproto specification.
+///
+/// If you only need to check
+/// if the certificate is valid at a given time, you can use the [valid_at()] method.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdCert<S: Signature, P: PublicKey<S>> {
     /// Inner TBS (To be signed) certificate
