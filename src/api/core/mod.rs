@@ -213,9 +213,25 @@ impl HttpClient {
         Ok((id_cert, response_value.token))
     }
 
+    // TODO
+    /*
+    I am thinking of creating a custom type for encrypted private key material, which contains the
+    following information:
+    - The serial number of the ID-Cert, as clear text
+    - A modified `SubjectPublicKeyInfo` structure, which stores the following information:
+        - The private key material, encrypted
+        - The `AlgorithmIdentifier` of the private key material
+    - An `AlgorithmIdentifier` for the encryption algorithm used
+     */
+
     /// Upload encrypted private key material to the server for later retrieval. The upload size
     /// must not exceed the server's maximum upload size for this route. This is usually not more
     /// than 10kb and can be as low as 800 bytes, depending on the server configuration.
+    ///
+    /// The `data` parameter is a vector of [EncryptedPkm] which contains the serial number of the
+    /// ID-Cert and the encrypted private key material. Naturally, the server cannot check the
+    /// contents of the encrypted private key material. However, it is recommended to store the data
+    /// in a `SubjectPublicKeyInfo` structure, where the public key is the private key material.
     pub async fn upload_encrypted_pkm(&self, data: Vec<EncryptedPkm>) -> HttpResult<()> {
         let mut body = Vec::new();
         for pkm in data.iter() {
