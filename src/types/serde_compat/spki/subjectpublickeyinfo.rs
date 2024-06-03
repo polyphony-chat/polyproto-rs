@@ -4,12 +4,14 @@
 
 use std::ops::{Deref, DerefMut};
 
+use super::super::spki::AlgorithmIdentifierOwned;
 use der::asn1::BitString;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
 use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
-use spki::AlgorithmIdentifierOwned;
+
+use crate::types::LikeSubjectPublicKeyInfo;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SubjectPublicKeyInfo(spki::SubjectPublicKeyInfoOwned);
@@ -17,7 +19,7 @@ pub struct SubjectPublicKeyInfo(spki::SubjectPublicKeyInfoOwned);
 impl SubjectPublicKeyInfo {
     pub fn new(algorithm: AlgorithmIdentifierOwned, subject_public_key: BitString) -> Self {
         Self(spki::SubjectPublicKeyInfoOwned {
-            algorithm,
+            algorithm: algorithm.into(),
             subject_public_key,
         })
     }
@@ -39,14 +41,6 @@ impl SubjectPublicKeyInfo {
     /// Try to encode this type as DER.
     pub fn to_der(&self) -> Result<Vec<u8>, der::Error> {
         self.0.to_der()
-    }
-
-    pub fn algorithm(&self) -> &AlgorithmIdentifierOwned {
-        &self.0.algorithm
-    }
-
-    pub fn subject_public_key(&self) -> &BitString {
-        &self.0.subject_public_key
     }
 }
 
@@ -122,23 +116,10 @@ impl DerefMut for SubjectPublicKeyInfo {
     }
 }
 
-pub trait LikeSubjectPublicKeyInfo {
-    fn new(algorithm: AlgorithmIdentifierOwned, subject_public_key: BitString) -> Self;
-}
-
-impl LikeSubjectPublicKeyInfo for spki::SubjectPublicKeyInfoOwned {
-    fn new(algorithm: AlgorithmIdentifierOwned, subject_public_key: BitString) -> Self {
-        Self {
-            algorithm,
-            subject_public_key,
-        }
-    }
-}
-
 impl LikeSubjectPublicKeyInfo for SubjectPublicKeyInfo {
     fn new(algorithm: AlgorithmIdentifierOwned, subject_public_key: BitString) -> Self {
         spki::SubjectPublicKeyInfoOwned {
-            algorithm,
+            algorithm: algorithm.into(),
             subject_public_key,
         }
         .into()

@@ -6,11 +6,37 @@ pub mod challenge_string;
 pub mod encrypted_pkm;
 pub mod federation_id;
 #[cfg(feature = "serde")]
-pub mod serde;
+pub mod serde_compat;
 
 pub use challenge_string::*;
+use der::asn1::BitString;
+use der::Any;
 pub use encrypted_pkm::*;
 pub use federation_id::*;
+
+#[cfg(feature = "serde")]
+use serde_compat::spki::AlgorithmIdentifierOwned;
+#[cfg(not(feature = "serde"))]
+use spki::AlgorithmIdentifierOwned;
+use spki::ObjectIdentifier;
+
+pub trait LikeSubjectPublicKeyInfo {
+    fn new(algorithm: AlgorithmIdentifierOwned, subject_public_key: BitString) -> Self;
+}
+
+impl LikeSubjectPublicKeyInfo for spki::SubjectPublicKeyInfoOwned {
+    fn new(algorithm: AlgorithmIdentifierOwned, subject_public_key: BitString) -> Self {
+        #[allow(clippy::useless_conversion)]
+        Self {
+            algorithm: algorithm.into(),
+            subject_public_key,
+        }
+    }
+}
+
+pub trait LikeAlgorithmIdentifierOwned {
+    fn new(oid: ObjectIdentifier, parameters: Option<Any>) -> Self;
+}
 
 pub mod routes {
     #[derive(Debug, Clone)]

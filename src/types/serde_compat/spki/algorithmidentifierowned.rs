@@ -9,6 +9,8 @@ use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
 use spki::ObjectIdentifier;
 
+use crate::types::LikeAlgorithmIdentifierOwned;
+
 #[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
 pub struct AlgorithmIdentifierOwned(spki::AlgorithmIdentifierOwned);
 
@@ -54,10 +56,6 @@ impl From<AlgorithmIdentifierOwned> for spki::AlgorithmIdentifierOwned {
     }
 }
 
-pub trait LikeAlgorithmIdentifierOwned {
-    fn new(oid: ObjectIdentifier, parameters: Option<Any>) -> Self;
-}
-
 impl LikeAlgorithmIdentifierOwned for AlgorithmIdentifierOwned {
     fn new(oid: ObjectIdentifier, parameters: Option<Any>) -> Self {
         Self::new(oid, parameters)
@@ -98,3 +96,5 @@ impl Serialize for AlgorithmIdentifierOwned {
         serializer.serialize_bytes(&der)
     }
 }
+
+// TODO: Tests

@@ -15,7 +15,7 @@ use crate::errors::{ConversionError, RequestError};
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::types::routes::core::v1::*;
-use crate::types::ChallengeString;
+use crate::types::{ChallengeString, EncryptedPkm};
 
 use super::{HttpClient, HttpResult};
 

@@ -5,7 +5,7 @@
 use std::ops::{Deref, DerefMut};
 
 #[cfg(feature = "serde")]
-use crate::types::serde::der::asn1::Ia5String;
+use crate::types::serde_compat::der::asn1::Ia5String;
 #[cfg(not(feature = "serde"))]
 use der::asn1::Ia5String;
 
@@ -74,6 +74,7 @@ impl SessionId {
                 )))
             }
         };
+        #[allow(clippy::useless_conversion)]
         let session_id = SessionId {
             session_id: ia5string.into(),
         };
