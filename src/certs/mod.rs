@@ -4,9 +4,10 @@
 
 use std::ops::{Deref, DerefMut};
 
-use der::asn1::{BitString, Ia5String};
+use der::asn1::BitString;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
+use ser_der::asn1::Ia5String;
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 use x509_cert::name::Name;
 
@@ -61,7 +62,7 @@ impl SessionId {
     /// if needed. Checks if the input is a valid Ia5String and if the [SessionId] constraints have
     /// been violated.
     pub fn new_validated(id: &str) -> Result<Self, ConstraintError> {
-        let ia5string = match Ia5String::new(id) {
+        let ia5string = match der::asn1::Ia5String::new(id) {
             Ok(string) => string,
             Err(_) => {
                 return Err(ConstraintError::Malformed(Some(
@@ -70,10 +71,24 @@ impl SessionId {
             }
         };
         let session_id = SessionId {
-            session_id: ia5string,
+            session_id: ia5string.into(),
         };
         session_id.validate(None)?;
         Ok(session_id)
+    }
+}
+
+impl From<SessionId> for Ia5String {
+    fn from(value: SessionId) -> Self {
+        value.session_id
+    }
+}
+
+impl TryFrom<Ia5String> for SessionId {
+    type Error = ConstraintError;
+
+    fn try_from(value: Ia5String) -> Result<Self, Self::Error> {
+        SessionId::new_validated(value.to_string().as_str())
     }
 }
 
