@@ -3,9 +3,13 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 pub mod challenge_string;
+pub mod encrypted_pkm;
 pub mod federation_id;
+#[cfg(feature = "serde")]
+pub mod serde;
 
 pub use challenge_string::*;
+pub use encrypted_pkm::*;
 pub use federation_id::*;
 
 pub mod routes {
