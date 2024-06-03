@@ -7,7 +7,7 @@ use httptest::matchers::request::method_path;
 use httptest::matchers::{eq, json_decoded, matches, request};
 use httptest::responders::{json_encoded, status_code};
 use httptest::*;
-use polyproto::api::core::current_unix_time;
+use polyproto::api::core::{current_unix_time, EncryptedPkm};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
@@ -16,7 +16,7 @@ use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
     DELETE_SESSION, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING, GET_SERVER_PUBLIC_IDCERT,
     GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT,
-    UPDATE_SESSION_IDCERT,
+    UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
 };
 use serde_json::json;
 use x509_cert::time::Validity;
@@ -390,6 +390,37 @@ async fn rotate_session_id_cert() {
     let client = polyproto::api::HttpClient::new(&url).unwrap();
     client
         .rotate_session_id_cert::<Ed25519Signature, Ed25519PublicKey>(id_csr)
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn upload_encrypted_pkm() {
+    init_logger();
+    let key = gen_priv_key();
+    let pkm = String::from_utf8_lossy(key.key.as_bytes()).to_string();
+    let server = Server::run();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(UPLOAD_ENCRYPTED_PKM.method.to_string()),
+            request::path(UPLOAD_ENCRYPTED_PKM.path),
+            request::body(json_decoded(eq(json!([
+                {
+                    "key_data": pkm,
+                    "serial_number": "one"
+                }
+            ]))))
+        ])
+        .respond_with(status_code(201)),
+    );
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    let encrypted_pkm = EncryptedPkm {
+        serial_number: SessionId::new_validated("one").unwrap().into(),
+        key_data: pkm,
+    };
+    client
+        .upload_encrypted_pkm(vec![encrypted_pkm])
         .await
         .unwrap();
 }

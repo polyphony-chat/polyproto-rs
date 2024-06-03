@@ -4,6 +4,7 @@
 
 use std::time::UNIX_EPOCH;
 
+use ser_der::asn1::Ia5String;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use x509_cert::serial_number::SerialNumber;
@@ -18,8 +19,6 @@ use crate::types::routes::core::v1::*;
 use crate::types::ChallengeString;
 
 use super::{HttpClient, HttpResult};
-
-// TODO: MLS routes still missing
 
 pub fn current_unix_time() -> u64 {
     std::time::SystemTime::now()
@@ -222,7 +221,7 @@ impl HttpClient {
         for pkm in data.iter() {
             body.push(json!({
                 "serial_number": pkm.serial_number.to_string(),
-                "encrypted_pkm": pkm.key_data
+                "key_data": pkm.key_data
             }));
         }
         let request_url = self.url.join(UPLOAD_ENCRYPTED_PKM.path)?;
@@ -252,10 +251,10 @@ impl HttpClient {
             .request(GET_ENCRYPTED_PKM.method.clone(), request_url)
             .body(json!(body).to_string());
         let response =
-            HttpClient::handle_response::<Vec<EncryptedPkmJson>>(request.send().await).await?;
+            HttpClient::handle_response::<Vec<EncryptedPkm>>(request.send().await).await?;
         let mut vec_pkm = Vec::new();
         for pkm in response.into_iter() {
-            vec_pkm.push(EncryptedPkm::try_from(pkm)?);
+            vec_pkm.push(pkm);
         }
         Ok(vec_pkm)
     }
@@ -287,47 +286,12 @@ impl HttpClient {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 /// Represents encrypted private key material. The `serial` is used to identify the key
 /// material. The `encrypted_pkm` is the actual encrypted private key material.
 pub struct EncryptedPkm {
-    pub serial_number: SerialNumber,
+    pub serial_number: Ia5String,
     pub key_data: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-/// Stringly typed version of [EncryptedPkm], used for serialization and deserialization.
-/// This is necessary because [SerialNumber] from the `x509_cert` crate does not implement
-/// `Serialize` and `Deserialize`.
-///
-/// Implements `From<EncryptedPkm>` and `TryInto<EncryptedPkmJson>` for conversion between the two
-/// types.
-///
-/// (actually, it does not implement `TryInto<EncryptedPkmJson>`. However, [EncryptedPkm] implements
-/// `TryFrom<EncryptedPkmJson>`, but you get the idea.)
-pub struct EncryptedPkmJson {
-    pub serial_number: String,
-    pub key_data: String,
-}
-
-impl From<EncryptedPkm> for EncryptedPkmJson {
-    fn from(pkm: EncryptedPkm) -> Self {
-        Self {
-            serial_number: pkm.serial_number.to_string(),
-            key_data: pkm.key_data,
-        }
-    }
-}
-
-impl TryFrom<EncryptedPkmJson> for EncryptedPkm {
-    type Error = ConversionError;
-
-    fn try_from(pkm: EncryptedPkmJson) -> Result<Self, Self::Error> {
-        Ok(Self {
-            serial_number: SerialNumber::new(pkm.serial_number.as_bytes())?,
-            key_data: pkm.key_data,
-        })
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
