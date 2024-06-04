@@ -11,22 +11,8 @@ use super::x509_cert::SerialNumber;
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A private key material structure for storing encrypted private key material on a home server.
 ///
-/// JSON representation:
-/// ```json
-/// {
-///     "serial_number": [41, 12, 3, 123, 4, 3, 11],
-///     "key_data": "-----BEGIN[...]",
-///     "encryption_algorithm": [1, 2, 840, 113549, 1, 5, 13, 1, 1, 5]
-/// }
-/// ```
-///
-/// where:
-///
-/// - `serial_number`: [SerialNumber], as an array of integers. Must represent a positive integer of up to 20 octets in length.
-/// - `key_data`: [PrivateKeyInfo] as a PEM-encoded ASN.1 structure. This is just a
-///               [SubjectPublicKeyInfoOwned] structure which stores an encrypted private key in the
-///              `subject_public_key` field.
-/// - `encryption_algorithm`: [AlgorithmIdentifierOwned], DER encoded as an array of bytes.
+/// For more information, such as how this type is represented in JSON, see the type definition of
+/// `EncryptedPKM` on the [polyproto documentation website](https://docs.polyphony.chat/APIs/core/Types/encrypted_pkm/)
 pub struct EncryptedPkm {
     pub serial_number: SerialNumber,
     pub key_data: PrivateKeyInfo,
