@@ -424,7 +424,8 @@ async fn upload_encrypted_pkm() {
     client
         .upload_encrypted_pkm(vec![encrypted_pkm])
         .await
-        .unwrap(); */
+        .unwrap();
+    */
 }
 
 #[tokio::test]
