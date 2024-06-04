@@ -4,6 +4,10 @@
 
 use std::ops::{Deref, DerefMut};
 
+use log::trace;
+
+use crate::errors::{ConversionError, InvalidInput};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Wrapper type around [x509_cert::serial_number::SerialNumber], providing serde support, if the
 /// `serde` feature is enabled. See "De-/serialization value expectations" below for more
@@ -71,6 +75,38 @@ impl SerialNumber {
     pub fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
     }
+
+    /// Try to convert the inner byte slice to a [u128].
+    ///
+    /// Returns an error if the byte slice is empty,
+    /// or if the byte slice is longer than 16 bytes. Leading zeros of byte slices are stripped, so
+    /// 17 bytes are allowed, if the first byte is zero.
+    pub fn try_as_u128(&self) -> Result<u128, ConversionError> {
+        let mut bytes = self.as_bytes().to_vec();
+        if bytes.is_empty() {
+            return Err(InvalidInput::Length {
+                min_length: 1,
+                max_length: 16,
+                actual_length: 1.to_string(),
+            }
+            .into());
+        }
+        if *bytes.first().unwrap() == 0 {
+            bytes.remove(0);
+        }
+        trace!("bytes: {:?}", bytes);
+        if bytes.len() > 16 {
+            return Err(InvalidInput::Length {
+                min_length: 1,
+                max_length: 16,
+                actual_length: bytes.len().to_string(),
+            }
+            .into());
+        }
+        let mut buf = [0u8; 16];
+        buf[16 - bytes.len()..].copy_from_slice(&bytes);
+        Ok(u128::from_be_bytes(buf))
+    }
 }
 
 #[cfg(feature = "serde")]
@@ -95,6 +131,18 @@ mod serde_support {
         {
             SerialNumber::new(v).map_err(serde::de::Error::custom)
         }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::SeqAccess<'de>,
+        {
+            let mut bytes: Vec<u8> = Vec::new(); // Create a new Vec to store the bytes
+            while let Some(byte) = seq.next_element()? {
+                // "Iterate" over the sequence, assuming each element is a byte
+                bytes.push(byte) // Push the byte to the Vec
+            }
+            SerialNumber::new(&bytes).map_err(serde::de::Error::custom) // Create a SerialNumber from the Vec
+        }
     }
 
     impl<'de> Deserialize<'de> for SerialNumber {
@@ -102,7 +150,7 @@ mod serde_support {
         where
             D: serde::Deserializer<'de>,
         {
-            deserializer.deserialize_bytes(SerialNumberVisitor)
+            deserializer.deserialize_any(SerialNumberVisitor)
         }
     }
 
@@ -112,6 +160,71 @@ mod serde_support {
             S: serde::Serializer,
         {
             serializer.serialize_bytes(self.as_bytes())
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use log::trace;
+    use serde_json::json;
+
+    use crate::testing_utils::init_logger;
+
+    use super::SerialNumber;
+
+    #[test]
+    fn serialize_deserialize() {
+        init_logger();
+        let serial_number = SerialNumber::new(&2347812387874u128.to_be_bytes()).unwrap();
+        let serialized = json!(serial_number);
+        trace!("is_array: {:?}", serialized.is_array());
+        trace!("serialized: {}", serialized);
+        let deserialized: SerialNumber = serde_json::from_value(serialized).unwrap();
+
+        assert_eq!(serial_number, deserialized);
+    }
+
+    #[test]
+    fn serial_number_from_to_u128() {
+        init_logger();
+        let mut val = 0u128;
+        loop {
+            let serial_number = SerialNumber::new(&val.to_be_bytes()).unwrap();
+            let json = json!(serial_number);
+            let deserialized: SerialNumber = serde_json::from_value(json).unwrap();
+            let u128 = deserialized.try_as_u128().unwrap();
+            assert_eq!(u128, val);
+            assert_eq!(deserialized, serial_number);
+            if val == 0 {
+                val = 1;
+            }
+            if val == u128::MAX {
+                break;
+            }
+            val = match val.checked_mul(2) {
+                Some(v) => v,
+                None => u128::MAX,
+            };
+        }
+    }
+
+    #[test]
+    fn try_as_u128() {
+        init_logger();
+        let mut val = 1u128;
+        loop {
+            let serial_number = SerialNumber::new(&val.to_be_bytes()).unwrap();
+            let u128 = serial_number.try_as_u128().unwrap();
+            assert_eq!(u128, val);
+            trace!("u128: {}", u128);
+            if val == u128::MAX {
+                break;
+            }
+            val = match val.checked_mul(2) {
+                Some(v) => v,
+                None => u128::MAX,
+            };
         }
     }
 }
