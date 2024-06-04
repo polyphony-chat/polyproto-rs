@@ -8,6 +8,16 @@ use der::{Any, Decode, Encode};
 use spki::ObjectIdentifier;
 
 #[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
+/// `AlgorithmIdentifier` reference which has `Any` parameters.
+///
+/// A wrapper around `spki::AlgorithmIdentifierOwned`, which provides `serde` support, if enabled by
+/// the `serde` feature.
+///
+/// ## De-/Serialization expectations
+///
+/// This type expects a DER encoded AlgorithmIdentifier with optional der::Any parameters. The DER
+/// encoded data has to be provided in the form of an array of bytes. Types that fulfill this
+/// expectation are, for example, `&[u8]`, `Vec<u8>` and `&[u8; N]`.
 pub struct AlgorithmIdentifierOwned(spki::AlgorithmIdentifierOwned);
 
 impl AlgorithmIdentifierOwned {
