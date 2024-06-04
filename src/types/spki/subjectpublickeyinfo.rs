@@ -79,8 +79,7 @@ mod serde_support {
         type Value = SubjectPublicKeyInfo;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter
-                .write_str("This visitor expects a valid, PEM or DER encoded SubjectPublicKeyInfo.")
+            formatter.write_str("a valid, PEM or DER encoded SubjectPublicKeyInfo")
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>

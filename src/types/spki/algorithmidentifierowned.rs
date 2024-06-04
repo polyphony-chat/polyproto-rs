@@ -73,7 +73,7 @@ mod serde_support {
         type Value = AlgorithmIdentifierOwned;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("this Visitor expects a DER encoded AlgorithmIdentifier with optional der::Any parameters and a BitString Key")
+            formatter.write_str("a DER encoded AlgorithmIdentifier with optional der::Any parameters and a BitString Key")
         }
     }
 
