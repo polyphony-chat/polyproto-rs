@@ -4,9 +4,9 @@
 
 use std::time::UNIX_EPOCH;
 
+use crate::types::x509_cert::SerialNumber;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use x509_cert::serial_number::SerialNumber;
 
 use crate::certs::idcert::IdCert;
 use crate::certs::idcsr::IdCsr;

@@ -111,13 +111,8 @@ pub(crate) mod testing_utils {
 #[cfg(test)]
 mod test {
     use der::asn1::Uint;
-    use x509_cert::certificate::Profile;
-    use x509_cert::serial_number::SerialNumber;
 
-    #[derive(Clone, PartialEq, Eq, Debug)]
-    enum TestProfile {}
-
-    impl Profile for TestProfile {}
+    use crate::types::x509_cert::SerialNumber;
 
     fn strip_leading_zeroes(bytes: &[u8]) -> &[u8] {
         if let Some(stripped) = bytes.strip_prefix(&[0u8]) {
@@ -132,8 +127,7 @@ mod test {
     fn test_convert_serial_number() {
         let biguint = Uint::new(&[10u8, 240u8]).unwrap();
         assert_eq!(biguint.as_bytes(), &[10u8, 240u8]);
-        let serial_number: SerialNumber<TestProfile> =
-            SerialNumber::new(biguint.as_bytes()).unwrap();
+        let serial_number = SerialNumber::new(biguint.as_bytes()).unwrap();
         assert_eq!(
             strip_leading_zeroes(serial_number.as_bytes()),
             biguint.as_bytes()
@@ -141,8 +135,7 @@ mod test {
 
         let biguint = Uint::new(&[240u8, 10u8]).unwrap();
         assert_eq!(biguint.as_bytes(), &[240u8, 10u8]);
-        let serial_number: SerialNumber<TestProfile> =
-            SerialNumber::new(biguint.as_bytes()).unwrap();
+        let serial_number = SerialNumber::new(biguint.as_bytes()).unwrap();
         assert_eq!(
             strip_leading_zeroes(serial_number.as_bytes()),
             biguint.as_bytes()
