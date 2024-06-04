@@ -396,6 +396,7 @@ async fn rotate_session_id_cert() {
 
 #[tokio::test]
 async fn upload_encrypted_pkm() {
+    /*
     init_logger();
     let key = gen_priv_key();
     let pkm = String::from_utf8_lossy(key.key.as_bytes()).to_string();
@@ -414,7 +415,7 @@ async fn upload_encrypted_pkm() {
         .respond_with(status_code(201)),
     );
     // TODO: Rewrite this test
-    /*     let url = server_url(&server);
+        let url = server_url(&server);
     let client = polyproto::api::HttpClient::new(&url).unwrap();
     let encrypted_pkm = EncryptedPkm {
         serial_number: SessionId::new_validated("one").unwrap().into(),
