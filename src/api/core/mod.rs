@@ -235,7 +235,7 @@ impl HttpClient {
         let mut body = Vec::new();
         for pkm in data.iter() {
             body.push(json!({
-                "serial_number": pkm.serial_number.to_string(),
+                "serial_number": pkm.serial_number,
                 "key_data": pkm.key_data
             }));
         }
