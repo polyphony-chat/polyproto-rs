@@ -85,14 +85,23 @@ pub use der;
 pub use spki;
 pub use x509_cert::name::*;
 
-/// Types implementing [Constrained] can be validated to be well-formed. In addition to the [Constrained]
-/// trait, types can also implement [ActorConstrained] and [HomeServerConstrained] to add additional
-/// guarantees about their well-formedness in the context of an actor or home server. If implemented,
-/// these trait methods should be preferred over the [Constrained] trait method.
+/// Types implementing [Constrained] can be validated to be well-formed.
+///
+/// ## `Target` parameter
 ///
 /// The `target` parameter is used to specify the context in which the type should be validated.
 /// For example: Specifying a [Target] of `Actor` would also check that the IdCert is not a CA
 /// certificate, among other things.
+///
+/// If the `target` is `None`, the type will be validated without
+/// considering this context. If you know the context in which the type will be used, there is no
+/// reason to not specify it, and you would only reap negative consequences from not doing so.
+///
+/// Valid reasons to specify `None` as the `target` are, for example, if you parse a type from a
+/// file and do not know the context in which it will be used. Be careful when doing this; ideally,
+/// find a way to find out the context in which the type will be used.
+///
+/// ## Safety
 ///
 /// [Constrained] does not guarantee that a validated type will always be *correct* in the context
 /// it is in.
