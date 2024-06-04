@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+#![allow(missing_docs)]
+
 pub static ERR_MSG_HOME_SERVER_MISSING_CA_ATTR: &str =
     "Home servers CSRs and Certificates must have the \"CA\" capability set to true!";
 pub static ERR_MSG_ACTOR_CANNOT_BE_CA: &str =

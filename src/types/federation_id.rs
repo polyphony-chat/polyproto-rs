@@ -9,9 +9,11 @@ use regex::Regex;
 use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX};
 use crate::Constrained;
 
+/// The regular expression for a valid `FederationId`.
 pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// A `FederationId` is a globally unique identifier for an actor in the context of polyproto.
 pub struct FederationId {
     pub(crate) inner: String,
 }

@@ -5,9 +5,23 @@
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, PartialEq, Clone, Eq, PartialOrd, Ord)]
+/// Wrapper around [der::asn1::Ia5String], which provides serde support, if the `serde` feature is
+/// enabled.
+///
+/// ASN.1 `IA5String` type.
+///
+/// Supports the [International Alphabet No. 5 (IA5)] character encoding, i.e.
+/// the lower 128 characters of the ASCII alphabet. (Note: IA5 is now
+/// technically known as the International Reference Alphabet or IRA as
+/// specified in the ITU-T's T.50 recommendation).
+///
+/// For UTF-8, use [`String`][`alloc::string::String`].
+///
+/// [International Alphabet No. 5 (IA5)]: https://en.wikipedia.org/wiki/T.50_%28standard%29
 pub struct Ia5String(der::asn1::Ia5String);
 
 impl Ia5String {
+    /// Create a new `IA5String`.
     pub fn new<T>(input: &T) -> Result<Self, der::Error>
     where
         T: AsRef<[u8]> + ?Sized,

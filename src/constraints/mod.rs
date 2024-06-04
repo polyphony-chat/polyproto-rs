@@ -19,12 +19,12 @@ use crate::{
     OID_RDN_UNIQUE_IDENTIFIER,
 };
 
-pub mod capabilities;
-pub mod certs;
-pub mod name;
-pub mod session_id;
+mod capabilities;
+mod certs;
+mod name;
+mod session_id;
 #[cfg(feature = "types")]
-pub mod types;
+mod types;
 
 #[cfg(test)]
 mod name_constraints {

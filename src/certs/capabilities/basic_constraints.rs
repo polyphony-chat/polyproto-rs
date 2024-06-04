@@ -11,7 +11,7 @@ use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
 
-use crate::errors::{ConstraintError, InvalidInput, ConversionError};
+use crate::errors::{ConstraintError, ConversionError, InvalidInput};
 
 use super::OID_BASIC_CONSTRAINTS;
 
@@ -52,12 +52,11 @@ impl TryFrom<Attribute> for BasicConstraints {
     fn try_from(value: Attribute) -> Result<Self, Self::Error> {
         // Basic input validation. Check OID of Attribute and length of the "values" SetOfVec provided.
         if value.oid.to_string() != super::OID_BASIC_CONSTRAINTS {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                format!(
-                    "OID of value does not match any of OID_BASIC_CONSTRAINTS. Found OID {}",
-                    value.oid
-                ),
-            )));
+            return Err(InvalidInput::Malformed(format!(
+                "OID of value does not match any of OID_BASIC_CONSTRAINTS. Found OID {}",
+                value.oid
+            ))
+            .into());
         }
         let values = value.values;
         if values.len() != 1usize {

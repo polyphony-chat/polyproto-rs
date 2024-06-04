@@ -21,6 +21,7 @@ use spki::ObjectIdentifier;
 pub struct AlgorithmIdentifierOwned(spki::AlgorithmIdentifierOwned);
 
 impl AlgorithmIdentifierOwned {
+    /// Create a new `AlgorithmIdentifierOwned`.
     pub fn new(oid: ObjectIdentifier, parameters: Option<Any>) -> Self {
         Self(spki::AlgorithmIdentifierOwned { oid, parameters })
     }

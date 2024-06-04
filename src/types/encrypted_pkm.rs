@@ -14,15 +14,20 @@ use super::x509_cert::SerialNumber;
 /// For more information, such as how this type is represented in JSON, see the type definition of
 /// `EncryptedPKM` on the [polyproto documentation website](https://docs.polyphony.chat/APIs/core/Types/encrypted_pkm/)
 pub struct EncryptedPkm {
+    /// The serial number of the certificate that this private key material is associated with.
     pub serial_number: SerialNumber,
+    /// The encrypted private key material, along with the signature algorithm of the private key.
     pub key_data: PrivateKeyInfo,
+    /// The encryption algorithm used to encrypt the private key material.
     pub encryption_algorithm: AlgorithmIdentifierOwned,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 /// Private key material with additional information about the private keys' algorithm.
 pub struct PrivateKeyInfo {
+    /// The algorithm of the private key.
     pub algorithm: AlgorithmIdentifierOwned,
+    /// The encrypted private key material.
     pub encrypted_private_key_bitstring: BitString,
 }
 

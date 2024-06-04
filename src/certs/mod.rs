@@ -94,6 +94,8 @@ impl TryFrom<Ia5String> for SessionId {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// Whether something is intended for an actor or a home server.
+#[allow(missing_docs)]
 pub enum Target {
     Actor,
     HomeServer,

@@ -8,6 +8,7 @@ use url::Url;
 
 use crate::errors::RequestError;
 
+/// The `core` module contains all API routes for implementing the core polyproto protocol in a client or server.
 pub mod core;
 
 #[derive(Debug, Clone)]
@@ -27,11 +28,13 @@ pub mod core;
 /// let challenge: ChallengeString = client.get_challenge_string().await.unwrap();
 /// ```
 pub struct HttpClient {
+    /// The reqwest client used to make requests.
     pub client: reqwest::Client,
     headers: reqwest::header::HeaderMap,
     pub(crate) url: Url,
 }
 
+/// A type alias for the result of an HTTP request.
 pub type HttpResult<T> = Result<T, RequestError>;
 
 impl HttpClient {

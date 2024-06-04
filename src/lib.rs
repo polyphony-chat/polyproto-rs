@@ -45,9 +45,20 @@ polyproto = { version = "0", features = ["wasm"] }
 ```
 */
 
+#![forbid(unsafe_code)]
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    missing_copy_implementations
+)]
+
+/// The OID for the `domainComponent` RDN
 pub const OID_RDN_DOMAIN_COMPONENT: &str = "0.9.2342.19200300.100.1.25";
+/// The OID for the `commonName` RDN
 pub const OID_RDN_COMMON_NAME: &str = "2.5.4.3";
+/// The OID for the `uniqueIdentifier` RDN
 pub const OID_RDN_UNIQUE_IDENTIFIER: &str = "0.9.2342.19200300.100.1.44";
+/// The OID for the `uid` RDN
 pub const OID_RDN_UID: &str = "0.9.2342.19200300.100.1.1";
 
 use certs::Target;
@@ -68,7 +79,7 @@ pub mod signature;
 /// Types used in polyproto and the polyproto HTTP/REST APIs
 pub mod types;
 
-pub mod constraints;
+mod constraints;
 
 pub use der;
 pub use spki;
@@ -92,6 +103,7 @@ pub use x509_cert::name::*;
 /// the system. However, this makes no implications about "123" being the correct password for a
 /// given user account.
 pub trait Constrained {
+    /// Perform validation on the type, returning an error if the type is not well-formed.
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError>;
 }
 

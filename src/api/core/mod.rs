@@ -19,6 +19,7 @@ use crate::types::{ChallengeString, EncryptedPkm};
 
 use super::{HttpClient, HttpResult};
 
+/// Get the current UNIX timestamp according to the system clock.
 pub fn current_unix_time() -> u64 {
     std::time::SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -307,14 +308,18 @@ impl HttpClient {
 /// `GET /.p2/core/v1/idcert/actor/:fid`
 /// route. Can be converted to and (try)from [IdCertExtJson].
 pub struct IdCertExt<S: Signature, P: PublicKey<S>> {
+    /// The [IdCert] itself
     pub id_cert: IdCert<S, P>,
+    /// Whether the certificate has been marked as invalidated
     pub invalidated: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 /// Stringly typed version of [IdCertExt], used for serialization and deserialization.
 pub struct IdCertExtJson {
+    /// The [IdCert] as a PEM encoded string
     pub id_cert: String,
+    /// Whether the certificate has been marked as invalidated
     pub invalidated: bool,
 }
 
@@ -339,8 +344,12 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<IdCertExtJson> for IdCertExt<S, P> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+/// Represents a pair of an [IdCert] and a token, used in the API as a response when an [IdCsr] has
+/// been accepted by the server.
 pub struct IdCertToken {
+    /// The [IdCert] as a PEM encoded string
     pub id_cert: String,
+    /// The token as a string
     pub token: String,
 }
 
