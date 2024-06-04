@@ -5,11 +5,7 @@
 use std::ops::{Deref, DerefMut};
 
 use der::{Any, Decode, Encode};
-use serde::de::Visitor;
-use serde::{Deserialize, Serialize};
 use spki::ObjectIdentifier;
-
-use crate::types::LikeAlgorithmIdentifierOwned;
 
 #[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
 pub struct AlgorithmIdentifierOwned(spki::AlgorithmIdentifierOwned);
@@ -56,44 +52,38 @@ impl From<AlgorithmIdentifierOwned> for spki::AlgorithmIdentifierOwned {
     }
 }
 
-impl LikeAlgorithmIdentifierOwned for AlgorithmIdentifierOwned {
-    fn new(oid: ObjectIdentifier, parameters: Option<Any>) -> Self {
-        Self::new(oid, parameters)
+#[cfg(feature = "serde")]
+mod serde_support {
+    use super::AlgorithmIdentifierOwned;
+    use serde::de::Visitor;
+    use serde::{Deserialize, Serialize};
+    struct AlgorithmIdentifierVisitor;
+
+    impl<'de> Visitor<'de> for AlgorithmIdentifierVisitor {
+        type Value = AlgorithmIdentifierOwned;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("this Visitor expects a DER encoded AlgorithmIdentifier with optional der::Any parameters and a BitString Key")
+        }
     }
-}
 
-impl LikeAlgorithmIdentifierOwned for spki::AlgorithmIdentifierOwned {
-    fn new(oid: ObjectIdentifier, parameters: Option<Any>) -> Self {
-        spki::AlgorithmIdentifier { oid, parameters }
+    impl<'de> Deserialize<'de> for AlgorithmIdentifierOwned {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_bytes(AlgorithmIdentifierVisitor)
+        }
     }
-}
 
-struct AlgorithmIdentifierVisitor;
-
-impl<'de> Visitor<'de> for AlgorithmIdentifierVisitor {
-    type Value = AlgorithmIdentifierOwned;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("this Visitor expects a DER encoded AlgorithmIdentifier with optional der::Any parameters and a BitString Key")
-    }
-}
-
-impl<'de> Deserialize<'de> for AlgorithmIdentifierOwned {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_bytes(AlgorithmIdentifierVisitor)
-    }
-}
-
-impl Serialize for AlgorithmIdentifierOwned {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let der = self.to_der().map_err(serde::ser::Error::custom)?;
-        serializer.serialize_bytes(&der)
+    impl Serialize for AlgorithmIdentifierOwned {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            let der = self.to_der().map_err(serde::ser::Error::custom)?;
+            serializer.serialize_bytes(&der)
+        }
     }
 }
 

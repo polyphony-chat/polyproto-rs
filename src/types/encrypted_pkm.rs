@@ -2,28 +2,31 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#[cfg(feature = "serde")]
-use {
-    crate::types::serde_compat::{
-        der::asn1::Ia5String, spki::AlgorithmIdentifierOwned,
-        spki::SubjectPublicKeyInfo as SubjectPublicKeyInfoOwned,
-    },
-    ::serde::Deserialize,
-    ::serde::Serialize,
-};
-
-#[cfg(not(feature = "serde"))]
-use {
-    crate::types::LikeSubjectPublicKeyInfo,
-    der::asn1::Ia5String,
-    spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned},
-};
-
 use der::asn1::BitString;
 
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+use super::der::asn1::Ia5String;
+use super::spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfo};
+
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 /// A private key material structure for storing encrypted private key material on a home server.
+///
+/// JSON representation:
+/// ```json
+/// {
+///     "serial_number": "3784567832abcdefg",
+///     "key_data": "-----BEGIN[...]",
+///     "encryption_algorithm": [1, 2, 840, 113549, 1, 5, 13, 1, 1, 5]
+/// }
+/// ```
+///
+/// where:
+///
+/// - `serial_number`: [Ia5String] as a string
+/// - `key_data`: [PrivateKeyInfo] as a PEM-encoded ASN.1 structure. This is just a
+///               [SubjectPublicKeyInfoOwned] structure which stores an encrypted private key in the
+///              `subject_public_key` field.
+/// - `encryption_algorithm`: [AlgorithmIdentifierOwned], DER encoded as an array of bytes.
 pub struct EncryptedPkm {
     pub serial_number: Ia5String,
     pub key_data: PrivateKeyInfo,
@@ -37,8 +40,8 @@ pub struct PrivateKeyInfo {
     pub encrypted_private_key_bitstring: BitString,
 }
 
-impl From<SubjectPublicKeyInfoOwned> for PrivateKeyInfo {
-    fn from(value: SubjectPublicKeyInfoOwned) -> Self {
+impl From<SubjectPublicKeyInfo> for PrivateKeyInfo {
+    fn from(value: SubjectPublicKeyInfo) -> Self {
         #[allow(clippy::useless_conversion)]
         PrivateKeyInfo {
             algorithm: value.algorithm.clone().into(),
@@ -47,24 +50,30 @@ impl From<SubjectPublicKeyInfoOwned> for PrivateKeyInfo {
     }
 }
 
-impl From<PrivateKeyInfo> for SubjectPublicKeyInfoOwned {
+impl From<PrivateKeyInfo> for SubjectPublicKeyInfo {
     fn from(value: PrivateKeyInfo) -> Self {
-        SubjectPublicKeyInfoOwned::new(value.algorithm, value.encrypted_private_key_bitstring)
+        spki::SubjectPublicKeyInfoOwned {
+            algorithm: value.algorithm.into(),
+            subject_public_key: value.encrypted_private_key_bitstring,
+        }
+        .into()
     }
 }
 
 #[cfg(feature = "serde")]
-mod serde {
+mod serde_support {
     use der::pem::LineEnding;
     use serde::de::Visitor;
     use serde::{Deserialize, Serialize};
 
-    use crate::types::serde_compat::spki::SubjectPublicKeyInfo;
+    use crate::types::spki::SubjectPublicKeyInfo;
+
+    use super::PrivateKeyInfo;
 
     struct PrivateKeyInfoVisitor;
 
     impl<'de> Visitor<'de> for PrivateKeyInfoVisitor {
-        type Value = crate::types::encrypted_pkm::PrivateKeyInfo;
+        type Value = PrivateKeyInfo;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
             formatter.write_str("a private key info structure, which is a subject public key info structure as defined in RFC 5280. this private key info structure needs to be a valid PEM encoded ASN.1 structure")
@@ -74,7 +83,7 @@ mod serde {
         where
             E: serde::de::Error,
         {
-            crate::types::serde_compat::spki::SubjectPublicKeyInfo::from_pem(v.as_bytes())
+            SubjectPublicKeyInfo::from_pem(v.as_bytes())
                 .map_err(serde::de::Error::custom)
                 .map(Into::into)
         }

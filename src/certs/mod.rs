@@ -4,11 +4,6 @@
 
 use std::ops::{Deref, DerefMut};
 
-#[cfg(feature = "serde")]
-use crate::types::serde_compat::der::asn1::Ia5String;
-#[cfg(not(feature = "serde"))]
-use der::asn1::Ia5String;
-
 use der::asn1::BitString;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
@@ -16,6 +11,7 @@ use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 use x509_cert::name::Name;
 
 use crate::errors::ConversionError;
+use crate::types::der::asn1::Ia5String;
 use crate::{Constrained, ConstraintError, OID_RDN_DOMAIN_COMPONENT};
 
 /// Additional capabilities ([x509_cert::ext::Extensions] or [x509_cert::attr::Attributes], depending

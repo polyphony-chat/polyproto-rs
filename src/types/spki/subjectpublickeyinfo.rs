@@ -8,10 +8,6 @@ use super::super::spki::AlgorithmIdentifierOwned;
 use der::asn1::BitString;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
-use serde::de::Visitor;
-use serde::{Deserialize, Serialize};
-
-use crate::types::LikeSubjectPublicKeyInfo;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SubjectPublicKeyInfo(spki::SubjectPublicKeyInfoOwned);
@@ -56,52 +52,6 @@ impl From<SubjectPublicKeyInfo> for spki::SubjectPublicKeyInfoOwned {
     }
 }
 
-struct SubjectPublicKeyInfoVisitor;
-
-impl<'de> Visitor<'de> for SubjectPublicKeyInfoVisitor {
-    type Value = SubjectPublicKeyInfo;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter
-            .write_str("This visitor expects a valid, PEM or DER encoded SubjectPublicKeyInfo.")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        SubjectPublicKeyInfo::from_pem(v).map_err(serde::de::Error::custom)
-    }
-
-    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        SubjectPublicKeyInfo::from_der(v).map_err(serde::de::Error::custom)
-    }
-}
-
-impl<'de> Deserialize<'de> for SubjectPublicKeyInfo {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_any(SubjectPublicKeyInfoVisitor)
-    }
-}
-
-impl Serialize for SubjectPublicKeyInfo {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let pem = self
-            .to_pem(LineEnding::default())
-            .map_err(serde::ser::Error::custom)?;
-        serializer.serialize_str(&pem)
-    }
-}
-
 impl Deref for SubjectPublicKeyInfo {
     type Target = spki::SubjectPublicKeyInfoOwned;
 
@@ -116,13 +66,57 @@ impl DerefMut for SubjectPublicKeyInfo {
     }
 }
 
-impl LikeSubjectPublicKeyInfo for SubjectPublicKeyInfo {
-    fn new(algorithm: AlgorithmIdentifierOwned, subject_public_key: BitString) -> Self {
-        spki::SubjectPublicKeyInfoOwned {
-            algorithm: algorithm.into(),
-            subject_public_key,
+#[cfg(feature = "serde")]
+mod serde_support {
+    use der::pem::LineEnding;
+    use serde::de::Visitor;
+    use serde::{Deserialize, Serialize};
+
+    use super::SubjectPublicKeyInfo;
+    struct SubjectPublicKeyInfoVisitor;
+
+    impl<'de> Visitor<'de> for SubjectPublicKeyInfoVisitor {
+        type Value = SubjectPublicKeyInfo;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter
+                .write_str("This visitor expects a valid, PEM or DER encoded SubjectPublicKeyInfo.")
         }
-        .into()
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            SubjectPublicKeyInfo::from_pem(v).map_err(serde::de::Error::custom)
+        }
+
+        fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            SubjectPublicKeyInfo::from_der(v).map_err(serde::de::Error::custom)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for SubjectPublicKeyInfo {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_any(SubjectPublicKeyInfoVisitor)
+        }
+    }
+
+    impl Serialize for SubjectPublicKeyInfo {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            let pem = self
+                .to_pem(LineEnding::default())
+                .map_err(serde::ser::Error::custom)?;
+            serializer.serialize_str(&pem)
+        }
     }
 }
 
@@ -134,7 +128,7 @@ mod test {
     use serde_json::json;
     use spki::ObjectIdentifier;
 
-    use crate::types::serde_compat::spki::AlgorithmIdentifierOwned;
+    use crate::types::spki::AlgorithmIdentifierOwned;
 
     use super::SubjectPublicKeyInfo;
 
