@@ -18,7 +18,7 @@ use crate::errors::ConversionError;
 ///
 /// ## De-/Serialization value expectations
 ///
-/// The implementation of serde de-/serialization for this type expects the value to be a valid, unsigned 128-bit integer.
+/// The implementation of serde de-/serialization for this type expects the value to be a valid, unsigned integer, up to 128 bits.
 pub struct Uint(der::asn1::Uint);
 
 impl Uint {
