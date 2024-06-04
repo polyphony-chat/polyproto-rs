@@ -70,7 +70,7 @@ impl SessionId {
                 )))
             }
         };
-        #[allow(clippy::useless_conversion)]
+
         let session_id = SessionId {
             session_id: ia5string.into(),
         };

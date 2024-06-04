@@ -28,7 +28,6 @@ pub struct PrivateKeyInfo {
 
 impl From<SubjectPublicKeyInfo> for PrivateKeyInfo {
     fn from(value: SubjectPublicKeyInfo) -> Self {
-        #[allow(clippy::useless_conversion)]
         PrivateKeyInfo {
             algorithm: value.algorithm.clone().into(),
             encrypted_private_key_bitstring: value.subject_public_key.clone(),
