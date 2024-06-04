@@ -7,6 +7,7 @@ pub mod der;
 pub mod encrypted_pkm;
 pub mod federation_id;
 pub mod spki;
+pub mod x509_cert;
 
 pub use challenge_string::*;
 pub use encrypted_pkm::*;
