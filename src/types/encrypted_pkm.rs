@@ -4,17 +4,17 @@
 
 use der::asn1::BitString;
 
-use super::der::asn1::Ia5String;
 use super::spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfo};
+use super::x509_cert::SerialNumber;
 
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// A private key material structure for storing encrypted private key material on a home server.
 ///
 /// JSON representation:
 /// ```json
 /// {
-///     "serial_number": "3784567832abcdefg",
+///     "serial_number": [41, 12, 3, 123, 4, 3, 11],
 ///     "key_data": "-----BEGIN[...]",
 ///     "encryption_algorithm": [1, 2, 840, 113549, 1, 5, 13, 1, 1, 5]
 /// }
@@ -22,13 +22,13 @@ use super::spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfo};
 ///
 /// where:
 ///
-/// - `serial_number`: [Ia5String] as a string
+/// - `serial_number`: [SerialNumber], as an array of integers. Must represent a positive integer of up to 20 octets in length.
 /// - `key_data`: [PrivateKeyInfo] as a PEM-encoded ASN.1 structure. This is just a
 ///               [SubjectPublicKeyInfoOwned] structure which stores an encrypted private key in the
 ///              `subject_public_key` field.
 /// - `encryption_algorithm`: [AlgorithmIdentifierOwned], DER encoded as an array of bytes.
 pub struct EncryptedPkm {
-    pub serial_number: Ia5String,
+    pub serial_number: SerialNumber,
     pub key_data: PrivateKeyInfo,
     pub encryption_algorithm: AlgorithmIdentifierOwned,
 }
