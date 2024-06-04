@@ -16,7 +16,7 @@ use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
     DELETE_SESSION, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING, GET_SERVER_PUBLIC_IDCERT,
     GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT,
-    UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
+    UPDATE_SESSION_IDCERT,
 };
 use serde_json::json;
 use x509_cert::time::Validity;
