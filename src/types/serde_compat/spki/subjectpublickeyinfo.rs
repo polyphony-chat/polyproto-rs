@@ -126,4 +126,78 @@ impl LikeSubjectPublicKeyInfo for SubjectPublicKeyInfo {
     }
 }
 
-// TODO: TESTS
+#[cfg(test)]
+mod test {
+    use std::str::FromStr;
+
+    use der::asn1::BitString;
+    use serde_json::json;
+    use spki::ObjectIdentifier;
+
+    use crate::types::serde_compat::spki::AlgorithmIdentifierOwned;
+
+    use super::SubjectPublicKeyInfo;
+
+    #[test]
+    fn deserialize_serialize_spki_json() {
+        let oids = [
+            ObjectIdentifier::from_str("1.1.3.1").unwrap(),
+            ObjectIdentifier::from_str("2.23.5672.1").unwrap(),
+            ObjectIdentifier::from_str("0.3.1.1").unwrap(),
+            ObjectIdentifier::from_str("1.2.3.4.5.6.7.8.9.0.12.3.4.5.6.67").unwrap(),
+            ObjectIdentifier::from_str("1.2.1122").unwrap(),
+        ];
+
+        for oid in oids.into_iter() {
+            let spki = SubjectPublicKeyInfo::new(
+                AlgorithmIdentifierOwned::new(oid, None),
+                BitString::from_bytes(&[0x00, 0x01, 0x02]).unwrap(),
+            );
+            let spki_json = json!(&spki);
+            let spki2: SubjectPublicKeyInfo = serde_json::from_value(spki_json.clone()).unwrap();
+            assert_eq!(spki, spki2);
+        }
+    }
+
+    #[test]
+    fn deserialize_serialize_spki_pem() {
+        let oids = [
+            ObjectIdentifier::from_str("1.1.3.1").unwrap(),
+            ObjectIdentifier::from_str("2.23.5672.1").unwrap(),
+            ObjectIdentifier::from_str("0.3.1.1").unwrap(),
+            ObjectIdentifier::from_str("1.2.3.4.5.6.7.8.9.0.12.3.4.5.6.67").unwrap(),
+            ObjectIdentifier::from_str("1.2.1122").unwrap(),
+        ];
+
+        for oid in oids.into_iter() {
+            let spki = SubjectPublicKeyInfo::new(
+                AlgorithmIdentifierOwned::new(oid, None),
+                BitString::from_bytes(&[0x00, 0x01, 0x02]).unwrap(),
+            );
+            let spki_pem = spki.to_pem(der::pem::LineEnding::LF).unwrap();
+            let spki2 = SubjectPublicKeyInfo::from_pem(spki_pem).unwrap();
+            assert_eq!(spki, spki2);
+        }
+    }
+
+    #[test]
+    fn deserialize_serialize_spki_der() {
+        let oids = [
+            ObjectIdentifier::from_str("1.1.3.1").unwrap(),
+            ObjectIdentifier::from_str("2.23.5672.1").unwrap(),
+            ObjectIdentifier::from_str("0.3.1.1").unwrap(),
+            ObjectIdentifier::from_str("1.2.3.4.5.6.7.8.9.0.12.3.4.5.6.67").unwrap(),
+            ObjectIdentifier::from_str("1.2.1122").unwrap(),
+        ];
+
+        for oid in oids.into_iter() {
+            let spki = SubjectPublicKeyInfo::new(
+                AlgorithmIdentifierOwned::new(oid, None),
+                BitString::from_bytes(&[0x00, 0x01, 0x02]).unwrap(),
+            );
+            let spki_der = spki.to_der().unwrap();
+            let spki2 = SubjectPublicKeyInfo::from_der(&spki_der).unwrap();
+            assert_eq!(spki, spki2);
+        }
+    }
+}
