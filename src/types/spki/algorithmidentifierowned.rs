@@ -73,7 +73,27 @@ mod serde_support {
         type Value = AlgorithmIdentifierOwned;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("a DER encoded AlgorithmIdentifier with optional der::Any parameters and a BitString Key")
+            formatter
+                .write_str("a valid DER encoded byte slice representing an AlgorithmIdentifier")
+        }
+
+        fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            AlgorithmIdentifierOwned::from_der(v).map_err(serde::de::Error::custom)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::SeqAccess<'de>,
+        {
+            let mut bytes: Vec<u8> = Vec::new(); // Create a new Vec to store the bytes
+            while let Some(byte) = seq.next_element()? {
+                // "Iterate" over the sequence, assuming each element is a byte
+                bytes.push(byte) // Push the byte to the Vec
+            }
+            AlgorithmIdentifierOwned::from_der(&bytes).map_err(serde::de::Error::custom)
         }
     }
 
@@ -97,4 +117,41 @@ mod serde_support {
     }
 }
 
-// TODO: Tests
+#[cfg(test)]
+mod test {
+    use std::str::FromStr;
+
+    use der::asn1::BitString;
+    use der::{Any, Decode, Encode};
+    use log::trace;
+    use serde_json::json;
+    use spki::ObjectIdentifier;
+
+    use crate::testing_utils::init_logger;
+
+    use super::AlgorithmIdentifierOwned;
+
+    #[test]
+    fn de_serialize() {
+        init_logger();
+        let oid = ObjectIdentifier::from_str("1.1.1.4.5").unwrap();
+        let alg = AlgorithmIdentifierOwned::new(oid, None);
+        let json = json!(alg);
+        let deserialized: AlgorithmIdentifierOwned = serde_json::from_value(json).unwrap();
+        assert_eq!(alg, deserialized);
+        trace!("deserialized: {:?}", deserialized);
+        trace!("original: {:?}", alg);
+
+        let bytes = [48, 6, 6, 3, 43, 6, 1, 5, 1, 4, 5, 5, 23, 2, 0, 0];
+        let bitstring = BitString::from_bytes(&bytes).unwrap();
+        let alg = AlgorithmIdentifierOwned::new(
+            oid,
+            Some(Any::from_der(&bitstring.to_der().unwrap()).unwrap()),
+        );
+        let json = json!(alg);
+        let deserialized: AlgorithmIdentifierOwned = serde_json::from_value(json).unwrap();
+        trace!("deserialized: {:?}", deserialized);
+        trace!("original: {:?}", alg);
+        assert_eq!(alg, deserialized);
+    }
+}
