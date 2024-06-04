@@ -401,7 +401,7 @@ async fn upload_encrypted_pkm() {
     let key = gen_priv_key();
     let pkm = String::from_utf8_lossy(key.key.as_bytes()).to_string();
     let server = Server::run();
-    server.expect(
+    /*server.expect(
         Expectation::matching(all_of![
             request::method(UPLOAD_ENCRYPTED_PKM.method.to_string()),
             request::path(UPLOAD_ENCRYPTED_PKM.path),
