@@ -92,7 +92,7 @@ mod serde_support {
         type Value = Uint;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("an unsigned integer of any size")
+            formatter.write_str("an unsigned integer up to 128 bits in size")
         }
 
         fn visit_u128<E>(self, v: u128) -> Result<Self::Value, E>
