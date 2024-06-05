@@ -18,3 +18,4 @@
 {"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\QResponse counterpart of CreateSessionSchema.\\E$"}
 {"rule":"MASS_AGREEMENT","sentence":"^\\QThe challenge string.\\E$"}
 {"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\QResponse counterpart of IdentifyRequest.\\E$"}
+{"rule":"EN_A_VS_AN","sentence":"^\\QTry to convert the inner byte slice to a u128.\\E$"}
