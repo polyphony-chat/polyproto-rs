@@ -3,11 +3,16 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::ops::{Deref, DerefMut};
+use std::str::FromStr;
 
-use der::asn1::{BitString, Ia5String};
+use der::asn1::BitString;
+use der::pem::LineEnding;
+use der::{Decode, DecodePem, Encode, EncodePem};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
-use x509_cert::name::Name;
+use x509_cert::name::{Name, RdnSequence};
 
+use crate::errors::ConversionError;
+use crate::types::der::asn1::Ia5String;
 use crate::{Constrained, ConstraintError, OID_RDN_DOMAIN_COMPONENT};
 
 /// Additional capabilities ([x509_cert::ext::Extensions] or [x509_cert::attr::Attributes], depending
@@ -46,16 +51,60 @@ impl DerefMut for SessionId {
     }
 }
 
+impl std::fmt::Display for SessionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.session_id.fmt(f)
+    }
+}
+
 impl SessionId {
     #[allow(clippy::new_ret_no_self)]
     /// Creates a new [SessionId] which can be converted into an [Attribute] using `.as_attribute()`,
     /// if needed. Checks if the input is a valid Ia5String and if the [SessionId] constraints have
     /// been violated.
-    pub fn new_validated(id: Ia5String) -> Result<Self, ConstraintError> {
-        let session_id = SessionId { session_id: id };
-        session_id.validate()?;
+    pub fn new_validated(id: &str) -> Result<Self, ConstraintError> {
+        let ia5string = match der::asn1::Ia5String::new(id) {
+            Ok(string) => string,
+            Err(_) => {
+                return Err(ConstraintError::Malformed(Some(
+                    "Invalid Ia5String passed as SessionId".to_string(),
+                )))
+            }
+        };
+
+        let session_id = SessionId {
+            session_id: ia5string.into(),
+        };
+        session_id.validate(None)?;
         Ok(session_id)
     }
+
+    /// Converts this [SessionId] into a [Name] for use in a certificate.
+    pub fn to_rdn_sequence(&self) -> Name {
+        RdnSequence::from_str(&format!("uniqueIdentifier={}", self)).unwrap()
+    }
+}
+
+impl From<SessionId> for Ia5String {
+    fn from(value: SessionId) -> Self {
+        value.session_id
+    }
+}
+
+impl TryFrom<Ia5String> for SessionId {
+    type Error = ConstraintError;
+
+    fn try_from(value: Ia5String) -> Result<Self, Self::Error> {
+        SessionId::new_validated(value.to_string().as_str())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// Whether something is intended for an actor or a home server.
+#[allow(missing_docs)]
+pub enum Target {
+    Actor,
+    HomeServer,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -76,13 +125,40 @@ pub enum PkcsVersion {
     V1 = 0,
 }
 
-/// Information regarding a subjects' public key.
+/// Information regarding a subjects' public key. This is a `SubjectPublicKeyInfo` in the context of
+/// PKCS #10.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PublicKeyInfo {
     /// Properties of the signature algorithm used to create the public key.
     pub algorithm: AlgorithmIdentifierOwned,
     /// The public key, represented as a [BitString].
     pub public_key_bitstring: BitString,
+}
+
+impl PublicKeyInfo {
+    /// Create a new [PublicKeyInfo] from the provided DER encoded data. The data must be a valid,
+    /// DER encoded PKCS #10 `SubjectPublicKeyInfo` structure. The caller is responsible for
+    /// verifying the correctness of the resulting data before using it.
+    pub fn from_der(value: &str) -> Result<Self, ConversionError> {
+        Ok(SubjectPublicKeyInfoOwned::from_der(value.as_bytes())?.into())
+    }
+
+    /// Create a new [PublicKeyInfo] from the provided PEM encoded data. The data must be a valid,
+    /// PEM encoded PKCS #10 `SubjectPublicKeyInfo` structure. The caller is responsible for
+    /// verifying the correctness of the resulting data before using it.
+    pub fn from_pem(value: &str) -> Result<Self, ConversionError> {
+        Ok(SubjectPublicKeyInfoOwned::from_pem(value.as_bytes())?.into())
+    }
+
+    /// Encode this type as DER, returning a byte vector.
+    pub fn to_der(&self) -> Result<Vec<u8>, ConversionError> {
+        Ok(SubjectPublicKeyInfoOwned::from(self.clone()).to_der()?)
+    }
+
+    /// Encode this type as PEM, returning a string.
+    pub fn to_pem(&self, line_ending: LineEnding) -> Result<String, ConversionError> {
+        Ok(SubjectPublicKeyInfoOwned::from(self.clone()).to_pem(line_ending)?)
+    }
 }
 
 impl From<SubjectPublicKeyInfoOwned> for PublicKeyInfo {
@@ -108,15 +184,17 @@ impl From<PublicKeyInfo> for SubjectPublicKeyInfoOwned {
 pub fn equal_domain_components(name_1: &Name, name_2: &Name) -> bool {
     let mut domain_components_1 = Vec::new();
     let mut domain_components_2 = Vec::new();
-    for (component_1, component_2) in name_1.0.iter().zip(name_2.0.iter()) {
-        for subcomponent_1 in component_1.0.iter() {
-            if subcomponent_1.oid.to_string().as_str() == OID_RDN_DOMAIN_COMPONENT {
-                domain_components_1.push(subcomponent_1);
+    for rdn in name_1.0.iter() {
+        for ava in rdn.0.iter() {
+            if ava.oid.to_string().as_str() == OID_RDN_DOMAIN_COMPONENT {
+                domain_components_1.push(String::from_utf8_lossy(ava.value.value()));
             }
         }
-        for subcomponent_2 in component_2.0.iter() {
-            if subcomponent_2.oid.to_string().as_str() == OID_RDN_DOMAIN_COMPONENT {
-                domain_components_2.push(subcomponent_2);
+    }
+    for rdn in name_2.0.iter() {
+        for ava in rdn.0.iter() {
+            if ava.oid.to_string().as_str() == OID_RDN_DOMAIN_COMPONENT {
+                domain_components_2.push(String::from_utf8_lossy(ava.value.value()));
             }
         }
     }

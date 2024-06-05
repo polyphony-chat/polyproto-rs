@@ -2,25 +2,20 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#![allow(unused)]
-
 use std::str::FromStr;
 use std::time::Duration;
 
-use der::asn1::{BitString, Ia5String, Uint, UtcTime};
+use der::asn1::{BitString, Uint, UtcTime};
 use der::Encode;
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
-use polyproto::certs::PublicKeyInfo;
+use polyproto::certs::{PublicKeyInfo, Target};
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
-use thiserror::Error;
-use x509_cert::attr::Attributes;
 use x509_cert::name::RdnSequence;
-use x509_cert::request::CertReq;
 use x509_cert::time::{Time, Validity};
 use x509_cert::Certificate;
 
@@ -41,8 +36,6 @@ use x509_cert::Certificate;
 /// openssl x509 -in cert.der -text -noout -inform der
 /// ```
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
 fn main() {
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
@@ -51,24 +44,24 @@ fn main() {
     println!();
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
+        &RdnSequence::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap(),
         &priv_key,
         &Capabilities::default_actor(),
+        Some(Target::Actor),
     )
     .unwrap();
     let data = csr.clone().to_der().unwrap();
     let file_name_with_extension = "cert.csr";
-    #[cfg(not(target_arch = "wasm32"))]
-    std::fs::write(file_name_with_extension, &data).unwrap();
+    std::fs::write(file_name_with_extension, data).unwrap();
 
     let cert = IdCert::from_actor_csr(
         csr,
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
-        RdnSequence::from_str(
-            "CN=root,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
-        )
-        .unwrap(),
+        RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         Validity {
             not_before: Time::UtcTime(
                 UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
@@ -82,12 +75,8 @@ fn main() {
     let data = Certificate::try_from(cert).unwrap().to_der().unwrap();
     let file_name_with_extension = "cert.der";
     #[cfg(not(target_arch = "wasm32"))]
-    std::fs::write(file_name_with_extension, &data).unwrap();
+    std::fs::write(file_name_with_extension, data).unwrap();
 }
-
-#[cfg(not(target_arch = "wasm32"))]
-#[cfg(not(test))]
-fn main() {}
 
 // As mentioned in the README, we start by implementing the signature trait.
 
@@ -97,6 +86,12 @@ fn main() {}
 struct Ed25519Signature {
     signature: Ed25519DalekSignature,
     algorithm: AlgorithmIdentifierOwned,
+}
+
+impl std::fmt::Display for Ed25519Signature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.signature)
+    }
 }
 
 // We implement the Signature trait for our signature type.
@@ -121,7 +116,7 @@ impl Signature for Ed25519Signature {
     }
 
     #[cfg(not(tarpaulin_include))]
-    fn from_bitstring(signature: &[u8]) -> Self {
+    fn from_bytes(signature: &[u8]) -> Self {
         let mut signature_vec = signature.to_vec();
         signature_vec.resize(64, 0);
         let signature_array: [u8; 64] = {
@@ -231,4 +226,9 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
             key: VerifyingKey::from_bytes(&signature_array).unwrap(),
         })
     }
+}
+
+#[test]
+fn test_example() {
+    main()
 }

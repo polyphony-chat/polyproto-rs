@@ -1,74 +1,62 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
-#![allow(unused)]
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use std::str::FromStr;
 use std::time::Duration;
 
-use der::asn1::{BitString, Ia5String, Uint, UtcTime};
-use der::Encode;
-use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
-use polyproto::certs::capabilities::{self, Capabilities};
+use der::asn1::{BitString, Uint, UtcTime};
+use ed25519_dalek::ed25519::signature::Signer;
+use ed25519_dalek::{Signature as Ed25519DalekSignature, SigningKey, VerifyingKey};
+use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
+use polyproto::certs::idcsr::IdCsr;
 use polyproto::certs::PublicKeyInfo;
 use polyproto::errors::composite::ConversionError;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
+use polyproto::Name;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
-use thiserror::Error;
-use x509_cert::attr::Attributes;
-use x509_cert::name::RdnSequence;
-use x509_cert::request::CertReq;
 use x509_cert::time::{Time, Validity};
-use x509_cert::Certificate;
 
-/// The following example uses the same setup as in ed25519_basic.rs, but in its main method, it
-/// creates a certificate signing request (CSR) and writes it to a file. The CSR is created from a
-/// polyproto ID CSR, which is a wrapper around a PKCS #10 CSR.
-///
-/// If you have openssl installed, you can inspect the CSR by running:
-///
-/// ```sh
-/// openssl req -in cert.csr -verify -inform der
-/// ```
-///
-/// After that, the program creates an ID-Cert from the given ID-CSR. The `cert.der` file can also
-/// be validated using openssl:
-///
-/// ```sh
-/// openssl x509 -in cert.der -text -noout -inform der
-/// ```
+pub fn init_logger() {
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "trace");
+    }
+    env_logger::builder().is_test(true).try_init().unwrap_or(());
+}
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
-fn test_create_actor_cert() {
-    let mut csprng = rand::rngs::OsRng;
-    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
-    println!("Private Key is: {:?}", priv_key.key.to_bytes());
-    println!("Public Key is: {:?}", priv_key.public_key.key.to_bytes());
-    println!();
-    let mut capabilities = Capabilities::default_actor();
-    capabilities
-        .key_usage
-        .key_usages
-        .push(capabilities::KeyUsage::CrlSign);
-    let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
+pub fn actor_subject(cn: &str) -> Name {
+    Name::from_str(&format!(
+        "CN={},DC=polyphony,DC=chat,UID={}@polyphony.chat,uniqueIdentifier=client1",
+        cn, cn
+    ))
+    .unwrap()
+}
+
+pub fn default_validity() -> Validity {
+    Validity {
+        not_before: Time::UtcTime(UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap()),
+        not_after: Time::UtcTime(UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap()),
+    }
+}
+
+pub fn home_server_subject() -> Name {
+    Name::from_str("DC=polyphony,DC=chat").unwrap()
+}
+
+pub fn gen_priv_key() -> Ed25519PrivateKey {
+    Ed25519PrivateKey::gen_keypair(&mut rand::rngs::OsRng)
+}
+
+pub fn actor_id_cert(cn: &str) -> IdCert<Ed25519Signature, Ed25519PublicKey> {
+    let priv_key = gen_priv_key();
+    IdCert::from_actor_csr(
+        actor_csr(cn, &priv_key),
         &priv_key,
-        &capabilities,
-    )
-    .unwrap();
-    let cert = IdCert::from_actor_csr(
-        csr,
-        &priv_key,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
-        RdnSequence::from_str(
-            "CN=root,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
-        )
-        .unwrap(),
+        Uint::new(&[8]).unwrap(),
+        home_server_subject(),
         Validity {
             not_before: Time::UtcTime(
                 UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
@@ -78,82 +66,61 @@ fn test_create_actor_cert() {
             ),
         },
     )
-    .unwrap();
-    let cert_data = cert.clone().to_der().unwrap();
-    let data = Certificate::try_from(cert).unwrap().to_der().unwrap();
-    assert_eq!(cert_data, data);
+    .unwrap()
 }
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
-fn test_create_ca_cert() {
-    let mut csprng = rand::rngs::OsRng;
-    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
-    println!("Private Key is: {:?}", priv_key.key.to_bytes());
-    println!("Public Key is: {:?}", priv_key.public_key.key.to_bytes());
-    println!();
+pub fn actor_csr(
+    cn: &str,
+    priv_key: &Ed25519PrivateKey,
+) -> IdCsr<Ed25519Signature, Ed25519PublicKey> {
+    IdCsr::new(
+        &actor_subject(cn),
+        priv_key,
+        &Capabilities::default_actor(),
+        Some(polyproto::certs::Target::Actor),
+    )
+    .unwrap()
+}
 
-    let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
+pub fn home_server_id_cert() -> IdCert<Ed25519Signature, Ed25519PublicKey> {
+    let priv_key = gen_priv_key();
+    IdCert::from_ca_csr(
+        home_server_csr(&priv_key),
         &priv_key,
+        Uint::new(&[8]).unwrap(),
+        home_server_subject(),
+        Validity {
+            not_before: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
+            ),
+            not_after: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
+            ),
+        },
+    )
+    .unwrap()
+}
+
+pub fn home_server_csr(priv_key: &Ed25519PrivateKey) -> IdCsr<Ed25519Signature, Ed25519PublicKey> {
+    IdCsr::new(
+        &home_server_subject(),
+        priv_key,
         &Capabilities::default_home_server(),
+        Some(polyproto::certs::Target::HomeServer),
     )
-    .unwrap();
-    let cert = IdCert::from_ca_csr(
-        csr,
-        &priv_key,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
-        RdnSequence::from_str(
-            "CN=root,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
-        )
-        .unwrap(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
-    )
-    .unwrap();
-    let cert_data = cert.clone().to_der().unwrap();
-    let data = Certificate::try_from(cert).unwrap().to_der().unwrap();
-    assert_eq!(cert_data, data);
+    .unwrap()
 }
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
-fn test_create_invalid_actor_csr() {
-    let mut csprng = rand::rngs::OsRng;
-    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
-    println!("Private Key is: {:?}", priv_key.key.to_bytes());
-    println!("Public Key is: {:?}", priv_key.public_key.key.to_bytes());
-    println!();
-
-    let mut capabilities = Capabilities::default_actor();
-    // This is not allowed in actor certificates/csrs
-    capabilities
-        .key_usage
-        .key_usages
-        .push(capabilities::KeyUsage::KeyCertSign);
-
-    let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
-        &priv_key,
-        &capabilities,
-    );
-    assert!(csr.is_err());
-}
-
-// As mentioned in the README, we start by implementing the signature trait.
-
-// Here, we start by defining the signature type, which is a wrapper around the signature type from
-// the ed25519-dalek crate.
 #[derive(Debug, PartialEq, Eq, Clone)]
-struct Ed25519Signature {
-    signature: Ed25519DalekSignature,
-    algorithm: AlgorithmIdentifierOwned,
+pub(crate) struct Ed25519Signature {
+    pub(crate) signature: Ed25519DalekSignature,
+    pub(crate) algorithm: AlgorithmIdentifierOwned,
+}
+
+impl std::fmt::Display for Ed25519Signature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.signature)
+    }
 }
 
 // We implement the Signature trait for our signature type.
@@ -177,7 +144,7 @@ impl Signature for Ed25519Signature {
         }
     }
 
-    fn from_bitstring(signature: &[u8]) -> Self {
+    fn from_bytes(signature: &[u8]) -> Self {
         let mut signature_vec = signature.to_vec();
         signature_vec.resize(64, 0);
         let signature_array: [u8; 64] = {
@@ -202,11 +169,11 @@ impl SignatureBitStringEncoding for Ed25519Signature {
 
 // Next, we implement the key traits. We start by defining the private key type.
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Ed25519PrivateKey {
+pub(crate) struct Ed25519PrivateKey {
     // Defined below
-    public_key: Ed25519PublicKey,
+    pub(crate) public_key: Ed25519PublicKey,
     // The private key from the ed25519-dalek crate
-    key: SigningKey,
+    pub(crate) key: SigningKey,
 }
 
 impl PrivateKey<Ed25519Signature> for Ed25519PrivateKey {
@@ -241,9 +208,9 @@ impl Ed25519PrivateKey {
 
 // Same thing as above for the public key type.
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Ed25519PublicKey {
+pub(crate) struct Ed25519PublicKey {
     // The public key type from the ed25519-dalek crate
-    key: VerifyingKey,
+    pub(crate) key: VerifyingKey,
 }
 
 impl PublicKey<Ed25519Signature> for Ed25519PublicKey {

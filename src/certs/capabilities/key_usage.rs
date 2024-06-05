@@ -10,8 +10,7 @@ use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
 
-use crate::errors::base::InvalidInput;
-use crate::errors::composite::ConversionError;
+use crate::errors::{ConversionError, InvalidInput};
 
 use super::*;
 
@@ -91,13 +90,15 @@ impl KeyUsages {
     /// ```
     pub fn from_bitstring(bitstring: BitString) -> Result<Self, ConversionError> {
         let mut byte_array = bitstring.raw_bytes().to_vec();
-        if byte_array.is_empty() || byte_array.len() < 2 {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                "Passed BitString seems to be invalid".to_string(),
-            )));
-        }
-        byte_array.remove(0);
+        log::trace!("[from_bitstring] BitString raw bytes: {:?}", byte_array);
         let mut key_usages = Vec::new();
+        if byte_array == [0] || byte_array.is_empty() {
+            // TODO: PLEASE write a test for this. Is an empty byte array valid? Is a byte array with a single 0 valid, and does it mean that no KeyUsage is set? -bitfl0wer
+            return Ok(KeyUsages { key_usages });
+        }
+        if byte_array[0] == 0 && byte_array.len() == 2 {
+            byte_array.remove(0);
+        }
         if byte_array.len() == 2 {
             // If the length of the byte array is 2, this means that DecipherOnly is set.
             key_usages.push(KeyUsage::DecipherOnly);
@@ -123,17 +124,18 @@ impl KeyUsages {
                     // This should never happen, as we are only dividing by 2 until we reach 1.
                     _ => panic!("This should never happen. Please report this error to https://github.com/polyphony-chat/polyproto"),
                 })
-            }
-            if current_try == 1 {
+            } else if current_try == 1 {
                 break;
+            } else {
+                current_try /= 2;
             }
-            current_try /= 2;
         }
         if byte_array[0] != 0 {
             return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                "Could not properly convert this BitString to KeyUsages. The BitString is malformed".to_string(),
+                "Could not properly convert this BitString to KeyUsages. The BitString contains a value not representable by KeyUsages".to_string(),
             )));
         }
+        log::debug!("[from_bitstring] Converted KeyUsages: {:?}", key_usages);
         Ok(KeyUsages { key_usages })
     }
 
@@ -187,6 +189,8 @@ impl KeyUsages {
             // bits.
             unused_bits = 7;
         }
+        log::debug!("[to_bitstring] Unused bits: {}", unused_bits);
+        log::debug!("[to_bitstring] Encoded values: {:?}", encoded_numbers_vec);
         BitString::new(unused_bits, encoded_numbers_vec)
             .expect("Error when converting KeyUsages to BitString. Please report this error to https://github.com/polyphony-chat/polyproto")
     }
@@ -202,9 +206,9 @@ impl TryFrom<Attribute> for KeyUsages {
     type Error = ConversionError;
 
     fn try_from(value: Attribute) -> Result<Self, Self::Error> {
-        if value.tag() != Tag::BitString {
+        if value.tag() != Tag::Sequence {
             return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                format!("Expected BitString, found {}", value.tag(),),
+                format!("Expected Sequence, found {}", value.tag(),),
             )));
         }
         match value.values.len() {
@@ -219,7 +223,8 @@ impl TryFrom<Attribute> for KeyUsages {
             }
         };
         let inner_value = value.values.get(0).expect("Illegal state. Please report this error to https://github.com/polyphony-chat/polyproto");
-        KeyUsages::from_bitstring(BitString::from_der(inner_value.value())?)
+        log::debug!("Inner value: {:?}", inner_value);
+        KeyUsages::from_bitstring(BitString::from_der(&inner_value.to_der()?)?)
     }
 }
 
@@ -236,7 +241,7 @@ impl TryFrom<Extension> for KeyUsages {
             )));
         }
         let any = Any::from_der(value.extn_value.as_bytes())?;
-        KeyUsages::from_bitstring(BitString::from_bytes(any.value())?)
+        KeyUsages::from_bitstring(BitString::from_der(&any.to_der()?)?)
     }
 }
 
@@ -246,7 +251,8 @@ impl TryFrom<KeyUsages> for Attribute {
     fn try_from(value: KeyUsages) -> Result<Self, Self::Error> {
         let mut sov = SetOfVec::new();
         let bitstring = value.to_bitstring();
-        sov.insert(Any::from_der(&bitstring.to_der()?)?)?;
+        let any = Any::from_der(&bitstring.to_der()?)?;
+        sov.insert(any)?;
         Ok(Attribute {
             oid: ObjectIdentifier::from_str(OID_KEY_USAGE)?,
             values: sov,

@@ -2,27 +2,20 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#![allow(unused)]
-
 use std::str::FromStr;
 use std::time::Duration;
 
-use der::asn1::{BitString, Ia5String, Uint, UtcTime};
-use der::{Decode, Encode};
+use der::asn1::{BitString, Uint, UtcTime};
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
-use polyproto::certs::PublicKeyInfo;
+use polyproto::certs::{PublicKeyInfo, Target};
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
-use thiserror::Error;
-use x509_cert::attr::Attributes;
 use x509_cert::name::RdnSequence;
-use x509_cert::request::CertReq;
 use x509_cert::time::{Time, Validity};
-use x509_cert::Certificate;
 
 /// The following example uses the same setup as in ed25519_basic.rs, but in its main method, it
 /// creates a certificate signing request (CSR) and writes it to a file. The CSR is created from a
@@ -34,35 +27,38 @@ use x509_cert::Certificate;
 /// openssl req -in cert.csr -verify -inform der
 /// ```
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
 fn main() {
     let mut csprng = rand::rngs::OsRng;
-    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
-    println!("Private Key is: {:?}", priv_key.key.to_bytes());
-    println!("Public Key is: {:?}", priv_key.public_key.key.to_bytes());
+    let priv_key_actor = Ed25519PrivateKey::gen_keypair(&mut csprng);
+    let priv_key_home_server = Ed25519PrivateKey::gen_keypair(&mut csprng);
+    println!("Private Key is: {:?}", priv_key_actor.key.to_bytes());
+    println!(
+        "Public Key is: {:?}",
+        priv_key_actor.public_key.key.to_bytes()
+    );
     println!();
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
-        &RdnSequence::from_str("CN=flori,DC=www,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1").unwrap(),
-        &priv_key,
+        &RdnSequence::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap(),
+        &priv_key_actor,
         &Capabilities::default_actor(),
+        Some(polyproto::certs::Target::Actor),
     )
     .unwrap();
 
     let data = csr.clone().to_der().unwrap();
     let file_name_with_extension = "cert.csr";
     #[cfg(not(target_arch = "wasm32"))]
-    std::fs::write(file_name_with_extension, &data).unwrap();
+    std::fs::write(file_name_with_extension, data).unwrap();
 
     let cert = IdCert::from_actor_csr(
         csr,
-        &priv_key,
+        &priv_key_home_server,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
-        RdnSequence::from_str(
-            "CN=root,DC=www,DC=polyphony,DC=chat,UID=root@polyphony.chat,uniqueIdentifier=root",
-        )
-        .unwrap(),
+        RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         Validity {
             not_before: Time::UtcTime(
                 UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
@@ -74,13 +70,16 @@ fn main() {
     )
     .unwrap();
     let data = cert.clone().to_der().unwrap();
-    let cert_from_der = IdCert::from_der(data).unwrap();
-    assert_eq!(cert_from_der, cert)
+    // ``::from_der()` performs a full check of the certificate, including signature verification.
+    let cert_from_der =
+        IdCert::from_der(&data, Target::Actor, 15, &priv_key_home_server.public_key).unwrap();
+    assert_eq!(cert_from_der, cert);
+    // ...so technically, we don't need to verify the signature again. This is just for demonstration
+    // of how you would manually verify a certificate.
+    assert!(cert_from_der
+        .full_verify_actor(15, &priv_key_home_server.public_key)
+        .is_ok())
 }
-
-#[cfg(not(target_arch = "wasm32"))]
-#[cfg(not(test))]
-fn main() {}
 
 // As mentioned in the README, we start by implementing the signature trait.
 
@@ -90,6 +89,12 @@ fn main() {}
 struct Ed25519Signature {
     signature: Ed25519DalekSignature,
     algorithm: AlgorithmIdentifierOwned,
+}
+
+impl std::fmt::Display for Ed25519Signature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.signature)
+    }
 }
 
 // We implement the Signature trait for our signature type.
@@ -113,7 +118,7 @@ impl Signature for Ed25519Signature {
         }
     }
 
-    fn from_bitstring(signature: &[u8]) -> Self {
+    fn from_bytes(signature: &[u8]) -> Self {
         let mut signature_vec = signature.to_vec();
         signature_vec.resize(64, 0);
         let signature_array: [u8; 64] = {
@@ -221,4 +226,9 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
             key: VerifyingKey::from_bytes(&signature_array).unwrap(),
         })
     }
+}
+
+#[test]
+fn test_example() {
+    main()
 }

@@ -4,19 +4,20 @@
 
 use std::marker::PhantomData;
 
-use der::{Decode, Encode};
+use der::pem::LineEnding;
+use der::{Decode, DecodePem, Encode, EncodePem};
 use spki::AlgorithmIdentifierOwned;
 use x509_cert::attr::Attributes;
 use x509_cert::name::Name;
 use x509_cert::request::{CertReq, CertReqInfo};
 
-use crate::errors::composite::ConversionError;
+use crate::errors::ConversionError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
-use crate::{Constrained, ConstraintError};
+use crate::Constrained;
 
 use super::capabilities::Capabilities;
-use super::{PkcsVersion, PublicKeyInfo};
+use super::{PkcsVersion, PublicKeyInfo, Target};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A polyproto Certificate Signing Request, compatible with [IETF RFC 2986 "PKCS #10"](https://datatracker.ietf.org/doc/html/rfc2986).
@@ -40,7 +41,6 @@ pub struct IdCsr<S: Signature, P: PublicKey<S>> {
     /// [Signature] value for the `inner_csr`
     pub signature: S,
 }
-
 impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// Performs basic input validation and creates a new polyproto ID-Cert CSR, according to
     /// PKCS#10. The CSR is being signed using the subjects' supplied signing key ([PrivateKey])
@@ -53,63 +53,94 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     ///                       on how many subdomain levels there are.
     ///   - Domain Component: Actor home server domain.
     ///   - Domain Component: Actor home server TLD, if applicable.
-    ///   - Organizational Unit: Optional. May be repeated.
+    ///   - Session ID: [SessionId], an Ia5String, max 32 characters. You can use the [SessionId] struct
+    ///                 and its [SessionId::new_validated()] and [SessionId::to_rdn_sequence()] methods
+    ///                 to help you create a valid SessionId.
     /// - **signing_key**: Subject signing key. Will NOT be included in the certificate. Is used to
     ///                    sign the CSR.
-    /// - **subject_unique_id**: [Uint], subject (actor) session ID. MUST NOT exceed 32 characters
-    ///                          in length.
+    /// - **capabilities**: The capabilities requested by the subject.
+    /// - **target**: The [Target] for which the CSR is intended. This is used to validate the CSR
+    ///               against the polyproto specification.
+    ///
+    /// The resulting `IdCsr` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the CSRs intended usage context is provided.
     pub fn new(
         subject: &Name,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
         capabilities: &Capabilities,
+        target: Option<Target>,
     ) -> Result<IdCsr<S, P>, ConversionError> {
-        subject.validate()?;
-        let inner_csr = IdCsrInner::<S, P>::new(subject, signing_key.pubkey(), capabilities)?;
+        let inner_csr = IdCsrInner::<S, P> {
+            version: PkcsVersion::V1,
+            subject: subject.clone(),
+            subject_public_key: signing_key.pubkey().clone(),
+            capabilities: capabilities.clone(),
+            phantom_data: PhantomData,
+        };
         let signature = signing_key.sign(&inner_csr.clone().to_der()?);
         let signature_algorithm = S::algorithm_identifier();
-
-        Ok(IdCsr {
+        let id_csr = IdCsr {
             inner_csr,
             signature_algorithm,
             signature,
-        })
+        };
+        log::trace!("[IdCsr::new()] Validating self with Target: {:?}", target);
+        id_csr.validate(target)?;
+        Ok(id_csr)
     }
 
-    /// Validates the well-formedness of the [IdCsr] and its contents. Fails, if the [Name] or
-    /// [Capabilities] do not meet polyproto validation criteria for actor CSRs, or if
-    /// the signature fails to be verified.
-
-    pub fn valid_actor_csr(&self) -> Result<(), ConversionError> {
-        self.validate()?;
-        if self.inner_csr.capabilities.basic_constraints.ca {
-            return Err(ConversionError::ConstraintError(
-                ConstraintError::Malformed(Some("Actor CSR must not be a CA".to_string())),
-            ));
-        }
-        Ok(())
+    /// Create an [IdCsr] from a byte slice containing a DER encoded PKCS #10 CSR.
+    /// The resulting `IdCsr` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the CSRs intended usage context is provided.
+    pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
+        let csr = IdCsr::from_der_unchecked(bytes)?;
+        csr.validate(target)?;
+        Ok(csr)
     }
 
-    /// Validates the well-formedness of the [IdCsr] and its contents. Fails, if the [Name] or
-    /// [Capabilities] do not meet polyproto validation criteria for home server CSRs, or if
-    /// the signature fails to be verified.
-    pub fn valid_home_server_csr(&self) -> Result<(), ConversionError> {
-        self.validate()?;
-        if !self.inner_csr.capabilities.basic_constraints.ca {
-            return Err(ConversionError::ConstraintError(
-                ConstraintError::Malformed(Some("Actor CSR must be a CA".to_string())),
-            ));
-        }
-        Ok(())
-    }
-
-    /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
-    pub fn from_der(bytes: &[u8]) -> Result<Self, ConversionError> {
-        IdCsr::try_from(CertReq::from_der(bytes)?)
+    /// Create an unchecked [IdCsr] from a byte slice containing a DER encoded PKCS #10 CSR.
+    /// The caller is responsible for verifying the correctness of this `IdCsr` using
+    /// the [Constrained] trait before using it.
+    pub fn from_der_unchecked(bytes: &[u8]) -> Result<Self, ConversionError> {
+        let csr = IdCsr::try_from(CertReq::from_der(bytes)?)?;
+        Ok(csr)
     }
 
     /// Encode this type as DER, returning a byte vector.
     pub fn to_der(self) -> Result<Vec<u8>, ConversionError> {
         Ok(CertReq::try_from(self)?.to_der()?)
+    }
+
+    /// Create an [IdCsr] from a string containing a PEM encoded PKCS #10 CSR.
+    /// The resulting `IdCsr` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the CSRs intended usage context is provided.
+    pub fn from_pem(pem: &str, target: Option<Target>) -> Result<Self, ConversionError> {
+        let csr = IdCsr::from_pem_unchecked(pem)?;
+        csr.validate(target)?;
+        Ok(csr)
+    }
+
+    /// Create an unchecked [IdCsr] from a string containing a PEM encoded PKCS #10 CSR.
+    /// The caller is responsible for verifying the correctness of this `IdCsr` using
+    /// the [Constrained] trait before using it.
+    pub fn from_pem_unchecked(pem: &str) -> Result<Self, ConversionError> {
+        let csr = IdCsr::try_from(CertReq::from_pem(pem)?)?;
+        Ok(csr)
+    }
+
+    /// Encode this type as PEM, returning a string.
+    pub fn to_pem(self, line_ending: LineEnding) -> Result<String, ConversionError> {
+        Ok(CertReq::try_from(self)?.to_pem(line_ending)?)
+    }
+
+    /// Returns a byte vector containing the DER encoded [IdCsrInner]. This data is encoded
+    /// in the signature field of the IdCSR, and can be used to verify the signature of the CSR.
+    ///
+    /// This is a shorthand for `self.inner_csr.clone().to_der()`, since intuitively, one might
+    /// try to verify the signature of the CSR by using `self.to_der()`, which will result
+    /// in an error.
+    pub fn signature_data(&self) -> Result<Vec<u8>, ConversionError> {
+        self.inner_csr.clone().to_der()
     }
 }
 
@@ -140,29 +171,46 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
     /// Creates a new [IdCsrInner].
     ///
     /// Fails, if [Name] or [Capabilities] do not meet polyproto validation criteria.
+    ///
+    /// The resulting `IdCsrInner` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the CSRs intended usage context is provided.
+    ///
+    /// It is recommended to use [IdCsr::new] instead of this function, as it performs additional
+    /// validation and signing of the CSR.
     pub fn new(
         subject: &Name,
         public_key: &P,
         capabilities: &Capabilities,
+        target: Option<Target>,
     ) -> Result<IdCsrInner<S, P>, ConversionError> {
-        subject.validate()?;
-        capabilities.validate()?;
-
         let subject = subject.clone();
         let subject_public_key_info = public_key.clone();
-
-        Ok(IdCsrInner {
+        let id_csr_inner = IdCsrInner {
             version: PkcsVersion::V1,
             subject,
             subject_public_key: subject_public_key_info,
             capabilities: capabilities.clone(),
             phantom_data: PhantomData,
-        })
+        };
+        id_csr_inner.validate(target)?;
+        Ok(id_csr_inner)
     }
 
-    /// Create an IdCsrInner from a byte slice containing a DER encoded PKCS #10 CSR.
-    pub fn from_der(bytes: &[u8]) -> Result<Self, ConversionError> {
-        IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)
+    /// Create an [IdCsrInner] from a byte slice containing a DER encoded PKCS #10 CSR.
+    /// The resulting `IdCsrInner` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the CSRs intended usage context is provided.
+    pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
+        let csr_inner = IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)?;
+        csr_inner.validate(target)?;
+        Ok(csr_inner)
+    }
+
+    /// Create an unchecked [IdCsrInner] from a byte slice containing a DER encoded PKCS #10 CSR.
+    /// The caller is responsible for verifying the correctness of this `IdCsrInner` using
+    /// the [Constrained] trait before using it.
+    pub fn from_der_unchecked(bytes: &[u8]) -> Result<Self, ConversionError> {
+        let csr_inner = IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)?;
+        Ok(csr_inner)
     }
 
     /// Encode this type as DER, returning a byte vector.
@@ -174,11 +222,14 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
 impl<S: Signature, P: PublicKey<S>> TryFrom<CertReq> for IdCsr<S, P> {
     type Error = ConversionError;
 
+    /// Tries to convert a `CertReq` into an `IdCsr`. The Ok() variant of this Result is an
+    /// unverified `IdCsr`. If this conversion is called manually, the caller is responsible for
+    /// verifying the `IdCsr` using the [Constrained] trait.
     fn try_from(value: CertReq) -> Result<Self, Self::Error> {
         Ok(IdCsr {
             inner_csr: IdCsrInner::try_from(value.info)?,
             signature_algorithm: value.algorithm,
-            signature: S::from_bitstring(value.signature.raw_bytes()),
+            signature: S::from_bytes(value.signature.raw_bytes()),
         })
     }
 }
@@ -186,14 +237,16 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<CertReq> for IdCsr<S, P> {
 impl<S: Signature, P: PublicKey<S>> TryFrom<CertReqInfo> for IdCsrInner<S, P> {
     type Error = ConversionError;
 
+    /// Tries to convert a `CertReqInfo` into an `IdCsrInner`. The Ok() variant of this Result is
+    /// an unverified `IdCsrInner`. If this conversion is called manually, the caller is responsible
+    /// for verifying the `IdCsrInner` using the [Constrained] trait.
     fn try_from(value: CertReqInfo) -> Result<Self, Self::Error> {
         let rdn_sequence = value.subject;
-        rdn_sequence.validate()?;
+        rdn_sequence.validate(None)?;
         let public_key_info = PublicKeyInfo {
             algorithm: value.public_key.algorithm,
             public_key_bitstring: value.public_key.subject_public_key,
         };
-
         Ok(IdCsrInner {
             version: PkcsVersion::V1,
             subject: rdn_sequence,

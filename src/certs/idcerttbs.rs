@@ -12,15 +12,14 @@ use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 use x509_cert::TbsCertificate;
 
-use crate::errors::base::InvalidInput;
-use crate::errors::composite::ConversionError;
+use crate::errors::ConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::Constrained;
 
 use super::capabilities::Capabilities;
 use super::idcsr::IdCsr;
-use super::PublicKeyInfo;
+use super::{PublicKeyInfo, Target};
 
 /// An unsigned polyproto ID-Cert.
 ///
@@ -59,7 +58,7 @@ pub struct IdCertTbs<S: Signature, P: PublicKey<S>> {
     /// Capabilities assigned to the subject of the certificate.
     pub capabilities: Capabilities,
     /// PhantomData
-    s: std::marker::PhantomData<S>,
+    pub(crate) s: std::marker::PhantomData<S>,
 }
 
 impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
@@ -69,26 +68,18 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     /// the [BasicConstraints] "ca" flag set to `true`.
     ///
     /// See [IdCertTbs::from_ca_csr()] when trying to create a new CA certificate for home servers.
-    pub(crate) fn from_actor_csr(
+    ///
+    /// The resulting `IdCertTbs` is guaranteed to be well-formed and up to polyproto specification,
+    /// for the usage context of an actor certificate.
+    pub fn from_actor_csr(
         id_csr: IdCsr<S, P>,
         serial_number: Uint,
         signature_algorithm: AlgorithmIdentifierOwned,
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, ConversionError> {
-        if id_csr.inner_csr.capabilities.basic_constraints.ca {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                "Actor ID-Cert cannot have \"CA\" BasicConstraint set to true".to_string(),
-            )));
-        }
-        id_csr.validate()?;
-        issuer.validate()?;
-        // Verify if signature of IdCsr matches contents
-        id_csr.inner_csr.subject_public_key.verify_signature(
-            &id_csr.signature,
-            id_csr.inner_csr.clone().to_der()?.as_slice(),
-        )?;
-        Ok(IdCertTbs {
+        id_csr.validate(Some(Target::Actor))?;
+        let cert_tbs = IdCertTbs {
             serial_number,
             signature_algorithm,
             issuer,
@@ -97,7 +88,9 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
             subject_public_key: id_csr.inner_csr.subject_public_key,
             capabilities: id_csr.inner_csr.capabilities,
             s: std::marker::PhantomData,
-        })
+        };
+        cert_tbs.validate(Some(Target::Actor))?;
+        Ok(cert_tbs)
     }
 
     /// Create a new [IdCertTbs] by passing an [IdCsr] and other supplementary information. Returns
@@ -106,25 +99,18 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     /// the [BasicConstraints] "ca" flag set to `false`.
     ///
     /// See [IdCertTbs::from_actor_csr()] when trying to create a new actor certificate.
-    pub(crate) fn from_ca_csr(
+    ///
+    /// The resulting `IdCertTbs` is guaranteed to be well-formed and up to polyproto specification,
+    /// for the usage context of a home server certificate.
+    pub fn from_ca_csr(
         id_csr: IdCsr<S, P>,
         serial_number: Uint,
         signature_algorithm: AlgorithmIdentifierOwned,
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, ConversionError> {
-        if !id_csr.inner_csr.capabilities.basic_constraints.ca {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                "CA ID-Cert must have \"CA\" BasicConstraint set to true".to_string(),
-            )));
-        }
-        id_csr.validate()?;
-        // Verify if signature of IdCsr matches contents
-        id_csr.inner_csr.subject_public_key.verify_signature(
-            &id_csr.signature,
-            id_csr.inner_csr.clone().to_der()?.as_slice(),
-        )?;
-        Ok(IdCertTbs {
+        id_csr.validate(Some(Target::HomeServer))?;
+        let cert_tbs = IdCertTbs {
             serial_number,
             signature_algorithm,
             issuer,
@@ -133,7 +119,9 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
             subject_public_key: id_csr.inner_csr.subject_public_key,
             capabilities: id_csr.inner_csr.capabilities,
             s: std::marker::PhantomData,
-        })
+        };
+        cert_tbs.validate(Some(Target::HomeServer))?;
+        Ok(cert_tbs)
     }
 
     /// Encode this type as DER, returning a byte vector.
@@ -141,9 +129,28 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         Ok(TbsCertificate::try_from(self)?.to_der()?)
     }
 
-    /// Create an IdCsr from a byte slice containing a DER encoded PKCS #10 CSR.
-    pub fn from_der(bytes: &[u8]) -> Result<Self, ConversionError> {
-        IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)
+    /// Create an [IdCertTbs] from a byte slice containing a DER encoded PKCS #10 CSR. The resulting
+    /// `IdCertTbs` is guaranteed to be well-formed and up to polyproto specification,
+    /// if the correct [Target] for the certificates' intended usage context is provided.
+    pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
+        let cert = IdCertTbs::from_der_unchecked(bytes)?;
+        cert.validate(target)?;
+        Ok(cert)
+    }
+
+    /// Create an unchecked [IdCertTbs] from a byte slice containing a DER encoded PKCS #10 CSR. The caller is
+    /// responsible for verifying the correctness of this `IdCertTbs` using
+    /// the [Constrained] trait before using it.
+    pub fn from_der_unchecked(bytes: &[u8]) -> Result<Self, ConversionError> {
+        let cert = IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)?;
+        Ok(cert)
+    }
+
+    /// Checks if the IdCertTbs was valid at a given UNIX time. Does not validate the certificate
+    /// against the polyproto specification.
+    pub(crate) fn valid_at(&self, time: u64) -> bool {
+        time >= self.validity.not_before.to_unix_duration().as_secs()
+            && time <= self.validity.not_after.to_unix_duration().as_secs()
     }
 }
 
@@ -152,8 +159,11 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
 {
     type Error = ConversionError;
 
+    /// Tries to convert a [TbsCertificateInner] into an [IdCertTbs]. The Ok() variant of this Result
+    /// is an unverified `IdCertTbs`. If this conversion is called manually, the caller is responsible
+    /// for verifying the `IdCertTbs` using the [Constrained] trait.
     fn try_from(value: TbsCertificateInner<P>) -> Result<Self, Self::Error> {
-        value.subject.validate()?;
+        value.subject.validate(None)?;
 
         let capabilities =
             match value.extensions {

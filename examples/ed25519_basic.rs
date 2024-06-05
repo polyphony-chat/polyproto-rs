@@ -6,8 +6,6 @@
 // This example is not complete and should not be copy-pasted into a production environment without
 // further scrutiny and consideration.
 
-#![allow(unused)]
-
 use std::str::FromStr;
 
 use der::asn1::BitString;
@@ -17,10 +15,7 @@ use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
-use thiserror::Error;
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
 fn main() {
     let mut csprng = rand::rngs::OsRng;
     // Generate a key pair
@@ -60,10 +55,6 @@ fn main() {
     )
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-#[cfg(not(test))]
-fn main() {}
-
 // As mentioned in the README, we start by implementing the signature trait.
 
 // Here, we start by defining the signature type, which is a wrapper around the signature type from
@@ -72,6 +63,12 @@ fn main() {}
 struct Ed25519Signature {
     signature: Ed25519DalekSignature,
     algorithm: AlgorithmIdentifierOwned,
+}
+
+impl std::fmt::Display for Ed25519Signature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.signature)
+    }
 }
 
 // We implement the Signature trait for our signature type.
@@ -96,7 +93,7 @@ impl Signature for Ed25519Signature {
     }
 
     #[cfg(not(tarpaulin_include))]
-    fn from_bitstring(signature: &[u8]) -> Self {
+    fn from_bytes(signature: &[u8]) -> Self {
         let mut signature_vec = signature.to_vec();
         signature_vec.resize(64, 0);
         let signature_array: [u8; 64] = {
@@ -196,8 +193,6 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
     fn try_from_public_key_info(
         public_key_info: PublicKeyInfo,
     ) -> Result<Self, polyproto::errors::composite::ConversionError> {
-        use polyproto::errors::composite::ConversionError;
-
         let mut key_vec = public_key_info.public_key_bitstring.raw_bytes().to_vec();
         key_vec.resize(32, 0);
         let signature_array: [u8; 32] = {
@@ -209,4 +204,9 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
             key: VerifyingKey::from_bytes(&signature_array).unwrap(),
         })
     }
+}
+
+#[test]
+fn test_example() {
+    main()
 }
