@@ -290,7 +290,27 @@ mod test {
 
     #[test]
     fn test_dc_matches_dc_in_uid() {
-        // TODO
+        let good_name = Name::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap();
+        let bad_name = Name::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphonyy.chat,uniqueIdentifier=client1",
+        )
+        .unwrap();
+        assert!(good_name.validate(Some(Target::Actor)).is_ok());
+        assert!(bad_name.validate(Some(Target::Actor)).is_err());
+        let bad_name = Name::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.cat,uniqueIdentifier=client1",
+        )
+        .unwrap();
+        assert!(bad_name.validate(Some(Target::Actor)).is_err());
+        assert!(bad_name.validate(Some(Target::Actor)).is_err());
+        let bad_name = Name::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@thisis.polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap();
+        assert!(bad_name.validate(Some(Target::Actor)).is_err());
     }
 
     #[test]
