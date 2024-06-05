@@ -31,7 +31,7 @@ jobs:
             cargo test --verbose --all-features --tests --examples
           fi
   wasm:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
@@ -47,8 +47,6 @@ jobs:
           wasm-pack test --node -- --features wasm --examples
           wasm-pack test --firefox -- --features wasm --examples
           wasm-pack test --chrome -- --features wasm --examples
-          wasm-pack test --safari -- --features wasm --examples
           wasm-pack test --node -- --features wasm
           wasm-pack test --firefox -- --features wasm
           wasm-pack test --chrome -- --features wasm
-          wasm-pack test --safari -- --features wasm
