@@ -139,7 +139,7 @@ pub use x509_cert::name::*;
 ///
 /// If the `target` is `None`, the type will be validated without
 /// considering this context. If you know the context in which the type will be used, there is no
-/// reason to not specify it, and you would only reap negative consequences from not doing so.
+/// reason to not specify it, and you would only reap negative consequences for not doing so.
 ///
 /// Valid reasons to specify `None` as the `target` are, for example, if you parse a type from a
 /// file and do not know the context in which it will be used. Be careful when doing this; ideally,
