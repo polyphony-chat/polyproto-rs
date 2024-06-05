@@ -3,12 +3,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::ops::{Deref, DerefMut};
+use std::str::FromStr;
 
 use der::asn1::BitString;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
-use x509_cert::name::Name;
+use x509_cert::name::{Name, RdnSequence};
 
 use crate::errors::ConversionError;
 use crate::types::der::asn1::Ia5String;
@@ -76,6 +77,11 @@ impl SessionId {
         };
         session_id.validate(None)?;
         Ok(session_id)
+    }
+
+    /// Converts this [SessionId] into a [Name] for use in a certificate.
+    pub fn to_rdn_sequence(&self) -> Name {
+        RdnSequence::from_str(&format!("uniqueIdentifier={}", self)).unwrap()
     }
 }
 
