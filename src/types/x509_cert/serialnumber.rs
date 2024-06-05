@@ -109,6 +109,21 @@ impl SerialNumber {
     }
 }
 
+impl TryFrom<SerialNumber> for u128 {
+    type Error = ConversionError;
+
+    fn try_from(value: SerialNumber) -> Result<Self, Self::Error> {
+        value.try_as_u128()
+    }
+}
+
+impl From<u128> for SerialNumber {
+    fn from(value: u128) -> Self {
+        // All u128 values are valid serial numbers, so we can unwrap
+        SerialNumber::new(&value.to_be_bytes()).unwrap()
+    }
+}
+
 #[cfg(feature = "serde")]
 mod serde_support {
     use serde::de::Visitor;
