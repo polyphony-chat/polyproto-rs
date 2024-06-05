@@ -224,10 +224,7 @@ impl HttpClient {
     pub async fn upload_encrypted_pkm(&self, data: Vec<EncryptedPkm>) -> HttpResult<()> {
         let mut body = Vec::new();
         for pkm in data.iter() {
-            body.push(json!({
-                "serial_number": pkm.serial_number,
-                "key_data": pkm.key_data
-            }));
+            body.push(json!(pkm));
         }
         let request_url = self.url.join(UPLOAD_ENCRYPTED_PKM.path)?;
         self.client
@@ -249,7 +246,7 @@ impl HttpClient {
         let request_url = self.url.join(GET_ENCRYPTED_PKM.path)?;
         let mut body = Vec::new();
         for serial in serials.iter() {
-            body.push(json!(serial.to_string()));
+            body.push(json!(serial.try_as_u128()?));
         }
         let request = self
             .client
@@ -270,7 +267,7 @@ impl HttpClient {
         let request_url = self.url.join(DELETE_ENCRYPTED_PKM.path)?;
         let mut body = Vec::new();
         for serial in serials.iter() {
-            body.push(json!(serial.to_string()));
+            body.push(json!(serial.try_as_u128()?));
         }
         self.client
             .request(DELETE_ENCRYPTED_PKM.method.clone(), request_url)
