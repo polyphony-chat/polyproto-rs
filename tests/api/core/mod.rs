@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use der::asn1::{GeneralizedTime, Uint};
+use der::asn1::{BitString, GeneralizedTime, Uint};
 use httptest::matchers::request::method_path;
 use httptest::matchers::{eq, json_decoded, matches, request};
 use httptest::responders::{json_encoded, status_code};
@@ -14,11 +14,16 @@ use polyproto::certs::idcsr::IdCsr;
 use polyproto::certs::SessionId;
 use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
-    DELETE_SESSION, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING, GET_SERVER_PUBLIC_IDCERT,
+    DELETE_ENCRYPTED_PKM, DELETE_SESSION, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING,
+    GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_PUBLIC_IDCERT,
     GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT,
-    UPDATE_SESSION_IDCERT,
+    UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
 };
+use polyproto::types::spki::AlgorithmIdentifierOwned;
+use polyproto::types::x509_cert::SerialNumber;
+use polyproto::types::{EncryptedPkm, PrivateKeyInfo};
 use serde_json::json;
+use spki::ObjectIdentifier;
 use x509_cert::time::Validity;
 
 use crate::common::{
@@ -394,39 +399,110 @@ async fn rotate_session_id_cert() {
         .unwrap();
 }
 
-#[tokio::test]
-async fn upload_encrypted_pkm() {
-    /*
-    init_logger();
+fn encrypted_pkm(serial: u128) -> EncryptedPkm {
     let key = gen_priv_key();
     let pkm = String::from_utf8_lossy(key.key.as_bytes()).to_string();
+    EncryptedPkm {
+        serial_number: SerialNumber::new(&serial.to_be_bytes()).unwrap(),
+        key_data: PrivateKeyInfo {
+            algorithm: AlgorithmIdentifierOwned::new(
+                ObjectIdentifier::new("0.1.1.2.3.4.5.3.2.43.23.32").unwrap(),
+                None,
+            ),
+            encrypted_private_key_bitstring: BitString::from_bytes(&{
+                let mut pkm = pkm.as_bytes().to_vec();
+                pkm.reverse();
+                pkm
+            })
+            .unwrap(),
+        },
+        encryption_algorithm: AlgorithmIdentifierOwned::new(
+            ObjectIdentifier::new("1.34.234.26.53.73").unwrap(),
+            None,
+        ),
+    }
+}
+
+#[tokio::test]
+async fn upload_encrypted_pkm() {
+    init_logger();
+    let encrypted_pkm = encrypted_pkm(7923184);
     let server = Server::run();
     server.expect(
         Expectation::matching(all_of![
             request::method(UPLOAD_ENCRYPTED_PKM.method.to_string()),
             request::path(UPLOAD_ENCRYPTED_PKM.path),
-            request::body(json_decoded(eq(json!([
-                {
-                    "key_data": pkm,
-                    "serial_number": "one"
-                }
-            ]))))
+            request::body(json_decoded(eq(json!([&encrypted_pkm]))))
         ])
         .respond_with(status_code(201)),
     );
-    // TODO: Rewrite this test
-        let url = server_url(&server);
+    let url = server_url(&server);
     let client = polyproto::api::HttpClient::new(&url).unwrap();
-    let encrypted_pkm = EncryptedPkm {
-        serial_number: SessionId::new_validated("one").unwrap().into(),
-        key_data: pkm,
-    };
     client
         .upload_encrypted_pkm(vec![encrypted_pkm])
         .await
         .unwrap();
-    */
 }
 
 #[tokio::test]
-async fn get_encrypted_pkm() {}
+async fn get_encrypted_pkm() {
+    init_logger();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    let serial = 7923184u128;
+    let encrypted_pkm = encrypted_pkm(serial);
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(GET_ENCRYPTED_PKM.method.to_string()),
+            request::path(GET_ENCRYPTED_PKM.path),
+            request::body(json_decoded(eq(json!([serial]))))
+        ])
+        .respond_with(json_encoded(json!([encrypted_pkm]))),
+    );
+    let pkm = client
+        .get_encrypted_pkm(vec![SerialNumber::from(serial)])
+        .await
+        .unwrap();
+    assert_eq!(pkm.first().unwrap(), &encrypted_pkm);
+}
+
+#[tokio::test]
+async fn delete_encrypted_pkm() {
+    init_logger();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    let serial = 7923184u128;
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(DELETE_ENCRYPTED_PKM.method.to_string()),
+            request::path(DELETE_ENCRYPTED_PKM.path),
+            request::body(json_decoded(eq(json!([serial]))))
+        ])
+        .respond_with(status_code(204)),
+    );
+
+    client
+        .delete_encrypted_pkm(vec![SerialNumber::from(serial)])
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn get_pkm_upload_size_limit() {
+    init_logger();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    let limit = 1024u64;
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT.method.to_string()),
+            request::path(GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT.path),
+        ])
+        .respond_with(json_encoded(limit)),
+    );
+    let resp = client.get_pkm_upload_size_limit().await.unwrap();
+    assert_eq!(resp, limit);
+}
