@@ -19,3 +19,4 @@
 {"rule":"MASS_AGREEMENT","sentence":"^\\QThe challenge string.\\E$"}
 {"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\QResponse counterpart of IdentifyRequest.\\E$"}
 {"rule":"EN_A_VS_AN","sentence":"^\\QTry to convert the inner byte slice to a u128.\\E$"}
+{"rule":"POSSESSIVE_APOSTROPHE","sentence":"^\\QView the examples directory for a simple example on how to implement and use this crate with the ED25519 signature algorithm.\\E$"}

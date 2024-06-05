@@ -12,18 +12,18 @@
 
 Crate supplying (generic) Rust types and traits to quickly get a
 [polyproto](https://docs.polyphony.chat/Protocol%20Specifications/core/) implementation up and
-running.
+running, as well as an HTTP client for the polyproto API.
+
+Building upon types offered by the [der](https://crates.io/crates/der),
+[x509_cert](https://crates.io/crates/x509_cert) and [spki](https://crates.io/crates/spki) crates,
+this crate provides a set of types and traits to quickly implement the polyproto specification.
+Simply add cryptography and signature algorithm crates of your choice to the mix, and you are ready
+to go.
+
+All polyproto certificate types can be converted to and from the types offered by the `x509_cert`
+crate.
 
 ## Implementing polyproto
-
-**The crate is currently in an alpha stage. Some functionality is missing, and
-things may break or change at any point in time.**
-
-This crate extends upon types offered by [der](https://crates.io/crates/der) and
-[spki](https://crates.io/crates/spki). This crate exports both of these crates' types and traits
-under the `der` and `spki` modules, respectively. It is also possible to use polyproto together
-with the `x509_cert` crate, as all the polyproto certificate types are compatible with the
-certificate types from that crate.
 
 Start by implementing the trait [crate::signature::Signature] for a signature algorithm of your
 choice. Popular crates for cryptography and signature algorithms supply their own `PublicKey` and
@@ -33,8 +33,8 @@ choice. Popular crates for cryptography and signature algorithms supply their ow
 You can then use the [crate::certs] types to build certificates using your implementations of the
 aforementioned traits.
 
-View the [examples](./examples/) directory for a simple example on how to implement and use this
-crate.
+**View the [examples](./examples/)** directory for a simple example on how to implement and use this
+crate with the ED25519 signature algorithm.
 
 ## Cryptography
 
@@ -62,17 +62,17 @@ will have to use the `wasm` feature:
 polyproto = { version = "0", features = ["wasm"] }
 ```
 
-## HTTP API client through reqwest
+## HTTP API client through `reqwest`
 
-By default, this crate uses `reqwest` for HTTP requests. `reqwest` is an optional dependency, and
-you can disable it by using polyproto with `default-features = false` in your `Cargo.toml`:
+If the `reqwest` feature is activated, this crate offers a polyproto HTTP API client, using the
+`reqwest` crate.
 
-```toml
-[dependencies]
-polyproto = { version = "0", default-features = false, features = ["routes"] }
-```
+### Alternatives to `reqwest`
 
-Disabling `reqwest` gives you the ability to use your own HTTP client.
+If you would like to implement an HTTP client using something other than `reqwest`, simply enable
+the `types` and `serde` features. Using these features, you can implement your own HTTP client, with
+the polyproto crate acting as a single source of truth for request and response types, as well as
+request routes and methods through the exported `static` `Route`s.
 
 [build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/polyproto/build_and_test.yml?style=flat
 [build-url]: https://github.com/polyphony-chat/polyproto/blob/main/.github/workflows/build_and_test.yml
