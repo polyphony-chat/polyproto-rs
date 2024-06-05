@@ -50,4 +50,6 @@ async fn main() {
 }
 
 #[test]
-fn test_example() {}
+fn test_example() {
+    main()
+}
