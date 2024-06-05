@@ -1,6 +1,6 @@
 [package]
 name = "polyproto"
-version = "0.9.0-beta.1"
+version = "0.9.0
 edition = "2021"
 license = "MPL-2.0"
 description = "(Generic) Rust types and traits to quickly get a polyproto implementation up and running"
