@@ -6,8 +6,6 @@
 // This example is not complete and should not be copy-pasted into a production environment without
 // further scrutiny and consideration.
 
-#![allow(unused)]
-
 use std::str::FromStr;
 
 use der::asn1::BitString;
@@ -17,7 +15,6 @@ use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
-use thiserror::Error;
 
 fn main() {
     let mut csprng = rand::rngs::OsRng;
@@ -196,8 +193,6 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
     fn try_from_public_key_info(
         public_key_info: PublicKeyInfo,
     ) -> Result<Self, polyproto::errors::composite::ConversionError> {
-        use polyproto::errors::composite::ConversionError;
-
         let mut key_vec = public_key_info.public_key_bitstring.raw_bytes().to_vec();
         key_vec.resize(32, 0);
         let signature_array: [u8; 32] = {

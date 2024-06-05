@@ -2,12 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#![allow(unused)]
-
 use std::str::FromStr;
 use std::time::Duration;
 
-use der::asn1::{BitString, Ia5String, Uint, UtcTime};
+use der::asn1::{BitString, Uint, UtcTime};
 use der::Encode;
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::Capabilities;
@@ -17,10 +15,7 @@ use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
-use thiserror::Error;
-use x509_cert::attr::Attributes;
 use x509_cert::name::RdnSequence;
-use x509_cert::request::CertReq;
 use x509_cert::time::{Time, Validity};
 use x509_cert::Certificate;
 

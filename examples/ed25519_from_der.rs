@@ -2,13 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#![allow(unused)]
-
 use std::str::FromStr;
 use std::time::Duration;
 
-use der::asn1::{BitString, Ia5String, Uint, UtcTime};
-use der::{Decode, Encode};
+use der::asn1::{BitString, Uint, UtcTime};
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
@@ -17,12 +14,8 @@ use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
-use thiserror::Error;
-use x509_cert::attr::Attributes;
 use x509_cert::name::RdnSequence;
-use x509_cert::request::CertReq;
 use x509_cert::time::{Time, Validity};
-use x509_cert::Certificate;
 
 /// The following example uses the same setup as in ed25519_basic.rs, but in its main method, it
 /// creates a certificate signing request (CSR) and writes it to a file. The CSR is created from a
@@ -77,9 +70,15 @@ fn main() {
     )
     .unwrap();
     let data = cert.clone().to_der().unwrap();
+    // ``::from_der()` performs a full check of the certificate, including signature verification.
     let cert_from_der =
         IdCert::from_der(&data, Target::Actor, 15, &priv_key_home_server.public_key).unwrap();
-    assert_eq!(cert_from_der, cert)
+    assert_eq!(cert_from_der, cert);
+    // ...so technically, we don't need to verify the signature again. This is just for demonstration
+    // of how you would manually verify a certificate.
+    assert!(cert_from_der
+        .full_verify_actor(15, &priv_key_home_server.public_key)
+        .is_ok())
 }
 
 // As mentioned in the README, we start by implementing the signature trait.
