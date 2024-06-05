@@ -41,7 +41,6 @@ pub struct IdCsr<S: Signature, P: PublicKey<S>> {
     /// [Signature] value for the `inner_csr`
     pub signature: S,
 }
-// TODO: Document that we have a SessionId struct that can be used to create valid SessionIds
 impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// Performs basic input validation and creates a new polyproto ID-Cert CSR, according to
     /// PKCS#10. The CSR is being signed using the subjects' supplied signing key ([PrivateKey])
@@ -54,7 +53,9 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     ///                       on how many subdomain levels there are.
     ///   - Domain Component: Actor home server domain.
     ///   - Domain Component: Actor home server TLD, if applicable.
-    ///   - Organizational Unit: Optional. May be repeated.
+    ///   - Session ID: [SessionId], an Ia5String, max 32 characters. You can use the [SessionId] struct
+    ///                 and its [SessionId::new_validated()] and [SessionId::to_rdn_sequence()] methods
+    ///                 to help you create a valid SessionId.
     /// - **signing_key**: Subject signing key. Will NOT be included in the certificate. Is used to
     ///                    sign the CSR.
     /// - **capabilities**: The capabilities requested by the subject.
