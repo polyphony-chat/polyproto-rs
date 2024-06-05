@@ -96,8 +96,6 @@ impl KeyUsages {
             // TODO: PLEASE write a test for this. Is an empty byte array valid? Is a byte array with a single 0 valid, and does it mean that no KeyUsage is set? -bitfl0wer
             return Ok(KeyUsages { key_usages });
         }
-        // TODO: Instead of doing this, we should rather find out why the first byte is sometimes 0.
-        // works for now though. -bitfl0wer
         if byte_array[0] == 0 && byte_array.len() == 2 {
             byte_array.remove(0);
         }
