@@ -109,6 +109,33 @@ pub mod routes {
                 method: http::Method::OPTIONS,
                 path: "/.p2/core/v1/session/keymaterial",
             };
+
+            pub static CREATE_DISCOVERABLE: Route = Route {
+                method: http::Method::POST,
+                path: "/.p2/core/v1/services",
+            };
+
+            pub static DELETE_DISCOVERABLE: Route = Route {
+                method: http::Method::DELETE,
+                path: "/.p2/core/v1/services",
+            };
+
+            pub static SET_PRIMARY_DISCOVERABLE: Route = Route {
+                method: http::Method::PUT,
+                path: "/.p2/core/v1/services/primary",
+            };
+
+            /// Unlike [DISCOVER_SERVICE_SINGULAR], this route requires only one query parameter: `fid`.
+            pub static DISCOVER_SERVICE_ALL: Route = Route {
+                method: http::Method::GET,
+                path: "/.p2/core/v1/services/discover/",
+            };
+
+            /// Unlike [DISCOVER_SERVICE_ALL], this route requires two query parameters: `fid` and `service`.
+            pub static DISCOVER_SERVICE_SINGULAR: Route = Route {
+                method: http::Method::GET,
+                path: "/.p2/core/v1/services/discover/",
+            };
         }
     }
 }
