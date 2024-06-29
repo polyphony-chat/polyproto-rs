@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 
 use der::asn1::BitString;
@@ -37,20 +36,6 @@ pub struct SessionId {
     session_id: Ia5String,
 }
 
-impl Deref for SessionId {
-    type Target = Ia5String;
-
-    fn deref(&self) -> &Self::Target {
-        &self.session_id
-    }
-}
-
-impl DerefMut for SessionId {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.session_id
-    }
-}
-
 impl std::fmt::Display for SessionId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.session_id.fmt(f)
@@ -82,6 +67,11 @@ impl SessionId {
     /// Converts this [SessionId] into a [Name] for use in a certificate.
     pub fn to_rdn_sequence(&self) -> Name {
         RdnSequence::from_str(&format!("uniqueIdentifier={}", self)).unwrap()
+    }
+
+    /// Returns the inner [Ia5String] of this [SessionId] as an owned value.
+    pub fn to_ia5string(&self) -> Ia5String {
+        self.session_id.clone()
     }
 }
 

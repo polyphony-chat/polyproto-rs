@@ -53,7 +53,7 @@ fn invalid_federation_id() {
     assert!(FederationId::new("example@⾆.com").is_err());
     assert!(FederationId::new("example@😿.com").is_err());
     assert_eq!(
-        *FederationId::new("example@com.⾆").unwrap(),
+        FederationId::new("example@com.⾆").unwrap().to_string(),
         "example@com".to_string()
     );
 }
