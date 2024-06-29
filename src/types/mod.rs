@@ -12,6 +12,9 @@ pub mod der;
 pub mod encrypted_pkm;
 /// Module defining the [FederationId] type.
 pub mod federation_id;
+
+/// Module defining the [Service] type.
+pub mod service;
 /// This module contains wrappers for types from the `spki` crate which interface directly with the
 /// HTTP API of polyproto. These wrappers enable the types to be serialized and deserialized using
 /// the `serde` crate, if the `serde` feature is enabled.
@@ -24,6 +27,7 @@ pub mod x509_cert;
 pub use challenge_string::*;
 pub use encrypted_pkm::*;
 pub use federation_id::*;
+pub use service::*;
 
 /// Module defining the [Route] type, as well as `static` endpoints and their associated HTTP methods
 /// for the polyproto API. These `static`s can be used as a single source of truth for the API endpoints
