@@ -125,13 +125,11 @@ pub mod routes {
                 path: "/.p2/core/v1/services/primary",
             };
 
-            /// Unlike [DISCOVER_SERVICE_SINGULAR], this route requires only one query parameter: `fid`.
             pub static DISCOVER_SERVICE_ALL: Route = Route {
                 method: http::Method::GET,
                 path: "/.p2/core/v1/services/discover/",
             };
 
-            /// Unlike [DISCOVER_SERVICE_ALL], this route requires two query parameters: `fid` and `service`.
             pub static DISCOVER_SERVICE_SINGULAR: Route = Route {
                 method: http::Method::GET,
                 path: "/.p2/core/v1/services/discover/",
