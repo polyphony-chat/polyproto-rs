@@ -15,10 +15,36 @@ use url::Url;
 ///
 /// For more information, see the [type definition in the core protocol API documentation](https://docs.polyphony.chat/APIs/core/Types/service/)
 pub struct Service {
-    /// The name of the service that is being made discoverable. Must be formatted according to [section #8.2: Namespaces](https://docs.polyphony.chat/Protocol%20Specifications/core#82-namespaces) in the core protocol specification
-    pub service: String,
-    /// The base URL of the service provider, not including `/.p2/<service_name>`. Trailing slashes are allowed. If `(/).p2/<service_name>` is added to the URL specified here, a polyproto client should be able to access the HTTP API routes provided by the service.
+    /// The name of the service.
+    pub service: ServiceName,
+    /// The base URL of the service provider, not including `/.p2/<service_name>`. Trailing slashes
+    /// are allowed. If `(/).p2/<service_name>` is added to the URL specified here, a polyproto
+    /// client should be able to access the HTTP API routes provided by the service.
     pub url: Url,
-    ///  Whether the service provider specified in the `url` field is the primary service provider for this service and actor.
+    ///  Whether the service provider specified in the `url` field is the primary service provider
+    /// for this service and actor.
     pub primary: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+/// A valid service name, formatted according to
+/// [section #8.2: Namespaces](https://docs.polyphony.chat/Protocol%20Specifications/core#82-namespaces)
+/// in the core protocol specification.
+pub struct ServiceName {
+    inner: String,
+}
+
+impl std::fmt::Display for ServiceName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
+    }
+}
+
+impl ServiceName {
+    /// Create a new [ServiceName] from a string slice.
+    pub fn new(name: &str) -> Result<Self, crate::errors::ConstraintError> {
+        Ok(Self {
+            inner: name.to_string(),
+        })
+    }
 }
