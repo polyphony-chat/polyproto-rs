@@ -4,6 +4,8 @@
 
 use url::Url;
 
+use crate::Constrained;
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 /// A resource representing information about a discoverable service for an actor. You can learn more about
 /// services and discoverability by reading [section #9](https://docs.polyphony.chat/Protocol%20Specifications/core#9-services) of
@@ -43,8 +45,10 @@ impl std::fmt::Display for ServiceName {
 impl ServiceName {
     /// Create a new [ServiceName] from a string slice.
     pub fn new(name: &str) -> Result<Self, crate::errors::ConstraintError> {
-        Ok(Self {
+        let service_name = Self {
             inner: name.to_string(),
-        })
+        };
+        service_name.validate(None)?;
+        Ok(service_name)
     }
 }
