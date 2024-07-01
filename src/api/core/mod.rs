@@ -15,7 +15,7 @@ use crate::errors::{ConversionError, RequestError};
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::types::routes::core::v1::*;
-use crate::types::{ChallengeString, EncryptedPkm, FederationId, Service};
+use crate::types::{ChallengeString, EncryptedPkm, FederationId, Service, ServiceName};
 
 use super::{HttpClient, HttpResult};
 
@@ -185,7 +185,45 @@ impl HttpClient {
         Ok(())
     }
 
-    pub async fn discover_services(&self, actor_fid: &FederationId) -> HttpResult<Vec<Service>> {
+    /// Fetch a list of all services that the actor specified in the `actor_fid` argument has made
+    /// discoverable.
+    ///
+    /// ## Parameters
+    ///
+    /// `limit`: How many results to return at maximum. Omitting this value will return all existing
+    /// results.
+    pub async fn discover_services(
+        &self,
+        actor_fid: &FederationId,
+        limit: Option<u32>,
+    ) -> HttpResult<Vec<Service>> {
+        let request_url = self
+            .url
+            .join(DISCOVER_SERVICE_ALL.path)?
+            .join(&actor_fid.to_string())?;
+        let mut request = self
+            .client
+            .request(DISCOVER_SERVICE_ALL.method.clone(), request_url)
+            .query(&[("fid", actor_fid.to_string())]);
+        if let Some(limit) = limit {
+            request = request.body(
+                json!({
+                    "limit": limit
+                })
+                .to_string(),
+            );
+        }
+        let response = request.send().await;
+        HttpClient::handle_response::<Vec<Service>>(response).await
+    }
+
+    /// Get all `service_name` providers an `actor_fid` is registered with, limited to a specific service.
+    pub async fn discover_service(
+        &self,
+        actor_fid: &FederationId,
+        service_name: &ServiceName,
+        only_primary: bool,
+    ) {
         todo!()
     }
 }
