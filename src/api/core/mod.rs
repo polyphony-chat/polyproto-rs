@@ -15,7 +15,7 @@ use crate::errors::{ConversionError, RequestError};
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::types::routes::core::v1::*;
-use crate::types::{ChallengeString, EncryptedPkm};
+use crate::types::{ChallengeString, EncryptedPkm, FederationId, Service};
 
 use super::{HttpClient, HttpResult};
 
@@ -183,6 +183,10 @@ impl HttpClient {
             .send()
             .await?;
         Ok(())
+    }
+
+    pub async fn discover_services(&self, actor_fid: &FederationId) -> HttpResult<Vec<Service>> {
+        todo!()
     }
 }
 
