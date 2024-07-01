@@ -217,14 +217,44 @@ impl HttpClient {
         HttpClient::handle_response::<Vec<Service>>(response).await
     }
 
-    /// Get all `service_name` providers an `actor_fid` is registered with, limited to a specific service.
+    /// Fetch a list of services an actor is registered with, filtered by `service_name`.
+    ///
+    /// ## Parameters
+    ///
+    /// `limit`: How many results to return at maximum. Omitting this value will return all existing
+    /// results. Specifying a limit value of `1` will return only the primary service provider for
+    /// this service.
     pub async fn discover_service(
         &self,
         actor_fid: &FederationId,
         service_name: &ServiceName,
-        only_primary: bool,
-    ) {
-        todo!()
+        limit: Option<u32>,
+    ) -> HttpResult<Vec<Service>> {
+        let request_url = self
+            .url
+            .join(DISCOVER_SERVICE_ALL.path)?
+            .join(&actor_fid.to_string())?;
+        let mut request = self
+            .client
+            .request(DISCOVER_SERVICE_ALL.method.clone(), request_url);
+        if let Some(limit) = limit {
+            request = request.body(
+                json!({
+                    "limit": limit,
+                    "service_name": service_name
+                })
+                .to_string(),
+            );
+        } else {
+            request = request.body(
+                json!({
+                    "service_name": service_name
+                })
+                .to_string(),
+            );
+        }
+        let response = request.send().await;
+        HttpClient::handle_response::<Vec<Service>>(response).await
     }
 }
 
