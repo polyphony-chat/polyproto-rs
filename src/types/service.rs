@@ -6,6 +6,7 @@ use url::Url;
 
 use crate::Constrained;
 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 /// A resource representing information about a discoverable service for an actor. You can learn more about
 /// services and discoverability by reading [section #9](https://docs.polyphony.chat/Protocol%20Specifications/core#9-services) of
@@ -28,6 +29,7 @@ pub struct Service {
     pub primary: bool,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 /// A valid service name, formatted according to
 /// [section #8.2: Namespaces](https://docs.polyphony.chat/Protocol%20Specifications/core#82-namespaces)
