@@ -185,6 +185,7 @@ impl HttpClient {
         Ok(())
     }
 
+    // TODO: Test discover_services and discover_service
     /// Fetch a list of all services that the actor specified in the `actor_fid` argument has made
     /// discoverable.
     ///
