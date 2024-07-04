@@ -204,8 +204,7 @@ impl HttpClient {
             .join(&actor_fid.to_string())?;
         let mut request = self
             .client
-            .request(DISCOVER_SERVICE_ALL.method.clone(), request_url)
-            .query(&[("fid", actor_fid.to_string())]);
+            .request(DISCOVER_SERVICE_ALL.method.clone(), request_url);
         if let Some(limit) = limit {
             request = request.body(
                 json!({
