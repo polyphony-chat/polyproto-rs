@@ -2,9 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use crate::types::ServiceName;
+use crate::types::{Service, ServiceName};
 
 use super::*;
+
+impl Constrained for Service {
+    fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
+        self.service.validate(target)
+    }
+}
 
 impl Constrained for ServiceName {
     fn validate(&self, _target: Option<Target>) -> Result<(), ConstraintError> {
