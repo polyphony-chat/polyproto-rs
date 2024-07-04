@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use std::str::FromStr;
+
 use der::asn1::{BitString, GeneralizedTime, Uint};
 use httptest::matchers::request::method_path;
 use httptest::matchers::{eq, json_decoded, matches, request};
@@ -14,16 +16,17 @@ use polyproto::certs::idcsr::IdCsr;
 use polyproto::certs::SessionId;
 use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
-    DELETE_ENCRYPTED_PKM, DELETE_SESSION, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING,
-    GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_PUBLIC_IDCERT,
-    GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT,
-    UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
+    DELETE_ENCRYPTED_PKM, DELETE_SESSION, DISCOVER_SERVICE_ALL, GET_ACTOR_IDCERTS,
+    GET_CHALLENGE_STRING, GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT,
+    GET_SERVER_PUBLIC_IDCERT, GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY,
+    ROTATE_SESSION_IDCERT, UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
 };
 use polyproto::types::spki::AlgorithmIdentifierOwned;
 use polyproto::types::x509_cert::SerialNumber;
-use polyproto::types::{EncryptedPkm, PrivateKeyInfo};
+use polyproto::types::{EncryptedPkm, FederationId, PrivateKeyInfo, Service, ServiceName};
 use serde_json::json;
 use spki::ObjectIdentifier;
+use url::Url;
 use x509_cert::time::Validity;
 
 use crate::common::{
@@ -505,4 +508,31 @@ async fn get_pkm_upload_size_limit() {
     );
     let resp = client.get_pkm_upload_size_limit().await.unwrap();
     assert_eq!(resp, limit);
+}
+
+#[tokio::test]
+async fn discover_services() {
+    init_logger();
+    const FID: &str = "example@example.com";
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    let service = Service::new(
+        "polyproto-cat",
+        Url::from_str("http://polyphony.chat").unwrap(),
+        true,
+    )
+    .unwrap();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(DISCOVER_SERVICE_ALL.method.to_string()),
+            request::path(format!("{}{FID}", DISCOVER_SERVICE_ALL.path))
+        ])
+        .respond_with(json_encoded(json!(vec![&service]))),
+    );
+    let resp = client
+        .discover_services(&FederationId::new(FID).unwrap(), None)
+        .await
+        .unwrap();
+    assert_eq!(resp[0], service);
 }
