@@ -16,10 +16,10 @@ use polyproto::certs::idcsr::IdCsr;
 use polyproto::certs::SessionId;
 use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
-    DELETE_ENCRYPTED_PKM, DELETE_SESSION, DISCOVER_SERVICE_ALL, GET_ACTOR_IDCERTS,
-    GET_CHALLENGE_STRING, GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT,
-    GET_SERVER_PUBLIC_IDCERT, GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY,
-    ROTATE_SESSION_IDCERT, UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
+    DELETE_ENCRYPTED_PKM, DELETE_SESSION, DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR,
+    GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING, GET_ENCRYPTED_PKM,
+    GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_PUBLIC_IDCERT, GET_SERVER_PUBLIC_KEY,
+    ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT, UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
 };
 use polyproto::types::spki::AlgorithmIdentifierOwned;
 use polyproto::types::x509_cert::SerialNumber;
@@ -551,4 +551,35 @@ async fn discover_services() {
         .await
         .unwrap();
     assert_eq!(resp[0], service);
+}
+
+#[tokio::test]
+async fn discover_single_service() {
+    init_logger();
+    const FID: &str = "example@example.com";
+    let service_name = ServiceName::new("polyproto-cat").unwrap();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    let service = Service::new(
+        "polyproto-cat",
+        Url::from_str("http://polyphony.chat").unwrap(),
+        true,
+    )
+    .unwrap();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(DISCOVER_SERVICE_SINGULAR.method.to_string()),
+            request::path(format!(
+                "{}{FID}/{service_name}",
+                DISCOVER_SERVICE_SINGULAR.path
+            ))
+        ])
+        .respond_with(json_encoded(json!([service]))),
+    );
+    let result = client
+        .discover_service(&FederationId::new(FID).unwrap(), &service_name, None)
+        .await
+        .unwrap();
+    assert_eq!(result[0], service);
 }
