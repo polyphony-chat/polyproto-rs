@@ -4,6 +4,7 @@
 
 use url::Url;
 
+use crate::errors::ConstraintError;
 use crate::Constrained;
 
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
@@ -27,6 +28,18 @@ pub struct Service {
     ///  Whether the service provider specified in the `url` field is the primary service provider
     /// for this service and actor.
     pub primary: bool,
+}
+
+impl Service {
+    /// Create a new [Service] resource.
+    pub fn new(service_name: &str, url: Url, primary: bool) -> Result<Self, ConstraintError> {
+        let service_name = ServiceName::new(service_name)?;
+        Ok(Self {
+            service: service_name,
+            url,
+            primary,
+        })
+    }
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
