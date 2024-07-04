@@ -535,4 +535,20 @@ async fn discover_services() {
         .await
         .unwrap();
     assert_eq!(resp[0], service);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(DISCOVER_SERVICE_ALL.method.to_string()),
+            request::path(format!("{}{FID}", DISCOVER_SERVICE_ALL.path)),
+            request::body(json_decoded(eq(json!({
+                "limit": 1
+            }))))
+        ])
+        .respond_with(json_encoded(json!(vec![&service]))),
+    );
+    let resp = client
+        .discover_services(&FederationId::new(FID).unwrap(), Some(1))
+        .await
+        .unwrap();
+    assert_eq!(resp[0], service);
 }
