@@ -562,7 +562,7 @@ async fn discover_single_service() {
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new(&url).unwrap();
     let service = Service::new(
-        "polyproto-cat",
+        service_name.to_string().as_str(),
         Url::from_str("http://polyphony.chat").unwrap(),
         true,
     )
@@ -570,15 +570,32 @@ async fn discover_single_service() {
     server.expect(
         Expectation::matching(all_of![
             request::method(DISCOVER_SERVICE_SINGULAR.method.to_string()),
-            request::path(format!(
-                "{}{FID}/{service_name}",
-                DISCOVER_SERVICE_SINGULAR.path
-            ))
+            request::path(format!("{}{FID}", DISCOVER_SERVICE_SINGULAR.path)),
+            request::body(json_decoded(eq(json!({
+                "service": service_name
+            }))))
         ])
         .respond_with(json_encoded(json!([service]))),
     );
     let result = client
         .discover_service(&FederationId::new(FID).unwrap(), &service_name, None)
+        .await
+        .unwrap();
+    assert_eq!(result[0], service);
+
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(DISCOVER_SERVICE_SINGULAR.method.to_string()),
+            request::path(format!("{}{FID}", DISCOVER_SERVICE_SINGULAR.path)),
+            request::body(json_decoded(eq(json!({
+                "service": service_name,
+                "limit": 1
+            }))))
+        ])
+        .respond_with(json_encoded(json!([service]))),
+    );
+    let result = client
+        .discover_service(&FederationId::new(FID).unwrap(), &service_name, Some(1))
         .await
         .unwrap();
     assert_eq!(result[0], service);

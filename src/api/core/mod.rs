@@ -221,27 +221,33 @@ impl HttpClient {
     ///
     /// ## Parameters
     ///
-    /// `only_primary`: If set to `true` or omitted, only the primary service provider for the
-    /// specified service will be returned. If set to `false`, all service providers for the
-    /// specified service will be returned.
+    /// `limit`: Whether to limit the amount of returned results. Not specifying a limit will
+    /// return all services. Specifying a limit value of 1 will return only the primary
+    /// service provider.
     pub async fn discover_service(
         &self,
         actor_fid: &FederationId,
         service_name: &ServiceName,
-        only_primary: Option<bool>,
+        limit: Option<u32>,
     ) -> HttpResult<Vec<Service>> {
-        let request_url = self.url.join(&format!(
-            "{}{}/{}",
-            DISCOVER_SERVICE_SINGULAR.path, actor_fid, &service_name
-        ))?;
-        dbg!(&request_url);
+        let request_url = self
+            .url
+            .join(&format!("{}{}", DISCOVER_SERVICE_SINGULAR.path, actor_fid))?;
         let mut request = self
             .client
             .request(DISCOVER_SERVICE_SINGULAR.method.clone(), request_url);
-        if let Some(only_primary) = only_primary {
+        if let Some(limit) = limit {
             request = request.body(
                 json!({
-                    "only_primary": only_primary,
+                    "limit": limit,
+                    "service": service_name
+                })
+                .to_string(),
+            );
+        } else {
+            request = request.body(
+                json!({
+                    "service": service_name
                 })
                 .to_string(),
             );
