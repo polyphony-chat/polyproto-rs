@@ -359,16 +359,55 @@ impl HttpClient {
         HttpClient::handle_response::<u64>(response).await
     }
 
-    pub async fn add_discoverable_service() -> HttpResult<Service> {
-        todo!()
+    pub async fn add_discoverable_service(&self, service: &Service) -> HttpResult<Service> {
+        let request = self
+            .client
+            .request(
+                CREATE_DISCOVERABLE.method.clone(),
+                self.url.join(CREATE_DISCOVERABLE.path)?,
+            )
+            .body(json!(service).to_string());
+        let response = request.send().await;
+        HttpClient::handle_response::<Service>(response).await
     }
 
-    pub async fn delete_discoverable_service() -> HttpResult<Url> {
-        todo!()
+    pub async fn delete_discoverable_service(&self, url: &Url) -> HttpResult<Url> {
+        let request = self
+            .client
+            .request(
+                CREATE_DISCOVERABLE.method.clone(),
+                self.url.join(CREATE_DISCOVERABLE.path)?,
+            )
+            .body(
+                json!({
+                    "url": url
+                })
+                .to_string(),
+            );
+        let response = request.send().await;
+        HttpClient::handle_response::<Url>(response).await
     }
 
-    pub async fn set_primary_service_provider() -> HttpResult<Vec<Service>> {
-        todo!()
+    pub async fn set_primary_service_provider(
+        &self,
+        url: &Url,
+        service: &ServiceName,
+    ) -> HttpResult<Vec<Service>> {
+        let request = self
+            .client
+            .request(
+                CREATE_DISCOVERABLE.method.clone(),
+                self.url.join(CREATE_DISCOVERABLE.path)?,
+            )
+            .body(
+                json!({
+                    "url": url,
+                    "service": service
+                })
+                .to_string(),
+            );
+        let response = request.send().await;
+        HttpClient::handle_response::<Vec<Service>>(response).await
     }
 }
 
