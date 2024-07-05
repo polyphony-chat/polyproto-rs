@@ -5,6 +5,7 @@
 use std::time::UNIX_EPOCH;
 
 use crate::types::x509_cert::SerialNumber;
+use crate::url::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -356,6 +357,18 @@ impl HttpClient {
         );
         let response = request.send().await;
         HttpClient::handle_response::<u64>(response).await
+    }
+
+    pub async fn add_discoverable_service() -> HttpResult<Service> {
+        todo!()
+    }
+
+    pub async fn delete_discoverable_service() -> HttpResult<Url> {
+        todo!()
+    }
+
+    pub async fn set_primary_service_provider() -> HttpResult<Vec<Service>> {
+        todo!()
     }
 }
 
