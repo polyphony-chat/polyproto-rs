@@ -93,7 +93,8 @@ request routes and methods through the exported `static` `Route`s.
 #![warn(
     missing_docs,
     missing_debug_implementations,
-    missing_copy_implementations
+    missing_copy_implementations,
+    clippy::todo
 )]
 
 /// The OID for the `domainComponent` RDN
