@@ -128,6 +128,7 @@ mod constraints;
 
 pub use der;
 pub use spki;
+pub use url;
 pub use x509_cert::name::*;
 
 /// Types implementing [Constrained] can be validated to be well-formed.
