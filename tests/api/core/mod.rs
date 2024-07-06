@@ -19,7 +19,8 @@ use polyproto::types::routes::core::v1::{
     CREATE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_SESSION, DISCOVER_SERVICE_ALL,
     DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING, GET_ENCRYPTED_PKM,
     GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_PUBLIC_IDCERT, GET_SERVER_PUBLIC_KEY,
-    ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT, UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
+    ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT, SET_PRIMARY_DISCOVERABLE,
+    UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
 };
 use polyproto::types::spki::AlgorithmIdentifierOwned;
 use polyproto::types::x509_cert::SerialNumber;
@@ -615,12 +616,42 @@ async fn add_discoverable_service() {
     let client = polyproto::api::HttpClient::new(&url).unwrap();
     server.expect(
         Expectation::matching(all_of![
-            request::method("POST"),
+            request::method(CREATE_DISCOVERABLE.method.to_string()),
             request::path(CREATE_DISCOVERABLE.path),
             request::body(json_decoded(eq(json!(&service))))
         ])
         .respond_with(json_encoded(json!([service]))),
     );
     let services = client.add_discoverable_service(&service).await.unwrap();
+    assert_eq!(services[0], service);
+}
+
+#[tokio::test]
+async fn set_primary_service_provider() {
+    init_logger();
+    let service = Service::new(
+        "polyproto-cat",
+        Url::from_str("http://polyphony.chat").unwrap(),
+        true,
+    )
+    .unwrap();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(SET_PRIMARY_DISCOVERABLE.method.to_string()),
+            request::path(SET_PRIMARY_DISCOVERABLE.path),
+            request::body(json_decoded(eq(json!({
+                "url": service.url,
+                "service": service.service
+            }))))
+        ])
+        .respond_with(json_encoded(json!([service]))),
+    );
+    let services = client
+        .set_primary_service_provider(&service.url, &service.service)
+        .await
+        .unwrap();
     assert_eq!(services[0], service);
 }
