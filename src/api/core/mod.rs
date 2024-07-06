@@ -417,8 +417,8 @@ impl HttpClient {
         let request = self
             .client
             .request(
-                CREATE_DISCOVERABLE.method.clone(),
-                self.url.join(CREATE_DISCOVERABLE.path)?,
+                SET_PRIMARY_DISCOVERABLE.method.clone(),
+                self.url.join(SET_PRIMARY_DISCOVERABLE.path)?,
             )
             .body(
                 json!({
