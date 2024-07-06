@@ -359,7 +359,16 @@ impl HttpClient {
         HttpClient::handle_response::<u64>(response).await
     }
 
-    pub async fn add_discoverable_service(&self, service: &Service) -> HttpResult<Service> {
+    /// Add a service to the list of discoverable services. The service must be a valid [Service].
+    /// If the service provider is the first to provide this service, or if the [Service] has a
+    /// property of `primary` set to `true`, the service will be marked as the primary service
+    /// provider for this service.
+    ///
+    /// The server will return a [Vec] of all [Service]s affected
+    /// by this operation. This [Vec] will have a length of 1, if no other service entry was
+    /// affected, and a length of 2 if this new service entry has replaced an existing one in the
+    /// role of primary service provider.
+    pub async fn add_discoverable_service(&self, service: &Service) -> HttpResult<Vec<Service>> {
         let request = self
             .client
             .request(
@@ -368,10 +377,17 @@ impl HttpClient {
             )
             .body(json!(service).to_string());
         let response = request.send().await;
-        HttpClient::handle_response::<Service>(response).await
+        HttpClient::handle_response::<Vec<Service>>(response).await
     }
 
-    pub async fn delete_discoverable_service(&self, url: &Url) -> HttpResult<Url> {
+    /// Delete a discoverable service from the list of discoverable services. The service must be a
+    /// valid [Service] that exists in the list of discoverable services. On success, the server will
+    /// return a [ServiceDeleteResponse] containing the deleted service and, if applicable, the new
+    /// primary service provider for the service.
+    pub async fn delete_discoverable_service(
+        &self,
+        url: &Url,
+    ) -> HttpResult<ServiceDeleteResponse> {
         let request = self
             .client
             .request(
@@ -385,9 +401,14 @@ impl HttpClient {
                 .to_string(),
             );
         let response = request.send().await;
-        HttpClient::handle_response::<Url>(response).await
+        HttpClient::handle_response::<ServiceDeleteResponse>(response).await
     }
 
+    /// Set the primary service provider for a service, by specifying the URL of the new primary
+    /// service provider and the name of the service. The server will return a [Vec] of all [Service]s
+    /// affected by this operation. This [Vec] will have a length of 1, if no other service entry was
+    /// affected, and a length of 2 if this new service entry has replaced an existing one in the
+    /// role of primary service provider.
     pub async fn set_primary_service_provider(
         &self,
         url: &Url,
@@ -462,14 +483,13 @@ pub struct IdCertToken {
     pub token: String,
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_get_challenge_string() {
-        let url = "https://example.com/";
-        let client = HttpClient::new(url).unwrap();
-        let _result = client.get_challenge_string();
-    }
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Represents a response to a service discovery deletion request. Contains the deleted service
+/// and, if applicable, the new primary service provider for the service.
+pub struct ServiceDeleteResponse {
+    /// The service that was deleted.
+    pub deleted: Service,
+    /// The new primary service provider for the service, if applicable.
+    pub new_primary: Option<Service>,
 }
