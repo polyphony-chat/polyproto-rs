@@ -241,14 +241,14 @@ impl HttpClient {
             request = request.body(
                 json!({
                     "limit": limit,
-                    "service": service_name
+                    "name": service_name
                 })
                 .to_string(),
             );
         } else {
             request = request.body(
                 json!({
-                    "service": service_name
+                    "name": service_name
                 })
                 .to_string(),
             );
@@ -387,16 +387,18 @@ impl HttpClient {
     pub async fn delete_discoverable_service(
         &self,
         url: &Url,
+        name: &ServiceName,
     ) -> HttpResult<ServiceDeleteResponse> {
         let request = self
             .client
             .request(
-                CREATE_DISCOVERABLE.method.clone(),
-                self.url.join(CREATE_DISCOVERABLE.path)?,
+                DELETE_DISCOVERABLE.method.clone(),
+                self.url.join(DELETE_DISCOVERABLE.path)?,
             )
             .body(
                 json!({
-                    "url": url
+                    "url": url,
+                    "name": name,
                 })
                 .to_string(),
             );
@@ -412,7 +414,7 @@ impl HttpClient {
     pub async fn set_primary_service_provider(
         &self,
         url: &Url,
-        service: &ServiceName,
+        name: &ServiceName,
     ) -> HttpResult<Vec<Service>> {
         let request = self
             .client
@@ -423,7 +425,7 @@ impl HttpClient {
             .body(
                 json!({
                     "url": url,
-                    "service": service
+                    "name": name
                 })
                 .to_string(),
             );

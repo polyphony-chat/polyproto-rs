@@ -9,18 +9,18 @@ use httptest::matchers::request::method_path;
 use httptest::matchers::{eq, json_decoded, matches, request};
 use httptest::responders::{json_encoded, status_code};
 use httptest::*;
-use polyproto::api::core::current_unix_time;
+use polyproto::api::core::{current_unix_time, ServiceDeleteResponse};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
 use polyproto::certs::SessionId;
 use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
-    CREATE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_SESSION, DISCOVER_SERVICE_ALL,
-    DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING, GET_ENCRYPTED_PKM,
-    GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_PUBLIC_IDCERT, GET_SERVER_PUBLIC_KEY,
-    ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT, SET_PRIMARY_DISCOVERABLE,
-    UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
+    CREATE_DISCOVERABLE, DELETE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_SESSION,
+    DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING,
+    GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_PUBLIC_IDCERT,
+    GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT,
+    SET_PRIMARY_DISCOVERABLE, UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
 };
 use polyproto::types::spki::AlgorithmIdentifierOwned;
 use polyproto::types::x509_cert::SerialNumber;
@@ -573,7 +573,7 @@ async fn discover_single_service() {
             request::method(DISCOVER_SERVICE_SINGULAR.method.to_string()),
             request::path(format!("{}{FID}", DISCOVER_SERVICE_SINGULAR.path)),
             request::body(json_decoded(eq(json!({
-                "service": service_name
+                "name": service_name
             }))))
         ])
         .respond_with(json_encoded(json!([service]))),
@@ -589,7 +589,7 @@ async fn discover_single_service() {
             request::method(DISCOVER_SERVICE_SINGULAR.method.to_string()),
             request::path(format!("{}{FID}", DISCOVER_SERVICE_SINGULAR.path)),
             request::body(json_decoded(eq(json!({
-                "service": service_name,
+                "name": service_name,
                 "limit": 1
             }))))
         ])
@@ -644,7 +644,7 @@ async fn set_primary_service_provider() {
             request::path(SET_PRIMARY_DISCOVERABLE.path),
             request::body(json_decoded(eq(json!({
                 "url": service.url,
-                "service": service.service
+                "name": service.service
             }))))
         ])
         .respond_with(json_encoded(json!([service]))),
@@ -654,4 +654,38 @@ async fn set_primary_service_provider() {
         .await
         .unwrap();
     assert_eq!(services[0], service);
+}
+
+#[tokio::test]
+async fn delete_service_provider() {
+    init_logger();
+    let service = Service::new(
+        "polyproto-cat",
+        Url::from_str("http://polyphony.chat").unwrap(),
+        true,
+    )
+    .unwrap();
+    let delete_response = ServiceDeleteResponse {
+        deleted: service.clone(),
+        new_primary: None,
+    };
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(DELETE_DISCOVERABLE.method.to_string()),
+            request::path(DELETE_DISCOVERABLE.path),
+            request::body(json_decoded(eq(json!({
+                "url": service.url,
+                "name": service.service
+            }))))
+        ])
+        .respond_with(json_encoded(json!(delete_response))),
+    );
+    let services = client
+        .delete_discoverable_service(&service.url, &service.service)
+        .await
+        .unwrap();
+    assert_eq!(services.deleted, service);
 }
