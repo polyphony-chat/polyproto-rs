@@ -137,7 +137,7 @@ pub mod routes {
 
             pub const DISCOVER_SERVICE_SINGULAR: Route = Route {
                 method: Method::GET,
-                path: "/.p2/core/v1/services/discover/{fid}/{service}/",
+                path: "/.p2/core/v1/services/discover/",
             };
 
             pub const IMPORT_DATA: Route = Route {
