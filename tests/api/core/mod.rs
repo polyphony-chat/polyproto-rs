@@ -57,8 +57,8 @@ async fn get_challenge_string() {
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new(&url).unwrap();
     let challenge_string = client.get_challenge_string().await.unwrap();
-    assert_eq!(challenge_string.challenge, "a".repeat(32));
-    assert_eq!(challenge_string.expires, 1);
+    assert_eq!(challenge_string.challenge(), "a".repeat(32));
+    assert_eq!(challenge_string.expires(), 1);
 }
 
 #[tokio::test]
