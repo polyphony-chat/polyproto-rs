@@ -57,27 +57,22 @@ pub mod routes {
 
             pub static GET_CHALLENGE_STRING: Route = Route {
                 method: Method::GET,
-                path: "/.p2/core/v1/challenge",
+                path: "/.p2/core/v1/challenge/",
             };
 
             pub static GET_NEW_IDCERT: Route = Route {
                 method: Method::POST,
-                path: "/.p2/core/v1/idcert",
+                path: "/.p2/core/v1/idcert/",
             };
 
             pub static ROTATE_SERVER_IDENTITY_KEY: Route = Route {
                 method: Method::PUT,
-                path: "/.p2/core/v1/key/server",
+                path: "/.p2/core/v1/key/server/",
             };
 
-            pub static GET_SERVER_PUBLIC_IDCERT: Route = Route {
+            pub static GET_SERVER_IDCERT: Route = Route {
                 method: Method::GET,
-                path: "/.p2/core/v1/idcert/server",
-            };
-
-            pub static GET_SERVER_PUBLIC_KEY: Route = Route {
-                method: Method::GET,
-                path: "/.p2/core/v1/key/server",
+                path: "/.p2/core/v1/idcert/server/",
             };
 
             pub static GET_ACTOR_IDCERTS: Route = Route {
@@ -97,42 +92,42 @@ pub mod routes {
 
             pub static ROTATE_SESSION_IDCERT: Route = Route {
                 method: Method::POST,
-                path: "/.p2/core/v1/session/idcert",
+                path: "/.p2/core/v1/session/idcert/",
             };
 
             pub static UPLOAD_ENCRYPTED_PKM: Route = Route {
                 method: Method::POST,
-                path: "/.p2/core/v1/session/keymaterial",
+                path: "/.p2/core/v1/session/keymaterial/",
             };
 
             pub static GET_ENCRYPTED_PKM: Route = Route {
                 method: Method::GET,
-                path: "/.p2/core/v1/session/keymaterial",
+                path: "/.p2/core/v1/session/keymaterial/",
             };
 
             pub static DELETE_ENCRYPTED_PKM: Route = Route {
                 method: Method::DELETE,
-                path: "/.p2/core/v1/session/keymaterial",
+                path: "/.p2/core/v1/session/keymaterial/",
             };
 
             pub static GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT: Route = Route {
-                method: Method::OPTIONS,
-                path: "/.p2/core/v1/session/keymaterial",
+                method: Method::GET,
+                path: "/.p2/core/v1/session/keymaterial/size/",
             };
 
             pub static CREATE_DISCOVERABLE: Route = Route {
                 method: Method::POST,
-                path: "/.p2/core/v1/services",
+                path: "/.p2/core/v1/services/",
             };
 
             pub static DELETE_DISCOVERABLE: Route = Route {
                 method: Method::DELETE,
-                path: "/.p2/core/v1/services",
+                path: "/.p2/core/v1/services/",
             };
 
             pub static SET_PRIMARY_DISCOVERABLE: Route = Route {
                 method: Method::PUT,
-                path: "/.p2/core/v1/services/primary",
+                path: "/.p2/core/v1/services/primary/",
             };
 
             pub static DISCOVER_SERVICE_ALL: Route = Route {
@@ -142,7 +137,97 @@ pub mod routes {
 
             pub static DISCOVER_SERVICE_SINGULAR: Route = Route {
                 method: Method::GET,
-                path: "/.p2/core/v1/services/discover/",
+                path: "/.p2/core/v1/services/discover/{fid}/{service}/",
+            };
+
+            pub static IMPORT_DATA: Route = Route {
+                method: Method::POST,
+                path: "/.p2/core/v1/migration/data/",
+            };
+
+            pub static EXPORT_DATA: Route = Route {
+                method: Method::GET,
+                path: "/.p2/core/v1/data/",
+            };
+
+            pub static DELETE_DATA: Route = Route {
+                method: Method::DELETE,
+                path: "/.p2/core/v1/data/",
+            };
+
+            pub static SET_UP_REDIRECT: Route = Route {
+                method: Method::POST,
+                path: "/.p2/core/v1/migration/redirect/",
+            };
+
+            pub static REMOVE_REDIRECT: Route = Route {
+                method: Method::DELETE,
+                path: "/.p2/core/v1/migration/redirect/",
+            };
+
+            pub static COMPLETE_KEY_TRIAL: Route = Route {
+                method: Method::POST,
+                path: "/.p2/core/v1/keytrial/",
+            };
+
+            pub static GET_COMPLETED_KEYTRIALS_AND_RESPONSES: Route = Route {
+                method: Method::GET,
+                path: "/.p2/core/v1/keytrial/",
+            };
+
+            pub static GET_MESSAGES_TO_BE_RESIGNED: Route = Route {
+                method: Method::GET,
+                path: "/.p2/core/v1/messages/",
+            };
+
+            pub static REQUEST_MESSAGE_RESIGNING: Route = Route {
+                method: Method::POST,
+                path: "/.p2/core/v1/messages/",
+            };
+
+            pub static ABORT_MESSAGE_RESIGNING: Route = Route {
+                method: Method::DELETE,
+                path: "/.p2/core/v1/messages/",
+            };
+
+            pub static COMMIT_RESIGNED_MESSAGES: Route = Route {
+                method: Method::POST,
+                path: "/.p2/core/v1/messages/commit/",
+            };
+
+            pub static SET_UP_REDIRECT_EXTERN: Route = Route {
+                method: Method::POST,
+                path: "/.p2/core/v1/redirect/extern",
+            };
+
+            pub static GET_RESOURCE_BY_ID: Route = Route {
+                method: Method::GET,
+                path: "/.p2/core/v1/resource/",
+            };
+
+            pub static LIST_UPDATED_RESOURCES: Route = Route {
+                method: Method::GET,
+                path: "/.p2/core/v1/resource/resources/",
+            };
+
+            pub static UPDATE_RESOURCE_ACCESS: Route = Route {
+                method: Method::PUT,
+                path: "/.p2/core/v1/resource/",
+            };
+
+            pub static UPLOAD_RESOURCE: Route = Route {
+                method: Method::POST,
+                path: "/.p2/core/v1/resource/",
+            };
+
+            pub static DELETE_RESOURCE: Route = Route {
+                method: Method::DELETE,
+                path: "/.p2/core/v1/resource/",
+            };
+
+            pub static GET_RESOURCE_INFO_BY_ID: Route = Route {
+                method: Method::GET,
+                path: "/.p2/core/v1/resource/{rid}/info/",
             };
         }
     }
