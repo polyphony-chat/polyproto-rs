@@ -2,7 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use url::Url;
+#[cfg(feature = "reqwest")]
+type Url = url::Url;
+#[cfg(not(feature = "reqwest"))]
+type Url = String;
 
 use crate::errors::ConstraintError;
 use crate::Constrained;
@@ -12,7 +15,7 @@ use crate::Constrained;
 /// A resource representing information about a discoverable service for an actor. You can learn more about
 /// services and discoverability by reading [section #9](https://docs.polyphony.chat/Protocol%20Specifications/core#9-services) of
 /// the core protocol specification.
-
+///
 /// This resource contains information about the name of the service that is being made discoverable,
 /// the URL of the service provider, and whether this service provider is the primary service provider
 /// for the actor.
