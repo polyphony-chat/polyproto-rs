@@ -31,6 +31,7 @@ pub struct HttpClient {
     /// The reqwest client used to make requests.
     pub client: reqwest::Client,
     headers: reqwest::header::HeaderMap,
+    version: http::Version, //TODO: Allow setting HTTP version?
     pub(crate) url: Url,
 }
 
@@ -48,11 +49,13 @@ impl HttpClient {
         let client = reqwest::Client::new();
         let headers = reqwest::header::HeaderMap::new();
         let url = Url::parse(url)?;
+        let version = http::Version::HTTP_11;
 
         Ok(Self {
             client,
             headers,
             url,
+            version,
         })
     }
 
