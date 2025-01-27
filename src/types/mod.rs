@@ -33,12 +33,15 @@ pub use service::*;
 /// for the polyproto API. These `static`s can be used as a single source of truth for the API endpoints
 /// and what methods to submit to them.
 pub mod routes {
+
+    use http::Method;
+
     #[derive(Debug, Clone)]
     /// A route, consisting of an HTTP method and a path, which is relative to the root of the polyproto
     /// server URL.
     #[allow(missing_docs)]
     pub struct Route {
-        pub method: http::Method,
+        pub method: Method,
         pub path: &'static str,
     }
 
@@ -48,90 +51,97 @@ pub mod routes {
         /// [Route]s for version 1 of polyproto.
         pub mod v1 {
             #![allow(missing_docs)]
+            use http::Method;
+
             use super::super::Route;
 
             pub static GET_CHALLENGE_STRING: Route = Route {
-                method: http::Method::GET,
+                method: Method::GET,
                 path: "/.p2/core/v1/challenge",
             };
 
+            pub static GET_NEW_IDCERT: Route = Route {
+                method: Method::POST,
+                path: "/.p2/core/v1/idcert",
+            };
+
             pub static ROTATE_SERVER_IDENTITY_KEY: Route = Route {
-                method: http::Method::PUT,
+                method: Method::PUT,
                 path: "/.p2/core/v1/key/server",
             };
 
             pub static GET_SERVER_PUBLIC_IDCERT: Route = Route {
-                method: http::Method::GET,
+                method: Method::GET,
                 path: "/.p2/core/v1/idcert/server",
             };
 
             pub static GET_SERVER_PUBLIC_KEY: Route = Route {
-                method: http::Method::GET,
+                method: Method::GET,
                 path: "/.p2/core/v1/key/server",
             };
 
             pub static GET_ACTOR_IDCERTS: Route = Route {
-                method: http::Method::GET,
+                method: Method::GET,
                 path: "/.p2/core/v1/idcert/actor/",
             };
 
             pub static UPDATE_SESSION_IDCERT: Route = Route {
-                method: http::Method::PUT,
+                method: Method::PUT,
                 path: "/.p2/core/v1/session/idcert/extern",
             };
 
             pub static DELETE_SESSION: Route = Route {
-                method: http::Method::DELETE,
+                method: Method::DELETE,
                 path: "/.p2/core/v1/session/",
             };
 
             pub static ROTATE_SESSION_IDCERT: Route = Route {
-                method: http::Method::POST,
+                method: Method::POST,
                 path: "/.p2/core/v1/session/idcert",
             };
 
             pub static UPLOAD_ENCRYPTED_PKM: Route = Route {
-                method: http::Method::POST,
+                method: Method::POST,
                 path: "/.p2/core/v1/session/keymaterial",
             };
 
             pub static GET_ENCRYPTED_PKM: Route = Route {
-                method: http::Method::GET,
+                method: Method::GET,
                 path: "/.p2/core/v1/session/keymaterial",
             };
 
             pub static DELETE_ENCRYPTED_PKM: Route = Route {
-                method: http::Method::DELETE,
+                method: Method::DELETE,
                 path: "/.p2/core/v1/session/keymaterial",
             };
 
             pub static GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT: Route = Route {
-                method: http::Method::OPTIONS,
+                method: Method::OPTIONS,
                 path: "/.p2/core/v1/session/keymaterial",
             };
 
             pub static CREATE_DISCOVERABLE: Route = Route {
-                method: http::Method::POST,
+                method: Method::POST,
                 path: "/.p2/core/v1/services",
             };
 
             pub static DELETE_DISCOVERABLE: Route = Route {
-                method: http::Method::DELETE,
+                method: Method::DELETE,
                 path: "/.p2/core/v1/services",
             };
 
             pub static SET_PRIMARY_DISCOVERABLE: Route = Route {
-                method: http::Method::PUT,
+                method: Method::PUT,
                 path: "/.p2/core/v1/services/primary",
             };
 
             pub static DISCOVER_SERVICE_ALL: Route = Route {
-                method: http::Method::GET,
+                method: Method::GET,
                 path: "/.p2/core/v1/services/discover/",
             };
 
             pub static DISCOVER_SERVICE_SINGULAR: Route = Route {
-                method: http::Method::GET,
+                method: Method::GET,
                 path: "/.p2/core/v1/services/discover/",
             };
         }
