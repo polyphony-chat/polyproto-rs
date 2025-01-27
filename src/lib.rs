@@ -116,6 +116,8 @@ pub mod api;
 pub mod certs;
 /// Error types used in this crate
 pub mod errors;
+/// polyproto gateway server connection
+pub mod gateway;
 /// Generic polyproto public- and private key traits.
 pub mod key;
 /// Generic polyproto signature traits.
