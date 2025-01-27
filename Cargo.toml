@@ -22,7 +22,7 @@ serde = ["dep:serde", "dep:serde_json", "dep:url", "url/serde"]
 der = { version = "0.7.9", features = ["pem"] }
 getrandom = { version = "0.2.15", optional = true }
 regex = "1.11.1"
-reqwest = { version = "0.12.12", features = ["json"], optional = true }
+reqwest = { version = "0.12.12", features = ["json", "zstd"], optional = true }
 serde = { version = "1.0.217", optional = true, features = ["derive"] }
 serde_json = { version = "1.0.137", optional = true }
 spki = { version = "0.7.3", features = ["pem"] }
