@@ -24,10 +24,12 @@ impl ChallengeString {
         Ok(challenge)
     }
 
+    /// Returns the challenge string.
     pub fn challenge(&self) -> &str {
         &self.challenge
     }
 
+    /// Returns the expiration time in seconds since the Unix epoch.
     pub fn expires(&self) -> u64 {
         self.expires
     }
