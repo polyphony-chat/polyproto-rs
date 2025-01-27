@@ -18,9 +18,9 @@ use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
     CREATE_DISCOVERABLE, DELETE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_SESSION,
     DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING,
-    GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_PUBLIC_IDCERT,
-    GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT,
-    SET_PRIMARY_DISCOVERABLE, UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
+    GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_IDCERT,
+    ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT, SET_PRIMARY_DISCOVERABLE,
+    UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
 };
 use polyproto::types::spki::AlgorithmIdentifierOwned;
 use polyproto::types::x509_cert::SerialNumber;
@@ -114,37 +114,6 @@ async fn rotate_server_identity_key() {
 }
 
 #[tokio::test]
-async fn get_server_public_key() {
-    init_logger();
-    let mut csprng = rand::rngs::OsRng;
-    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
-    let public_key_info = priv_key.public_key.public_key_info();
-    let pem = public_key_info.to_pem(der::pem::LineEnding::LF).unwrap();
-    log::debug!("Generated Public Key:\n{}", pem);
-    let server = Server::run();
-    server.expect(
-        Expectation::matching(method_path(
-            GET_SERVER_PUBLIC_KEY.method.as_str(),
-            GET_SERVER_PUBLIC_KEY.path,
-        ))
-        .respond_with(json_encoded(json!(public_key_info
-            .to_pem(der::pem::LineEnding::LF)
-            .unwrap()))),
-    );
-    let url = server_url(&server);
-    let client = polyproto::api::HttpClient::new(&url).unwrap();
-    let public_key = client.get_server_public_key_info(None).await.unwrap();
-    log::debug!(
-        "Received Public Key:\n{}",
-        public_key.to_pem(der::pem::LineEnding::LF).unwrap()
-    );
-    assert_eq!(
-        public_key.public_key_bitstring,
-        priv_key.public_key.public_key_info().public_key_bitstring
-    );
-}
-
-#[tokio::test]
 async fn get_server_id_cert() {
     init_logger();
     let id_cert = home_server_id_cert();
@@ -154,8 +123,8 @@ async fn get_server_id_cert() {
     let client = polyproto::api::HttpClient::new(&url).unwrap();
     server.expect(
         Expectation::matching(all_of![
-            request::method(GET_SERVER_PUBLIC_IDCERT.method.as_str()),
-            request::path(GET_SERVER_PUBLIC_IDCERT.path),
+            request::method(GET_SERVER_IDCERT.method.as_str()),
+            request::path(GET_SERVER_IDCERT.path),
             request::body(json_decoded(eq(json!({"timestamp": 10})))),
         ])
         .respond_with(json_encoded(json!(cert_pem))),
