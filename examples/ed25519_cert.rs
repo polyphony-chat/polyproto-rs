@@ -35,7 +35,6 @@ use x509_cert::Certificate;
 /// ```sh
 /// openssl x509 -in cert.der -text -noout -inform der
 /// ```
-
 fn main() {
     let mut csprng = rand::rngs::OsRng;
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);

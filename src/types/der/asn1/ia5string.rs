@@ -73,7 +73,7 @@ mod serde_support {
 
     struct Ia5StringVisitor;
 
-    impl<'de> Visitor<'de> for Ia5StringVisitor {
+    impl Visitor<'_> for Ia5StringVisitor {
         type Value = Ia5String;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {

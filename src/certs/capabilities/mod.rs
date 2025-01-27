@@ -200,7 +200,6 @@ impl TryFrom<Extensions> for Capabilities {
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
-#[cfg(test)]
 mod test {
     use spki::ObjectIdentifier;
 

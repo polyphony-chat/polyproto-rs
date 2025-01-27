@@ -275,7 +275,6 @@ impl TryFrom<KeyUsages> for Extension {
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
-#[cfg(test)]
 mod test {
     use super::*;
 

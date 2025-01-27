@@ -101,8 +101,8 @@ pub enum Target {
 #[repr(u8)]
 /// `PKCS#10` version. From the PKCS specification document (RFC 2986):
 /// > version is the version number, for compatibility with future
-/// revisions of this document.  It shall be 0 for this version of
-/// the standard.
+/// > revisions of this document.  It shall be 0 for this version of
+/// > the standard.
 ///
 /// The specification also says:
 /// > `version       INTEGER { v1(0) } (v1,...),`
