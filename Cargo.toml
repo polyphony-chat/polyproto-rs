@@ -46,3 +46,6 @@ polyproto = { path = "./", features = ["types", "reqwest", "serde"] }
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3.50"
 wasm-bindgen = "0.2.100"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
