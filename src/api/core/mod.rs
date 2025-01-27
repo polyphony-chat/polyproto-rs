@@ -83,10 +83,10 @@ impl HttpClient {
         &self,
         unix_time: Option<u64>,
     ) -> HttpResult<IdCert<S, P>> {
-        let request_url = self.url.join(GET_SERVER_PUBLIC_IDCERT.path)?;
+        let request_url = self.url.join(GET_SERVER_IDCERT.path)?;
         let mut request = self
             .client
-            .request(GET_SERVER_PUBLIC_IDCERT.method.clone(), request_url);
+            .request(GET_SERVER_IDCERT.method.clone(), request_url);
         if let Some(time) = unix_time {
             request = request.body(json!({ "timestamp": time }).to_string());
         }
@@ -98,25 +98,6 @@ impl HttpClient {
             Err(e) => return Err(RequestError::ConversionError(e.into())),
         };
         Ok(id_cert)
-    }
-
-    /// Request the server's [PublicKeyInfo]. Specify a unix timestamp to get the public key which
-    /// the home server used at that time. If no timestamp is provided, the current public key is
-    /// returned.
-    pub async fn get_server_public_key_info(
-        &self,
-        unix_time: Option<u64>,
-    ) -> HttpResult<PublicKeyInfo> {
-        let request_url = self.url.join(GET_SERVER_PUBLIC_KEY.path)?;
-        let mut request = self
-            .client
-            .request(GET_SERVER_PUBLIC_KEY.method.clone(), request_url);
-        if let Some(time) = unix_time {
-            request = request.body(json!({ "timestamp": time }).to_string());
-        }
-        let response = request.send().await;
-        let pem = HttpClient::handle_response::<String>(response).await?;
-        Ok(PublicKeyInfo::from_pem(pem.as_str())?)
     }
 
     /// Request the [IdCert]s of an actor. Specify the federation ID of the actor to get the IdCerts
