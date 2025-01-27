@@ -20,29 +20,29 @@ serde = ["dep:serde", "dep:serde_json", "dep:url", "url/serde"]
 
 [dependencies]
 der = { version = "0.7.9", features = ["pem"] }
-getrandom = { version = "0.2.14", optional = true }
-regex = "1.10.4"
-reqwest = { version = "0.12.4", features = ["json"], optional = true }
-serde = { version = "1.0.199", optional = true, features = ["derive"] }
-serde_json = { version = "1.0.116", optional = true }
+getrandom = { version = "0.2.15", optional = true }
+regex = "1.11.1"
+reqwest = { version = "0.12.12", features = ["json"], optional = true }
+serde = { version = "1.0.217", optional = true, features = ["derive"] }
+serde_json = { version = "1.0.137", optional = true }
 spki = { version = "0.7.3", features = ["pem"] }
-thiserror = "1.0.59"
+thiserror = "2.0.11"
 x509-cert = "0.2.5"
-log = "0.4.21"
-url = { version = "2.5.0", optional = true }
-http = { version = "1.1.0", optional = true }
+log = "0.4.25"
+url = { version = "2.5.4", optional = true }
+http = { version = "1.2.0", optional = true }
 
 [dev-dependencies]
 ed25519-dalek = { version = "2.1.1", features = ["rand_core", "signature"] }
-env_logger = "0.11.3"
+env_logger = "0.11.6"
 httptest = "0.16.1"
 rand = "0.8.5"
-tokio = { version = "1.37.0", features = ["full"] }
-serde = { version = "1.0.199", features = ["derive"] }
-serde_json = { version = "1.0.116" }
-serde_test = "1.0.176"
+tokio = { version = "1.43.0", features = ["full"] }
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = { version = "1.0.137" }
+serde_test = "1.0.177"
 polyproto = { path = "./", features = ["types", "reqwest", "serde"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-wasm-bindgen-test = "0.3.42"
-wasm-bindgen = "0.2.92"
+wasm-bindgen-test = "0.3.50"
+wasm-bindgen = "0.2.100"
