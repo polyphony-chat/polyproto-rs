@@ -128,6 +128,7 @@ mod constraints;
 
 pub use der;
 pub use spki;
+#[cfg(feature = "reqwest")]
 pub use url;
 pub use x509_cert::name::*;
 
