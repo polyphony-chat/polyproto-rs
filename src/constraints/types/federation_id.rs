@@ -11,6 +11,11 @@ use super::*;
 
 impl Constrained for FederationId {
     fn validate(&self, _target: Option<Target>) -> Result<(), ConstraintError> {
+        if self.to_string().trim() != self.to_string().as_str() {
+            return Err(ConstraintError::Malformed(Some(format!(
+                "FederationId must not contain leading or trailing whitespace: {self}"
+            ))));
+        }
         let fid_regex = Regex::new(REGEX_FEDERATION_ID).unwrap();
         match fid_regex.is_match(&self.to_string()) {
             true => Ok(()),
