@@ -13,7 +13,10 @@ pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A `FederationId` is a globally unique identifier for an actor in the context of polyproto.
 pub struct FederationId {
-    pub(crate) inner: String,
+    /// Must be unique on each instance.
+    pub(crate) local_name: String,
+    /// Includes top-level domain, second-level domain and other subdomains. Address which the actors' home server can be reached at.
+    pub(crate) domain_name: String,
 }
 
 impl FederationId {
@@ -29,8 +32,12 @@ impl FederationId {
             x
         };
         if regex.is_match(&matches) {
+            let separator_position = matches.find('@').unwrap();
+            let local_name = matches[0..separator_position].to_string();
+            let domain_name = matches[separator_position + 1..].to_string();
             let fid = Self {
-                inner: matches.to_string(),
+                local_name,
+                domain_name,
             };
             fid.validate(None)?;
             Ok(fid)
@@ -44,6 +51,6 @@ impl FederationId {
 
 impl std::fmt::Display for FederationId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.inner)
+        write!(f, "{}@{}", self.local_name, self.domain_name)
     }
 }

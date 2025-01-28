@@ -12,7 +12,7 @@ use super::*;
 impl Constrained for FederationId {
     fn validate(&self, _target: Option<Target>) -> Result<(), ConstraintError> {
         let fid_regex = Regex::new(REGEX_FEDERATION_ID).unwrap();
-        match fid_regex.is_match(&self.inner) {
+        match fid_regex.is_match(&self.to_string()) {
             true => Ok(()),
             false => Err(ConstraintError::Malformed(Some(
                 ERR_MSG_FEDERATION_ID_REGEX.to_string(),
