@@ -8,7 +8,7 @@ use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX};
 use crate::Constrained;
 
 /// The regular expression for a valid `FederationId`.
-pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)";
+pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)$";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A `FederationId` is a globally unique identifier for an actor in the context of polyproto.
@@ -32,9 +32,9 @@ impl FederationId {
             x
         };
         if regex.is_match(&matches) {
-            let separator_position = matches.find('@').unwrap();
-            let local_name = matches[0..separator_position].to_string();
-            let domain_name = matches[separator_position + 1..].to_string();
+            let separator_position = id.find('@').unwrap();
+            let local_name = id[0..separator_position].to_string();
+            let domain_name = id[separator_position + 1..].to_string();
             let fid = Self {
                 local_name,
                 domain_name,
