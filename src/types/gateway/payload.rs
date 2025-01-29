@@ -57,7 +57,10 @@ pub struct ServerCertificateChange {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "camelCase")]
-pub struct HeartbeatAck {}
+#[serde(transparent)]
+pub struct HeartbeatAck {
+    pub inner: Vec<Payload>,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "camelCase")]
@@ -84,7 +87,7 @@ pub struct ServiceChannelAck {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "camelCase")]
+#[serde(transparent)]
 pub struct Resumed {
-    #[serde(flatten)]
     pub inner: Vec<Payload>,
 }
