@@ -24,6 +24,10 @@ pub mod spki;
 /// the `serde` crate, if the `serde` feature is enabled.
 pub mod x509_cert;
 
+#[cfg(feature = "gateway")]
+/// Module defining types associated with the polyproto WebSocket gateway.
+pub mod gateway;
+
 pub use challenge_string::*;
 pub use encrypted_pkm::*;
 pub use federation_id::*;
