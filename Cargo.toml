@@ -17,7 +17,7 @@ getrandom = ["dep:getrandom"]
 types = ["dep:http"]
 reqwest = ["dep:reqwest", "types", "serde", "dep:url"]
 serde = ["dep:serde", "dep:serde_json", "dep:url", "url/serde"]
-gateway = []
+gateway = ["serde"]
 
 [dependencies]
 der = { version = "0.7.9", features = ["pem"] }
