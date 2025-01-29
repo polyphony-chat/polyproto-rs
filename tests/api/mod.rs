@@ -25,25 +25,3 @@ fn challenge_string_length() {
 
     assert!(challenge.is_err());
 }
-
-#[test]
-fn valid_federation_id() {
-    FederationId::new("flori@polyphony.chat").unwrap();
-    FederationId::new("a@localhost").unwrap();
-    FederationId::new("really-long.domain.with-at-least-4-subdomains.or-something@example.com")
-        .unwrap();
-}
-
-#[test]
-fn invalid_federation_id() {
-    assert!(FederationId::new("\\@example.com").is_err());
-    assert!(FederationId::new("example.com").is_err());
-    assert!(FederationId::new("examplecom").is_err());
-    assert!(FederationId::new("⾆@example.com").is_err());
-    assert!(FederationId::new("example@⾆.com").is_err());
-    assert!(FederationId::new("example@😿.com").is_err());
-    assert_eq!(
-        FederationId::new("example@com.⾆").unwrap().to_string(),
-        "example@com".to_string()
-    );
-}

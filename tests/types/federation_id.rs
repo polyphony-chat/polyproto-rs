@@ -12,4 +12,15 @@ fn test_correct_federation_ids() {
     assert!(FederationId::new("xenia@example.com/1").is_err());
     assert!(FederationId::new("xenia@_example.com").is_err());
     assert!(FederationId::new("xenia@xn--grn-ioaaa.de").is_ok());
+    FederationId::new("flori@polyphony.chat").unwrap();
+    FederationId::new("a@localhost").unwrap();
+    FederationId::new("really-long.domain.with-at-least-4-subdomains.or-something@example.com")
+        .unwrap();
+    assert!(FederationId::new("example@xn--638h.com").is_ok());
+    assert!(FederationId::new("\\@example.com").is_err());
+    assert!(FederationId::new("example.com").is_err());
+    assert!(FederationId::new("examplecom").is_err());
+    assert!(FederationId::new("⾆@example.com").is_err());
+    assert!(FederationId::new("example@⾆.com").is_err());
+    assert!(FederationId::new("example@😿.com").is_err());
 }
