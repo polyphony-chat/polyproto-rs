@@ -16,8 +16,14 @@ wasm = ["getrandom", "getrandom/js"]
 getrandom = ["dep:getrandom"]
 types = ["dep:http"]
 reqwest = ["dep:reqwest", "types", "serde", "dep:url"]
-serde = ["dep:serde", "dep:serde_json", "dep:url", "url/serde"]
-gateway = ["serde"]
+serde = [
+    "dep:serde",
+    "dep:serde_json",
+    "dep:url",
+    "url/serde",
+    "dep:serde_with",
+]
+gateway = ["serde", "types"]
 
 [dependencies]
 der = { version = "0.7.9", features = ["pem"] }
@@ -32,6 +38,7 @@ x509-cert = "0.2.5"
 log = "0.4.25"
 url = { version = "2.5.4", optional = true }
 http = { version = "1.2.0", optional = true }
+serde_with = { version = "3.12.0", optional = true }
 
 [dev-dependencies]
 ed25519-dalek = { version = "2.1.1", features = ["rand_core", "signature"] }
