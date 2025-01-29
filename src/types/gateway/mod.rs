@@ -6,13 +6,13 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// A generic gateway event. [Documentation link](https://docs.polyphony.chat/Protocol%20Specifications/core/#321-gateway-event-payloads)
-pub struct Event<T> {
+pub struct Event {
     /// [Namespace](https://docs.polyphony.chat/Protocol%20Specifications/core/#82-namespaces) context for this payload.
     pub n: String,
     /// Gateway Opcode indicating the type of payload.
     pub op: u16,
     /// The event data associated with this payload.
-    pub d: T,
+    pub d: Payload,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Sequence number of the event, used for guaranteed, ordered delivery. This field is only received by clients and never sent to the server.
     pub s: Option<u64>,
