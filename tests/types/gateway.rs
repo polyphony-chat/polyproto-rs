@@ -3,6 +3,25 @@ use polyproto::types::gateway::payload::{
     Resumed, ServerCertificateChange, ServiceChannel, ServiceChannelAck, ServiceChannelAction,
 };
 use polyproto::types::gateway::{Event, Opcode, Payload};
+use serde_json::json;
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn serde_event() {
+    let event = Event {
+        n: "core".to_string(),
+        op: 3_u16,
+        d: Payload::Hello(Hello {
+            heartbeat_interval: 0,
+        }),
+        s: Some(12),
+    };
+    let mut json = json!(event);
+    assert!(json["op"].take().is_string());
+    assert!(json["s"].take().is_string());
+    assert!(json["n"].take().is_string());
+    assert!(json["d"].take().is_object());
+}
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
@@ -13,11 +32,18 @@ fn serde_event_payload_hello() {
         d: Payload::Hello(Hello {
             heartbeat_interval: 30000,
         }),
-        s: None,
+        s: Some(1),
     };
+    let mut json = json!(hello);
+    dbg!(&json);
     let hello_json = serde_json::to_string(&hello).unwrap();
+    dbg!(&hello_json);
     let hello_from_json = serde_json::from_str::<Event>(&hello_json).unwrap();
     assert_eq!(hello, hello_from_json);
+    let mut d = json["d"].take();
+    dbg!(&d);
+    assert!(d.is_object());
+    assert!(dbg!(&d["heartbeatInterval"].take()).is_string());
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -177,6 +203,7 @@ fn serde_event_payload_server_certificate_change() {
         s: None,
     };
     let certificate_change_json = serde_json::to_string(&certificate_change).unwrap();
+    dbg!(&certificate_change_json);
     let certificate_change_from_json =
         serde_json::from_str::<Event>(&certificate_change_json).unwrap();
     assert_eq!(certificate_change, certificate_change_from_json);
@@ -196,6 +223,7 @@ fn serde_event_payload_server_heartbeat() {
         s: None,
     };
     let event_json = serde_json::to_string(&event).unwrap();
+    dbg!(&event_json);
     let event_from_json = serde_json::from_str::<Event>(&event_json).unwrap();
     assert_eq!(event, event_from_json);
 }
