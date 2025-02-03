@@ -5,7 +5,6 @@
 pub(crate) mod core;
 
 use polyproto::types::ChallengeString;
-use polyproto::types::FederationId;
 
 #[test]
 fn challenge_string_length() {

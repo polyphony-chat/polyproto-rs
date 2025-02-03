@@ -14,7 +14,6 @@ use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
 use polyproto::certs::SessionId;
-use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
     CREATE_DISCOVERABLE, DELETE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_SESSION,
     DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING,
@@ -32,7 +31,7 @@ use x509_cert::time::Validity;
 
 use crate::common::{
     actor_id_cert, actor_subject, default_validity, gen_priv_key, home_server_id_cert,
-    home_server_subject, init_logger, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature,
+    home_server_subject, init_logger, Ed25519PublicKey, Ed25519Signature,
 };
 
 /// Correctly format the server URL for the test.

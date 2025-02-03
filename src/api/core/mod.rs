@@ -11,7 +11,7 @@ use serde_json::json;
 
 use crate::certs::idcert::IdCert;
 use crate::certs::idcsr::IdCsr;
-use crate::certs::{PublicKeyInfo, SessionId};
+use crate::certs::SessionId;
 use crate::errors::{ConversionError, RequestError};
 use crate::key::PublicKey;
 use crate::signature::Signature;
