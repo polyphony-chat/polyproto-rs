@@ -89,9 +89,11 @@ impl TryFrom<u16> for Opcode {
     }
 }
 
-trait Glue {}
+mod sealer {
+    pub trait Glue {}
+}
 
-pub trait HasOpcode: Glue {
+pub trait HasOpcode: sealer::Glue {
     fn opcode(&self) -> u16;
 }
 
@@ -111,7 +113,7 @@ pub enum Payload {
     Resumed(Resumed),
 }
 
-impl Glue for Payload {}
+impl sealer::Glue for Payload {}
 
 impl HasOpcode for Payload {
     fn opcode(&self) -> u16 {
