@@ -1,12 +1,10 @@
 /// Module defining gateway `d` payloads.
 pub mod payload;
 
-use serde::de::{Error, Expected};
+use serde::de::Error;
 use serde_json::Value;
-use std::collections::HashMap;
-use std::fmt::Display;
+use std::fmt::Debug;
 use std::hash::Hash;
-use std::marker::PhantomData;
 
 use payload::*;
 use serde::de::Visitor;
@@ -14,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
 #[serde_as]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 // TODO: Needs custom deserializer to deserialize `d` based on opcode
 /// A generic gateway event. [Documentation link](https://docs.polyphony.chat/Protocol%20Specifications/core/#321-gateway-event-payloads)
 pub struct Event {
@@ -59,6 +57,12 @@ pub enum Opcode {
     Resumed = 10,
 }
 
+impl From<Opcode> for u16 {
+    fn from(value: Opcode) -> Self {
+        value as u16
+    }
+}
+
 impl TryFrom<u16> for Opcode {
     type Error = crate::errors::InvalidInput;
 
@@ -91,7 +95,7 @@ pub trait HasOpcode: Glue {
     fn opcode(&self) -> u16;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Data (`d`) payload of a Gateway event.
 pub enum Payload {
     Heartbeat(Heartbeat),
@@ -160,17 +164,16 @@ impl Serialize for Payload {
     }
 }
 
-// TODO this is cool n all but i need this for Event not for Payload :  ) ) )) ) ) )) ) )
-impl<'de> Deserialize<'de> for Payload {
+impl<'de> Deserialize<'de> for Event {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         {
-            struct PayloadVisitor;
+            struct EventVisitor;
 
-            impl<'de> Visitor<'de> for PayloadVisitor {
-                type Value = Payload;
+            impl<'de> Visitor<'de> for EventVisitor {
+                type Value = Event;
 
                 fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     formatter.write_str("a Payload with a field `d` and a field `op`")
@@ -182,6 +185,7 @@ impl<'de> Deserialize<'de> for Payload {
                 {
                     let mut maybe_d = None;
                     let mut maybe_opcode = None;
+                    let mut maybe_s = None;
 
                     while let Some((key, value)) = map.next_entry::<String, serde_json::Value>()? {
                         dbg!(&key);
@@ -190,103 +194,155 @@ impl<'de> Deserialize<'de> for Payload {
                             maybe_d = Some(value);
                         } else if key == "op" {
                             maybe_opcode = Some(value)
+                        } else if key == "s" {
+                            maybe_s = Some(value);
                         }
                     }
 
-                    let d_value = match maybe_d {
+                    let d_serde_value = match maybe_d {
                         Some(value) => value,
                         None => return Err(A::Error::missing_field("d")),
                     };
-                    let op_value = match maybe_opcode {
+                    let op_serde_value = match maybe_opcode {
                         Some(value) => value,
                         None => return Err(A::Error::missing_field("op")),
                     };
-                    let integer_maybe_opcode = match op_value {
-                        Value::Number(num) => {
-                            let num_u64 = match num.as_u64() {
-                                Some(u) => u,
-                                None => {
-                                    return Err(A::Error::custom(format!(
-                                        "provided opcode {} is not an unsigned, 16 bit integer",
-                                        num
-                                    )))
-                                }
-                            };
-                            match u16::try_from(num_u64) {
-                                Ok(actual_opcode) => actual_opcode,
-                                Err(e) => return Err(A::Error::custom(e)),
-                            }
-                        }
-                        Value::String(str) => match str.parse::<u16>() {
-                            Ok(actual_opcode) => actual_opcode,
+                    let integer_maybe_opcode: u16 =
+                        match up_to_64_bit_uint_from_value(&op_serde_value) {
+                            Ok(o) => o,
                             Err(e) => return Err(A::Error::custom(e)),
-                        },
-                        other => {
-                            return Err(A::Error::invalid_type(
-                                serde::de::Unexpected::Other(&format!("{}", other)),
-                                &"String or integer",
-                            ))
-                        }
+                        };
+                    let op = Opcode::try_from(integer_maybe_opcode).map_err(A::Error::custom)?;
+
+                    let s = match maybe_s {
+                        Some(s) => Some(
+                            up_to_64_bit_uint_from_value::<u64>(&s).map_err(A::Error::custom)?,
+                        ),
+                        None => None,
                     };
 
-                    let opcode =
-                        Opcode::try_from(integer_maybe_opcode).map_err(A::Error::custom)?;
-
-                    Ok(match opcode {
+                    let d = match op {
                         Opcode::Heartbeat => Payload::Heartbeat(
-                            serde_json::from_value::<Heartbeat>(d_value.clone())
+                            serde_json::from_value::<Heartbeat>(d_serde_value.clone())
                                 .map_err(A::Error::custom)?,
                         ),
                         Opcode::Hello => Payload::Hello(
-                            serde_json::from_value::<Hello>(d_value.clone())
+                            serde_json::from_value::<Hello>(d_serde_value.clone())
                                 .map_err(A::Error::custom)?,
                         ),
                         Opcode::Identify => Payload::Identify(
-                            serde_json::from_value::<Identify>(d_value.clone())
+                            serde_json::from_value::<Identify>(d_serde_value.clone())
                                 .map_err(A::Error::custom)?,
                         ),
                         Opcode::NewSession => Payload::NewSession(
-                            serde_json::from_value::<NewSession>(d_value.clone())
+                            serde_json::from_value::<NewSession>(d_serde_value.clone())
                                 .map_err(A::Error::custom)?,
                         ),
                         Opcode::ActorCertificateInvalidation => {
                             Payload::ActorCertificateInvalidation(
                                 serde_json::from_value::<ActorCertificateInvalidation>(
-                                    d_value.clone(),
+                                    d_serde_value.clone(),
                                 )
                                 .map_err(A::Error::custom)?,
                             )
                         }
                         Opcode::Resume => Payload::Resume(
-                            serde_json::from_value::<Resume>(d_value.clone())
+                            serde_json::from_value::<Resume>(d_serde_value.clone())
                                 .map_err(A::Error::custom)?,
                         ),
                         Opcode::ServerCertificateChange => Payload::ServerCertificateChange(
-                            serde_json::from_value::<ServerCertificateChange>(d_value.clone())
-                                .map_err(A::Error::custom)?,
+                            serde_json::from_value::<ServerCertificateChange>(
+                                d_serde_value.clone(),
+                            )
+                            .map_err(A::Error::custom)?,
                         ),
                         Opcode::HeartbeatAck => Payload::HeartbeatAck(
-                            serde_json::from_value::<HeartbeatAck>(d_value.clone())
+                            serde_json::from_value::<HeartbeatAck>(d_serde_value.clone())
                                 .map_err(A::Error::custom)?,
                         ),
                         Opcode::ServiceChannel => Payload::ServiceChannel(
-                            serde_json::from_value::<ServiceChannel>(d_value.clone())
+                            serde_json::from_value::<ServiceChannel>(d_serde_value.clone())
                                 .map_err(A::Error::custom)?,
                         ),
 
                         Opcode::ServiceChannelAck => Payload::ServiceChannelAck(
-                            serde_json::from_value::<ServiceChannelAck>(d_value.clone())
+                            serde_json::from_value::<ServiceChannelAck>(d_serde_value.clone())
                                 .map_err(A::Error::custom)?,
                         ),
                         Opcode::Resumed => Payload::Resumed(
-                            serde_json::from_value::<Resumed>(d_value.clone())
+                            serde_json::from_value::<Resumed>(d_serde_value.clone())
                                 .map_err(A::Error::custom)?,
                         ),
-                    })
+                    };
+
+                    let event = Event {
+                        n: "core".to_string(),
+                        op: op.into(),
+                        d,
+                        s,
+                    };
+                    Ok(event)
                 }
             }
 
-            deserializer.deserialize_map(PayloadVisitor)
+            deserializer.deserialize_map(EventVisitor)
         }
+    }
+}
+
+/// Attempts to convert a value into an integer type, provided that the source value is up to 64 bits
+/// in size.
+///
+/// This function will attempt to convert the provided `Value` into an instance of the specified type `T`.
+/// The conversion can be done from either a `u64` value or by parsing a string representing a `u64` value.
+///
+/// # Errors
+///
+/// This function returns an error in the following cases:
+///
+/// - If the input `Value` is neither a `String` nor an `Integer`, the function will return an error with a message indicating that it expected either a `String` or an `Integer`.
+/// - If the conversion from `u64` to the target type `T` fails, the function will return an error with a message describing the conversion failure.
+/// - If the input string is not a valid representation of a `u64`, the function will return an error with a message indicating that it encountered a conversion error when parsing the string.
+fn up_to_64_bit_uint_from_value<T: TryFrom<u64>>(
+    value: &Value,
+) -> Result<T, crate::errors::InvalidInput>
+where
+    <T as std::convert::TryFrom<u64>>::Error: Debug,
+{
+    match value {
+        // extract this function into subfunction that can take u16 or u64
+        Value::Number(num) => {
+            let num_u64 = match num.as_u64() {
+                Some(u) => u,
+                None => {
+                    return Err(crate::errors::InvalidInput::Malformed(
+                        "Integer is larger than 64 bits".to_string(),
+                    ))
+                }
+            };
+            match T::try_from(num_u64) {
+                Ok(converted_value) => Ok(converted_value),
+                Err(e) => Err(crate::errors::InvalidInput::Malformed(format!(
+                    "Conversion error from number: {:?}",
+                    e
+                ))),
+            }
+        }
+        Value::String(str) => match str.parse::<u64>() {
+            Ok(converted_u64) => T::try_from(converted_u64).map_err(|e| {
+                crate::errors::InvalidInput::Malformed(format!(
+                    "Conversion error from string: {:?}",
+                    e
+                ))
+            }),
+            Err(e) => Err(crate::errors::InvalidInput::Malformed(format!(
+                "Conversion error from string: {:?}",
+                e
+            ))),
+        },
+        other => Err(crate::errors::InvalidInput::Malformed(format!(
+            "Expected String or Integer, found value {:?}",
+            other
+        ))),
     }
 }
