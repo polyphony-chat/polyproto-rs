@@ -1,4 +1,4 @@
-<img src="https://cloud.bitfl0wer.de/apps/files_sharing/publicpreview/gHCwFwrFqKwRYcA?file=/&fileId=1143162&x=2560&y=1080&a=true&etag=67a364fa7d295" align="left" alt="a purple cog, split in the middle along the horizontal axis with a gap inbetween the two halves. three overlayed, offset sinus-like waves travel through that gap. each wave has a different shade of purple"></img>
+<img src="https://cloud.bitfl0wer.de/apps/files_sharing/publicpreview/2qCxoXJ27yW7QNR?file=/&fileId=1143147&x=256&y=256&a=true" align="left" alt="a purple cog, split in the middle along the horizontal axis with a gap inbetween the two halves. three overlayed, offset sinus-like waves travel through that gap. each wave has a different shade of purple" width="128px" height="auto"></img>
 
 ### `polyproto`
 
