@@ -24,7 +24,7 @@ pub struct BasicConstraints {
     /// The maximum path length for certificates subordinate to this certificate. This attribute
     /// only has meaning if `ca` is true. If `ca` is true then a path length of None means there’s no
     /// restriction on the number of subordinate CAs in the certificate chain. If it is zero or
-    /// greater then it defines the maximum length for a subordinate CA’s certificate chain. For
+    /// greater, it defines the maximum length for a subordinate CA’s certificate chain. For
     /// example, a `path_length` of 1 means the certificate can sign a subordinate CA, but the
     /// subordinate CA is not allowed to create subordinates with `ca` set to true.
     pub path_length: Option<u64>,
@@ -249,7 +249,7 @@ fn any_to_bool(value: Any) -> Result<bool, ConstraintError> {
 fn any_to_u64(value: Any) -> Result<u64, ConstraintError> {
     match value.tag() {
         Tag::Integer => {
-            // The value is given to us a a byte slice of u8. We need to convert this
+            // The value is given to us as a byte slice of u8. We need to convert this
             // into a u64.
             let mut buf = [0u8; 8];
             let len = 8.min(value.value().len());
@@ -265,7 +265,6 @@ fn any_to_u64(value: Any) -> Result<u64, ConstraintError> {
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
-#[cfg(test)]
 mod test {
     use crate::testing_utils::init_logger;
 

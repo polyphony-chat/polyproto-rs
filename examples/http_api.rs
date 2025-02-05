@@ -45,8 +45,11 @@ async fn main() {
     // corresponding method in the `HttpClient` struct. For example, if we wanted to get a challenge
     // string from the server, we would call:
     let challenge = client.get_challenge_string().await.unwrap();
-    println!("Challenge string: {}", challenge.challenge);
-    println!("Challenge expires at UNIX timestamp: {}", challenge.expires);
+    println!("Challenge string: {}", challenge.challenge());
+    println!(
+        "Challenge expires at UNIX timestamp: {}",
+        challenge.expires()
+    );
 }
 
 #[test]

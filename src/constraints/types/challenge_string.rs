@@ -9,11 +9,11 @@ use super::*;
 
 impl Constrained for ChallengeString {
     fn validate(&self, _target: Option<Target>) -> Result<(), ConstraintError> {
-        if self.challenge.len() < 32 || self.challenge.len() > 255 {
+        if self.challenge().len() < 32 || self.challenge().len() > 256 {
             return Err(ConstraintError::OutOfBounds {
                 lower: 32,
                 upper: 255,
-                actual: self.challenge.len().to_string(),
+                actual: self.challenge().len().to_string(),
                 reason: ERR_MSG_CHALLENGE_STRING_LENGTH.to_string(),
             });
         }

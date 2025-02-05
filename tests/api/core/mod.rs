@@ -2,33 +2,36 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use std::str::FromStr;
+
 use der::asn1::{BitString, GeneralizedTime, Uint};
 use httptest::matchers::request::method_path;
 use httptest::matchers::{eq, json_decoded, matches, request};
 use httptest::responders::{json_encoded, status_code};
 use httptest::*;
-use polyproto::api::core::current_unix_time;
+use polyproto::api::core::{current_unix_time, ServiceDeleteResponse};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
 use polyproto::certs::SessionId;
-use polyproto::key::PublicKey;
 use polyproto::types::routes::core::v1::{
-    DELETE_ENCRYPTED_PKM, DELETE_SESSION, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING,
-    GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_PUBLIC_IDCERT,
-    GET_SERVER_PUBLIC_KEY, ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT,
+    CREATE_DISCOVERABLE, DELETE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_SESSION,
+    DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING,
+    GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_IDCERT,
+    ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT, SET_PRIMARY_DISCOVERABLE,
     UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
 };
 use polyproto::types::spki::AlgorithmIdentifierOwned;
 use polyproto::types::x509_cert::SerialNumber;
-use polyproto::types::{EncryptedPkm, PrivateKeyInfo};
+use polyproto::types::{EncryptedPkm, FederationId, PrivateKeyInfo, Service, ServiceName};
 use serde_json::json;
 use spki::ObjectIdentifier;
+use url::Url;
 use x509_cert::time::Validity;
 
 use crate::common::{
     actor_id_cert, actor_subject, default_validity, gen_priv_key, home_server_id_cert,
-    home_server_subject, init_logger, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature,
+    home_server_subject, init_logger, Ed25519PublicKey, Ed25519Signature,
 };
 
 /// Correctly format the server URL for the test.
@@ -53,8 +56,8 @@ async fn get_challenge_string() {
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new(&url).unwrap();
     let challenge_string = client.get_challenge_string().await.unwrap();
-    assert_eq!(challenge_string.challenge, "a".repeat(32));
-    assert_eq!(challenge_string.expires, 1);
+    assert_eq!(challenge_string.challenge(), "a".repeat(32));
+    assert_eq!(challenge_string.expires(), 1);
 }
 
 #[tokio::test]
@@ -110,37 +113,6 @@ async fn rotate_server_identity_key() {
 }
 
 #[tokio::test]
-async fn get_server_public_key() {
-    init_logger();
-    let mut csprng = rand::rngs::OsRng;
-    let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
-    let public_key_info = priv_key.public_key.public_key_info();
-    let pem = public_key_info.to_pem(der::pem::LineEnding::LF).unwrap();
-    log::debug!("Generated Public Key:\n{}", pem);
-    let server = Server::run();
-    server.expect(
-        Expectation::matching(method_path(
-            GET_SERVER_PUBLIC_KEY.method.as_str(),
-            GET_SERVER_PUBLIC_KEY.path,
-        ))
-        .respond_with(json_encoded(json!(public_key_info
-            .to_pem(der::pem::LineEnding::LF)
-            .unwrap()))),
-    );
-    let url = server_url(&server);
-    let client = polyproto::api::HttpClient::new(&url).unwrap();
-    let public_key = client.get_server_public_key_info(None).await.unwrap();
-    log::debug!(
-        "Received Public Key:\n{}",
-        public_key.to_pem(der::pem::LineEnding::LF).unwrap()
-    );
-    assert_eq!(
-        public_key.public_key_bitstring,
-        priv_key.public_key.public_key_info().public_key_bitstring
-    );
-}
-
-#[tokio::test]
 async fn get_server_id_cert() {
     init_logger();
     let id_cert = home_server_id_cert();
@@ -150,8 +122,8 @@ async fn get_server_id_cert() {
     let client = polyproto::api::HttpClient::new(&url).unwrap();
     server.expect(
         Expectation::matching(all_of![
-            request::method(GET_SERVER_PUBLIC_IDCERT.method.as_str()),
-            request::path(GET_SERVER_PUBLIC_IDCERT.path),
+            request::method(GET_SERVER_IDCERT.method.as_str()),
+            request::path(GET_SERVER_IDCERT.path),
             request::body(json_decoded(eq(json!({"timestamp": 10})))),
         ])
         .respond_with(json_encoded(json!(cert_pem))),
@@ -505,4 +477,183 @@ async fn get_pkm_upload_size_limit() {
     );
     let resp = client.get_pkm_upload_size_limit().await.unwrap();
     assert_eq!(resp, limit);
+}
+
+#[tokio::test]
+async fn discover_services() {
+    init_logger();
+    const FID: &str = "example@example.com";
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    let service = Service::new(
+        "polyproto-cat",
+        Url::from_str("http://polyphony.chat").unwrap(),
+        true,
+    )
+    .unwrap();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(DISCOVER_SERVICE_ALL.method.to_string()),
+            request::path(format!("{}{FID}", DISCOVER_SERVICE_ALL.path))
+        ])
+        .respond_with(json_encoded(json!(vec![&service]))),
+    );
+    let resp = client
+        .discover_services(&FederationId::new(FID).unwrap(), None)
+        .await
+        .unwrap();
+    assert_eq!(resp[0], service);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(DISCOVER_SERVICE_ALL.method.to_string()),
+            request::path(format!("{}{FID}", DISCOVER_SERVICE_ALL.path)),
+            request::body(json_decoded(eq(json!({
+                "limit": 1
+            }))))
+        ])
+        .respond_with(json_encoded(json!(vec![&service]))),
+    );
+    let resp = client
+        .discover_services(&FederationId::new(FID).unwrap(), Some(1))
+        .await
+        .unwrap();
+    assert_eq!(resp[0], service);
+}
+
+#[tokio::test]
+async fn discover_single_service() {
+    init_logger();
+    const FID: &str = "example@example.com";
+    let service_name = ServiceName::new("polyproto-cat").unwrap();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    let service = Service::new(
+        service_name.to_string().as_str(),
+        Url::from_str("http://polyphony.chat").unwrap(),
+        true,
+    )
+    .unwrap();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(DISCOVER_SERVICE_SINGULAR.method.to_string()),
+            request::path(format!("{}{FID}", DISCOVER_SERVICE_SINGULAR.path)),
+            request::body(json_decoded(eq(json!({
+                "name": service_name
+            }))))
+        ])
+        .respond_with(json_encoded(json!([service]))),
+    );
+    let result = client
+        .discover_service(&FederationId::new(FID).unwrap(), &service_name, None)
+        .await
+        .unwrap();
+    assert_eq!(result[0], service);
+
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(DISCOVER_SERVICE_SINGULAR.method.to_string()),
+            request::path(format!("{}{FID}", DISCOVER_SERVICE_SINGULAR.path)),
+            request::body(json_decoded(eq(json!({
+                "name": service_name,
+                "limit": 1
+            }))))
+        ])
+        .respond_with(json_encoded(json!([service]))),
+    );
+    let result = client
+        .discover_service(&FederationId::new(FID).unwrap(), &service_name, Some(1))
+        .await
+        .unwrap();
+    assert_eq!(result[0], service);
+}
+
+#[tokio::test]
+async fn add_discoverable_service() {
+    init_logger();
+    let service = Service::new(
+        "polyproto-cat",
+        Url::from_str("http://polyphony.chat").unwrap(),
+        true,
+    )
+    .unwrap();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(CREATE_DISCOVERABLE.method.to_string()),
+            request::path(CREATE_DISCOVERABLE.path),
+            request::body(json_decoded(eq(json!(&service))))
+        ])
+        .respond_with(json_encoded(json!([service]))),
+    );
+    let services = client.add_discoverable_service(&service).await.unwrap();
+    assert_eq!(services[0], service);
+}
+
+#[tokio::test]
+async fn set_primary_service_provider() {
+    init_logger();
+    let service = Service::new(
+        "polyproto-cat",
+        Url::from_str("http://polyphony.chat").unwrap(),
+        true,
+    )
+    .unwrap();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(SET_PRIMARY_DISCOVERABLE.method.to_string()),
+            request::path(SET_PRIMARY_DISCOVERABLE.path),
+            request::body(json_decoded(eq(json!({
+                "url": service.url,
+                "name": service.service
+            }))))
+        ])
+        .respond_with(json_encoded(json!([service]))),
+    );
+    let services = client
+        .set_primary_service_provider(&service.url, &service.service)
+        .await
+        .unwrap();
+    assert_eq!(services[0], service);
+}
+
+#[tokio::test]
+async fn delete_service_provider() {
+    init_logger();
+    let service = Service::new(
+        "polyproto-cat",
+        Url::from_str("http://polyphony.chat").unwrap(),
+        true,
+    )
+    .unwrap();
+    let delete_response = ServiceDeleteResponse {
+        deleted: service.clone(),
+        new_primary: None,
+    };
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(DELETE_DISCOVERABLE.method.to_string()),
+            request::path(DELETE_DISCOVERABLE.path),
+            request::body(json_decoded(eq(json!({
+                "url": service.url,
+                "name": service.service
+            }))))
+        ])
+        .respond_with(json_encoded(json!(delete_response))),
+    );
+    let services = client
+        .delete_discoverable_service(&service.url, &service.service)
+        .await
+        .unwrap();
+    assert_eq!(services.deleted, service);
 }

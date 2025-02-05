@@ -75,7 +75,7 @@ mod serde_support {
     use super::SubjectPublicKeyInfo;
     struct SubjectPublicKeyInfoVisitor;
 
-    impl<'de> Visitor<'de> for SubjectPublicKeyInfoVisitor {
+    impl Visitor<'_> for SubjectPublicKeyInfoVisitor {
         type Value = SubjectPublicKeyInfo;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {

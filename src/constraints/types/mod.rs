@@ -4,6 +4,7 @@
 
 mod challenge_string;
 mod federation_id;
+mod service;
 
 use crate::certs::Target;
 use crate::errors::ConstraintError;

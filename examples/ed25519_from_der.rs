@@ -26,7 +26,6 @@ use x509_cert::time::{Time, Validity};
 /// ```sh
 /// openssl req -in cert.csr -verify -inform der
 /// ```
-
 fn main() {
     let mut csprng = rand::rngs::OsRng;
     let priv_key_actor = Ed25519PrivateKey::gen_keypair(&mut csprng);

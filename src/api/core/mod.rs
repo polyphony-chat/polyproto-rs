@@ -5,17 +5,18 @@
 use std::time::UNIX_EPOCH;
 
 use crate::types::x509_cert::SerialNumber;
+use crate::url::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::certs::idcert::IdCert;
 use crate::certs::idcsr::IdCsr;
-use crate::certs::{PublicKeyInfo, SessionId};
+use crate::certs::SessionId;
 use crate::errors::{ConversionError, RequestError};
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::types::routes::core::v1::*;
-use crate::types::{ChallengeString, EncryptedPkm};
+use crate::types::{ChallengeString, EncryptedPkm, FederationId, Service, ServiceName};
 
 use super::{HttpClient, HttpResult};
 
@@ -82,10 +83,10 @@ impl HttpClient {
         &self,
         unix_time: Option<u64>,
     ) -> HttpResult<IdCert<S, P>> {
-        let request_url = self.url.join(GET_SERVER_PUBLIC_IDCERT.path)?;
+        let request_url = self.url.join(GET_SERVER_IDCERT.path)?;
         let mut request = self
             .client
-            .request(GET_SERVER_PUBLIC_IDCERT.method.clone(), request_url);
+            .request(GET_SERVER_IDCERT.method.clone(), request_url);
         if let Some(time) = unix_time {
             request = request.body(json!({ "timestamp": time }).to_string());
         }
@@ -97,25 +98,6 @@ impl HttpClient {
             Err(e) => return Err(RequestError::ConversionError(e.into())),
         };
         Ok(id_cert)
-    }
-
-    /// Request the server's [PublicKeyInfo]. Specify a unix timestamp to get the public key which
-    /// the home server used at that time. If no timestamp is provided, the current public key is
-    /// returned.
-    pub async fn get_server_public_key_info(
-        &self,
-        unix_time: Option<u64>,
-    ) -> HttpResult<PublicKeyInfo> {
-        let request_url = self.url.join(GET_SERVER_PUBLIC_KEY.path)?;
-        let mut request = self
-            .client
-            .request(GET_SERVER_PUBLIC_KEY.method.clone(), request_url);
-        if let Some(time) = unix_time {
-            request = request.body(json!({ "timestamp": time }).to_string());
-        }
-        let response = request.send().await;
-        let pem = HttpClient::handle_response::<String>(response).await?;
-        Ok(PublicKeyInfo::from_pem(pem.as_str())?)
     }
 
     /// Request the [IdCert]s of an actor. Specify the federation ID of the actor to get the IdCerts
@@ -183,6 +165,77 @@ impl HttpClient {
             .send()
             .await?;
         Ok(())
+    }
+
+    // TODO: Test discover_services and discover_service
+    /// Fetch a list of all services that the actor specified in the `actor_fid` argument has made
+    /// discoverable.
+    ///
+    /// ## Parameters
+    ///
+    /// `limit`: How many results to return at maximum. Omitting this value will return all existing
+    /// results.
+    pub async fn discover_services(
+        &self,
+        actor_fid: &FederationId,
+        limit: Option<u32>,
+    ) -> HttpResult<Vec<Service>> {
+        let request_url = self
+            .url
+            .join(DISCOVER_SERVICE_ALL.path)?
+            .join(&actor_fid.to_string())?;
+        let mut request = self
+            .client
+            .request(DISCOVER_SERVICE_ALL.method.clone(), request_url);
+        if let Some(limit) = limit {
+            request = request.body(
+                json!({
+                    "limit": limit
+                })
+                .to_string(),
+            );
+        }
+        let response = request.send().await;
+        HttpClient::handle_response::<Vec<Service>>(response).await
+    }
+
+    /// Fetch a list of services an actor is registered with, filtered by `service_name`.
+    ///
+    /// ## Parameters
+    ///
+    /// `limit`: Whether to limit the amount of returned results. Not specifying a limit will
+    /// return all services. Specifying a limit value of 1 will return only the primary
+    /// service provider.
+    pub async fn discover_service(
+        &self,
+        actor_fid: &FederationId,
+        service_name: &ServiceName,
+        limit: Option<u32>,
+    ) -> HttpResult<Vec<Service>> {
+        let request_url = self
+            .url
+            .join(&format!("{}{}", DISCOVER_SERVICE_SINGULAR.path, actor_fid))?;
+        let mut request = self
+            .client
+            .request(DISCOVER_SERVICE_SINGULAR.method.clone(), request_url);
+        if let Some(limit) = limit {
+            request = request.body(
+                json!({
+                    "limit": limit,
+                    "name": service_name
+                })
+                .to_string(),
+            );
+        } else {
+            request = request.body(
+                json!({
+                    "name": service_name
+                })
+                .to_string(),
+            );
+        }
+        let response = request.send().await;
+        HttpClient::handle_response::<Vec<Service>>(response).await
     }
 }
 
@@ -286,6 +339,80 @@ impl HttpClient {
         let response = request.send().await;
         HttpClient::handle_response::<u64>(response).await
     }
+
+    /// Add a service to the list of discoverable services. The service must be a valid [Service].
+    /// If the service provider is the first to provide this service, or if the [Service] has a
+    /// property of `primary` set to `true`, the service will be marked as the primary service
+    /// provider for this service.
+    ///
+    /// The server will return a [Vec] of all [Service]s affected
+    /// by this operation. This [Vec] will have a length of 1, if no other service entry was
+    /// affected, and a length of 2 if this new service entry has replaced an existing one in the
+    /// role of primary service provider.
+    pub async fn add_discoverable_service(&self, service: &Service) -> HttpResult<Vec<Service>> {
+        let request = self
+            .client
+            .request(
+                CREATE_DISCOVERABLE.method.clone(),
+                self.url.join(CREATE_DISCOVERABLE.path)?,
+            )
+            .body(json!(service).to_string());
+        let response = request.send().await;
+        HttpClient::handle_response::<Vec<Service>>(response).await
+    }
+
+    /// Delete a discoverable service from the list of discoverable services. The service must be a
+    /// valid [Service] that exists in the list of discoverable services. On success, the server will
+    /// return a [ServiceDeleteResponse] containing the deleted service and, if applicable, the new
+    /// primary service provider for the service.
+    pub async fn delete_discoverable_service(
+        &self,
+        url: &Url,
+        name: &ServiceName,
+    ) -> HttpResult<ServiceDeleteResponse> {
+        let request = self
+            .client
+            .request(
+                DELETE_DISCOVERABLE.method.clone(),
+                self.url.join(DELETE_DISCOVERABLE.path)?,
+            )
+            .body(
+                json!({
+                    "url": url,
+                    "name": name,
+                })
+                .to_string(),
+            );
+        let response = request.send().await;
+        HttpClient::handle_response::<ServiceDeleteResponse>(response).await
+    }
+
+    /// Set the primary service provider for a service, by specifying the URL of the new primary
+    /// service provider and the name of the service. The server will return a [Vec] of all [Service]s
+    /// affected by this operation. This [Vec] will have a length of 1, if no other service entry was
+    /// affected, and a length of 2 if this new service entry has replaced an existing one in the
+    /// role of primary service provider.
+    pub async fn set_primary_service_provider(
+        &self,
+        url: &Url,
+        name: &ServiceName,
+    ) -> HttpResult<Vec<Service>> {
+        let request = self
+            .client
+            .request(
+                SET_PRIMARY_DISCOVERABLE.method.clone(),
+                self.url.join(SET_PRIMARY_DISCOVERABLE.path)?,
+            )
+            .body(
+                json!({
+                    "url": url,
+                    "name": name
+                })
+                .to_string(),
+            );
+        let response = request.send().await;
+        HttpClient::handle_response::<Vec<Service>>(response).await
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -339,14 +466,13 @@ pub struct IdCertToken {
     pub token: String,
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_get_challenge_string() {
-        let url = "https://example.com/";
-        let client = HttpClient::new(url).unwrap();
-        let _result = client.get_challenge_string();
-    }
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Represents a response to a service discovery deletion request. Contains the deleted service
+/// and, if applicable, the new primary service provider for the service.
+pub struct ServiceDeleteResponse {
+    /// The service that was deleted.
+    pub deleted: Service,
+    /// The new primary service provider for the service, if applicable.
+    pub new_primary: Option<Service>,
 }

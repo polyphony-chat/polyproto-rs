@@ -93,7 +93,8 @@ request routes and methods through the exported `static` `Route`s.
 #![warn(
     missing_docs,
     missing_debug_implementations,
-    missing_copy_implementations
+    missing_copy_implementations,
+    clippy::todo
 )]
 
 /// The OID for the `domainComponent` RDN
@@ -115,6 +116,8 @@ pub mod api;
 pub mod certs;
 /// Error types used in this crate
 pub mod errors;
+/// polyproto gateway server connection
+pub mod gateway;
 /// Generic polyproto public- and private key traits.
 pub mod key;
 /// Generic polyproto signature traits.
@@ -127,6 +130,8 @@ mod constraints;
 
 pub use der;
 pub use spki;
+#[cfg(feature = "reqwest")]
+pub use url;
 pub use x509_cert::name::*;
 
 /// Types implementing [Constrained] can be validated to be well-formed.

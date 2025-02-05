@@ -2,34 +2,21 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use std::ops::{Deref, DerefMut};
-
 use regex::Regex;
 
 use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX};
 use crate::Constrained;
 
 /// The regular expression for a valid `FederationId`.
-pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)";
+pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)$";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A `FederationId` is a globally unique identifier for an actor in the context of polyproto.
 pub struct FederationId {
-    pub(crate) inner: String,
-}
-
-impl Deref for FederationId {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl DerefMut for FederationId {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
-    }
+    /// Must be unique on each instance.
+    pub(crate) local_name: String,
+    /// Includes top-level domain, second-level domain and other subdomains. Address which the actors' home server can be reached at.
+    pub(crate) domain_name: String,
 }
 
 impl FederationId {
@@ -45,8 +32,12 @@ impl FederationId {
             x
         };
         if regex.is_match(&matches) {
+            let separator_position = id.find('@').unwrap();
+            let local_name = id[0..separator_position].to_string();
+            let domain_name = id[separator_position + 1..].to_string();
             let fid = Self {
-                inner: matches.to_string(),
+                local_name,
+                domain_name,
             };
             fid.validate(None)?;
             Ok(fid)
@@ -60,6 +51,6 @@ impl FederationId {
 
 impl std::fmt::Display for FederationId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.inner)
+        write!(f, "{}@{}", self.local_name, self.domain_name)
     }
 }

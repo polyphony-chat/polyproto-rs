@@ -31,7 +31,9 @@ pub struct HttpClient {
     /// The reqwest client used to make requests.
     pub client: reqwest::Client,
     headers: reqwest::header::HeaderMap,
+    version: http::Version, //TODO: Allow setting HTTP version?
     pub(crate) url: Url,
+    zstd_compression: bool,
 }
 
 /// A type alias for the result of an HTTP request.
@@ -44,15 +46,58 @@ impl HttpClient {
     /// # Arguments
     ///
     /// * `url` - The base URL of a polyproto home server.
+    ///
+    /// # Errors
+    ///
+    /// Will fail if the URL is invalid or if there are issues creating the reqwest client.
     pub fn new(url: &str) -> HttpResult<Self> {
-        let client = reqwest::Client::new();
+        let client = reqwest::ClientBuilder::new()
+            .zstd(true)
+            .user_agent(format!("polyproto-rs/{}", env!("CARGO_PKG_VERSION")))
+            .build()?;
         let headers = reqwest::header::HeaderMap::new();
         let url = Url::parse(url)?;
+        let version = http::Version::HTTP_11;
 
         Ok(Self {
             client,
             headers,
             url,
+            version,
+            zstd_compression: true,
+        })
+    }
+
+    /// Creates a new instance of the client with the specified arguments. To access routes which
+    /// require authentication, you must set an authentication header.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The base URL of a polyproto home server.
+    /// * `headers`: [reqwest::header::HeaderMap]
+    /// * `version`: Version of the HTTP spec
+    /// * `zstd_compression`: Whether to use zstd compression for responses.
+    ///
+    /// # Errors
+    ///
+    /// Will fail if the URL is invalid or if there are issues creating the reqwest client.
+    pub fn new_with_args(
+        url: &str,
+        headers: reqwest::header::HeaderMap,
+        version: http::Version,
+        zstd_compression: bool,
+    ) -> HttpResult<Self> {
+        let client = reqwest::ClientBuilder::new()
+            .zstd(zstd_compression)
+            .user_agent(format!("polyproto-rs/{}", env!("CARGO_PKG_VERSION")))
+            .build()?;
+        let url = Url::parse(url)?;
+        Ok(Self {
+            client,
+            headers,
+            version,
+            url,
+            zstd_compression,
         })
     }
 

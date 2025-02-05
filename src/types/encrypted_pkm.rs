@@ -62,7 +62,7 @@ mod serde_support {
 
     struct PrivateKeyInfoVisitor;
 
-    impl<'de> Visitor<'de> for PrivateKeyInfoVisitor {
+    impl Visitor<'_> for PrivateKeyInfoVisitor {
         type Value = PrivateKeyInfo;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
