@@ -85,3 +85,7 @@ request routes and methods through the exported `static` `Route`s.
 [crates-link]: https://crates.io/crates/polyproto
 [docs]: https://docs.polyphony.chat/Protocol%20Specifications/core/
 [overview]: https://docs.polyphony.chat/Overviews/core/
+
+## Logo
+
+The polyproto logo was designed by the wonderful [antidoxi](https://antidoxi.carrd.co/).
