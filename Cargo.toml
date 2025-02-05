@@ -15,14 +15,11 @@ default = ["types"]
 wasm = ["getrandom", "getrandom/js"]
 getrandom = ["dep:getrandom"]
 types = ["dep:http"]
-reqwest = ["dep:reqwest", "types", "serde", "dep:url"]
-serde = [
-    "dep:serde",
-    "dep:serde_json",
-    "dep:url",
-    "url/serde",
-    "dep:serde_with",
-]
+reqwest = ["dep:reqwest", "types", "serde", "url"]
+serde = ["dep:serde", "serde_json", "url", "serde_with"]
+serde_with = ["dep:serde_with"]
+serde_json = ["dep:serde_json"]
+url = ["dep:url", "url/serde"]
 gateway = ["serde", "types"]
 
 [dependencies]
