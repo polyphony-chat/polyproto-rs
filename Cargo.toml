@@ -11,15 +11,14 @@ rust-version = "1.71.1"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [features]
-default = ["types"]
+default = ["types", "serde"]
 wasm = ["getrandom", "getrandom/js"]
 getrandom = ["dep:getrandom"]
 types = ["dep:http"]
-reqwest = ["dep:reqwest", "types", "serde", "url"]
-serde = ["dep:serde", "serde_json", "url", "serde_with"]
+reqwest = ["dep:reqwest", "types", "serde"]
+serde = ["dep:serde", "serde_json", "serde_with", "url/serde"]
 serde_with = ["dep:serde_with"]
 serde_json = ["dep:serde_json"]
-url = ["dep:url", "url/serde"]
 gateway = ["serde", "types"]
 
 [dependencies]
@@ -33,7 +32,7 @@ spki = { version = "0.7.3", features = ["pem"] }
 thiserror = "2.0.11"
 x509-cert = "0.2.5"
 log = "0.4.25"
-url = { version = "2.5.4", optional = true }
+url = { version = "2.5.4" }
 http = { version = "1.2.0", optional = true }
 serde_with = { version = "3.12.0", optional = true }
 
