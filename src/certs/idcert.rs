@@ -5,7 +5,7 @@
 use der::asn1::Uint;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
-use x509_cert::name::Name;
+use x509_cert::name::{Name, RdnSequence};
 use x509_cert::time::Validity;
 use x509_cert::Certificate;
 
@@ -313,6 +313,24 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             .subject_public_key
             .verify_signature(&self.signature, &der)?)
     }
+
+    pub fn issuer_url(&self) -> Result<url::Url, url::ParseError> {
+        rdns_to_url(&self.id_cert_tbs.issuer)
+    }
+
+    pub fn subject_url(&self) -> Result<url::Url, url::ParseError> {
+        rdns_to_url(&self.id_cert_tbs.issuer)
+    }
+}
+
+fn rdns_to_url(rdn_sequence: &RdnSequence) -> Result<url::Url, url::ParseError> {
+    use url::Url;
+
+    let mut url_str = String::new();
+    for rdn in rdn_sequence.0.iter() {
+        url_str += &rdn.to_string();
+    }
+    Url::parse(url_str.trim())
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<IdCert<S, P>> for Certificate {
