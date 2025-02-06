@@ -1,35 +1,23 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/
-
-// polyproto Logo © 2025 by antidoxi, created on behalf of Florian Weber (bitfl0wer) is licensed
-// under CC BY-NC-ND 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by-nc-nd/4.0/
-#![doc(
-    html_favicon_url = "https://cloud.bitfl0wer.de/apps/files_sharing/publicpreview/ceYrpBgHm7DKsJt?file=/&fileId=1143569&x=48&y=48&a=true"
-)]
-// polyproto Logo © 2025 by antidoxi, created on behalf of Florian Weber (bitfl0wer) is licensed
-// under CC BY-NC-ND 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by-nc-nd/4.0/
-#![doc(
-    html_logo_url = "https://cloud.bitfl0wer.de/apps/files_sharing/publicpreview/7dg3gxApCtXFc7x?file=/&fileId=1143133&x=512&y=512&a=true"
-)]
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 /*!
-<img src="https://cloud.bitfl0wer.de/apps/files_sharing/publicpreview/2qCxoXJ27yW7QNR?file=/&fileId=1143147&x=256&y=256&a=true" align="left" alt="a purple cog, split in the middle along the horizontal axis with a gap inbetween the two halves. three overlayed, offset sinus-like waves travel through that gap. each wave has a different shade of purple" width="128px" height="auto"></img>
+<div align="center">
 
-### `polyproto`
-
-![dev-status]
 [![Discord]][Discord-invite]
+[![Matrix]][Matrix-invite]
 [![Build][build-shield]][build-url]
 [![Coverage][coverage-shield]][coverage-url]
+<img src="https://img.shields.io/static/v1?label=Status&message=Alpha&color=blue" alt="Blue status badge, reading 'Alpha'">
+
+</div>
+
+# polyproto
 
 Crate supplying (generic) Rust types and traits to quickly get a
 [polyproto](https://docs.polyphony.chat/Protocol%20Specifications/core/) implementation up and
 running, as well as an HTTP client for the polyproto API.
-
-**[Overview/TL;DR][overview]** • **[Protocol Specification][docs]**
-
-## Crate overview
 
 Building upon types offered by the [der](https://crates.io/crates/der),
 [x509_cert](https://crates.io/crates/x509_cert) and [spki](https://crates.io/crates/spki) crates,
@@ -91,23 +79,14 @@ the `types` and `serde` features. Using these features, you can implement your o
 the polyproto crate acting as a single source of truth for request and response types, as well as
 request routes and methods through the exported `static` `Route`s.
 
-[dev-status]: https://img.shields.io/static/v1?label=Status&message=Alpha&color=blue
 [build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/polyproto/build_and_test.yml?style=flat
 [build-url]: https://github.com/polyphony-chat/polyproto/blob/main/.github/workflows/build_and_test.yml
 [coverage-shield]: https://coveralls.io/repos/github/polyphony-chat/polyproto/badge.svg?branch=main
 [coverage-url]: https://coveralls.io/github/polyphony-chat/polyproto?branch=main
 [Discord]: https://dcbadge.vercel.app/api/server/m3FpcapGDD?style=flat
 [Discord-invite]: https://discord.com/invite/m3FpcapGDD
-[crates-link]: https://crates.io/crates/polyproto
-[docs]: https://docs.polyphony.chat/Protocol%20Specifications/core/
-[overview]: https://docs.polyphony.chat/Overviews/core/
-
-## Logo
-
-The polyproto logo was designed by the wonderful [antidoxi](https://antidoxi.carrd.co/).
-
-polyproto Logo © 2025 by antidoxi, created on behalf of Florian Weber (bitfl0wer) is licensed under
-CC BY-NC-ND 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by-nc-nd/4.0/
+[Matrix]: https://img.shields.io/matrix/polyproto%3Atu-dresden.de?server_fqdn=matrix.org&style=flat&label=Matrix%20Room
+[Matrix-invite]: https://matrix.to/#/#polyproto:tu-dresden.de
 */
 
 #![forbid(unsafe_code)]
