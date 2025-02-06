@@ -9,7 +9,7 @@ use httptest::matchers::request::method_path;
 use httptest::matchers::{eq, json_decoded, matches, request};
 use httptest::responders::{json_encoded, status_code};
 use httptest::*;
-use polyproto::api::core::{current_unix_time, ServiceDeleteResponse};
+use polyproto::api::core::{current_unix_time, ServiceDeleteResponse, WellKnown};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
@@ -19,7 +19,7 @@ use polyproto::types::routes::core::v1::{
     DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING,
     GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_IDCERT,
     ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT, SET_PRIMARY_DISCOVERABLE,
-    UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM,
+    UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM, WELL_KNOWN,
 };
 use polyproto::types::spki::AlgorithmIdentifierOwned;
 use polyproto::types::x509_cert::SerialNumber;
@@ -656,4 +656,28 @@ async fn delete_service_provider() {
         .await
         .unwrap();
     assert_eq!(services.deleted, service);
+}
+
+#[tokio::test]
+async fn get_well_known() {
+    init_logger();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new(&url).unwrap();
+    let response = WellKnown::from(
+        Url::parse(&url)
+            .unwrap()
+            .join(".p2")
+            .unwrap()
+            .join("core")
+            .unwrap(),
+    );
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(WELL_KNOWN.method.to_string()),
+            request::path(WELL_KNOWN.path),
+        ])
+        .respond_with(json_encoded(json!(response))),
+    );
+    let _well_known = client.get_well_known(&url).await.unwrap();
 }
