@@ -117,12 +117,13 @@ impl HttpClient {
         Ok(())
     }
 
-    /// Sends a request and returns the response.
-    pub async fn request<T: Into<reqwest::Body>>(
+    /// Sends a request and returns a [HttpResult].
+    /// DOCUMENTME
+    pub async fn request(
         &self,
         method: reqwest::Method,
         url: &str,
-        body: Option<T>,
+        body: Option<reqwest::Body>,
     ) -> HttpResult<reqwest::Response> {
         Url::parse(url)?;
         let mut request = self.client.request(method, url);
@@ -133,10 +134,27 @@ impl HttpClient {
         Ok(request.send().await?)
     }
 
+    /// DOCUMENTME
+    pub async fn request_as<T: for<'a> Deserialize<'a>>(
+        &self,
+        method: reqwest::Method,
+        url: &str,
+        body: Option<reqwest::Body>,
+    ) -> HttpResult<T> {
+        let url = Url::parse(url)?;
+        let mut request = self.client.request(method, url);
+        request = request.headers(self.headers.clone());
+        if let Some(body) = body {
+            request = request.body(body);
+        }
+        let response = request.send().await;
+        Self::handle_response(response).await
+    }
+
     /// Sends a request, handles the response, and returns the deserialized object.
     pub(crate) async fn handle_response<T: for<'a> Deserialize<'a>>(
         response: Result<reqwest::Response, reqwest::Error>,
-    ) -> Result<T, RequestError> {
+    ) -> HttpResult<T> {
         let response = response?;
         let response_text = response.text().await?;
         let object = from_str::<T>(&response_text)?;
