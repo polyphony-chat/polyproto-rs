@@ -22,6 +22,10 @@ fn main() {
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
     println!("Private Key is: {:?}", priv_key.key.to_bytes());
     println!("Public Key is: {:?}", priv_key.public_key.key.to_bytes());
+    println!(
+        "Public Key OID is: {:?}",
+        priv_key.public_key.algorithm_identifier()
+    );
     println!();
 
     // Create and sign a message
