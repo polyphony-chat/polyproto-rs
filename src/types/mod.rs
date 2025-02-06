@@ -59,6 +59,11 @@ pub mod routes {
 
             use super::super::Route;
 
+            pub const WELL_KNOWN: Route = Route {
+                method: Method::GET,
+                path: "/.well-known/polyproto-core",
+            };
+
             pub const GET_CHALLENGE_STRING: Route = Route {
                 method: Method::GET,
                 path: "/.p2/core/v1/challenge/",
