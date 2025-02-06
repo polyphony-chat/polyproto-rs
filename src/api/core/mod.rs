@@ -414,7 +414,7 @@ impl HttpClient {
         HttpClient::handle_response::<Vec<Service>>(response).await
     }
 
-    /// Request the contents of the polyproto `.well-known` endpoint from a url.
+    /// Request the contents of the polyproto `.well-known` endpoint from a base url.
     ///
     /// This is a shorthand for
     /// ```rs
@@ -425,7 +425,8 @@ impl HttpClient {
     ///
     /// This method will error if the server is unreachable or if the resource is malformed.
     pub async fn get_well_known(&self, url: &str) -> HttpResult<WellKnown> {
-        self.request_as(http::Method::GET, url, None).await
+        let url = Url::parse(url)?.join(".well-known/polyproto-core")?;
+        self.request_as(http::Method::GET, url.as_str(), None).await
     }
 }
 
