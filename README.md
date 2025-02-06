@@ -89,3 +89,5 @@ request routes and methods through the exported `static` `Route`s.
 ## Logo
 
 The polyproto logo was designed by the wonderful [antidoxi](https://antidoxi.carrd.co/).
+The polyproto logos provided in this document are not covered by the MPL-2.0 license covering the rest
+of this project.
