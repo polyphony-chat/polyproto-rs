@@ -511,11 +511,11 @@ pub struct ServiceDeleteResponse {
 /// - `impl From<Url> for WellKnown`
 /// - `impl From<WellKnown> for Url`
 /// - `impl From<WellKnown> for String`
+// TODO: move into submodule
 pub struct WellKnown {
     api: Url,
 }
 
-#[cfg(feature = "serde")]
 impl WellKnown {
     /// Return the [Url] that this .well-known entry points to.
     pub fn api(&self) -> &Url {
@@ -523,35 +523,74 @@ impl WellKnown {
     }
 }
 
-#[cfg(feature = "serde")]
+impl WellKnown {
+    /**
+    # A little preamble
+
+    The following is an excerpt from section 3.1 of the polyproto specification.
+
+    polyproto servers can be hosted under a domain name different from the domain name appearing on ID-Certs managed by that server if all the following conditions are met:
+    1. Define the "visible domain name" as the domain name visible on an ID-Cert.
+    2. Define the "actual domain name" as the domain name where the polyproto server is actually hosted under.
+    3. The visible domain name must have a URI [visible domain name]/.well-known/polyproto-core, accessible via an HTTP GET request.
+    4. The resource accessible at this URI must be a JSON object formatted as such:
+
+    ```json
+     {
+         "api": "[actual domain name]/.p2/core/"
+     }
+    ```
+
+    5.  The ID-Cert received when querying [actual domain name]/.p2/core/idcert/server with an HTTP
+        GET request must have a field "issuer" containing domain components (dc) that, when parsed,
+        equal the domain name of the visible domain name. If the domain components in this field do
+        not match the domain components of the visible domain name, the server hosted under the actual
+        domain name must not be treated as a polyproto server for the visible domain name.
+
+    If all the above-mentioned conditions can be fulfilled, the client
+    can treat the server located at the actual domain name as a polyproto server serving the visible domain
+    name. Clients must not treat the server located at the actual domain name as a polyproto server
+    serving the actual domain name.
+
+    # TL;DR
+
+    This function verifies these 5 criteria. If all of these criteria
+    are fulfilled, `true` is returned. If any of the criteria are not fulfilled, `false` is returned.
+    Criterion #3 is fulfilled by the existence of this struct object.
+    */
+    pub fn matches_certificate<S: Signature, P: PublicKey<S>>(&self, cert: &IdCert<S, P>) -> bool {
+        self.api
+            == match cert.issuer_url() {
+                Ok(issuer_url) => issuer_url,
+                Err(_) => return false,
+            }
+    }
+}
+
 impl std::fmt::Display for WellKnown {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.api.as_str())
     }
 }
 
-#[cfg(feature = "serde")]
 impl<'a> From<&'a WellKnown> for &'a str {
     fn from(value: &'a WellKnown) -> Self {
         value.api.as_str()
     }
 }
 
-#[cfg(feature = "serde")]
 impl From<Url> for WellKnown {
     fn from(api: Url) -> Self {
         WellKnown { api }
     }
 }
 
-#[cfg(feature = "serde")]
 impl From<WellKnown> for Url {
     fn from(value: WellKnown) -> Self {
         value.api
     }
 }
 
-#[cfg(feature = "serde")]
 impl From<WellKnown> for String {
     fn from(value: WellKnown) -> Self {
         value.api.to_string()
