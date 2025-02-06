@@ -86,6 +86,22 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCert<S, P> {
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCertTbs<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
         log::trace!(
+            "[IdCertTbs::validate()] validating if DER encoding is intact for certificate serial {:?}",
+            self.serial_number
+        );
+        match self.clone().to_der() {
+            Ok(der) => der,
+            Err(_) => {
+                log::warn!(
+                    "[IdCert::full_verify_actor(&self)] {}",
+                    crate::errors::ERR_CERTIFICATE_TO_DER_ERROR
+                );
+                return Err(ConstraintError::Malformed(Some(
+                    crate::errors::ERR_CERTIFICATE_TO_DER_ERROR.to_string(),
+                )));
+            }
+        };
+        log::trace!(
             "[IdCertTbs::validate()] validating capabilities for target: {:?}",
             target
         );
