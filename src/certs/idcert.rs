@@ -362,6 +362,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// - The _magic_ 5 conditions are all met
     /// - There is no difference between the "visible" and "actual" domain names
     // TODO: Test me
+    // TODO: IdCertTbs needs this too
     pub async fn verify_link_visible_actual_domain_names(&self, client: &HttpClient) -> bool {
         let well_known = match WellKnown::new(
             client,
