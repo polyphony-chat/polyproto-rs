@@ -5,10 +5,12 @@
 use der::asn1::Uint;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
-use x509_cert::name::{Name, RdnSequence};
+use x509_cert::name::Name;
 use x509_cert::time::Validity;
 use x509_cert::Certificate;
 
+use crate::api::core::WellKnown;
+use crate::api::HttpClient;
 use crate::errors::{ConstraintError, ConversionError, InvalidCert, ERR_CERTIFICATE_TO_DER_ERROR};
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
@@ -335,27 +337,46 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             .verify_signature(&self.signature, &der)?)
     }
 
-    /// From an [IdCert], retrieve the `issuer` as a [Url].
-    // TODO: Test me
+    /// From an [IdCertTbs], retrieve the `issuer` as a [Url].
     pub fn issuer_url(&self) -> Result<url::Url, url::ParseError> {
-        rdns_to_url(&self.id_cert_tbs.issuer)
+        self.id_cert_tbs.issuer_url()
     }
 
-    /// From an [IdCert], retrieve the `subject` as a [Url].
+    /// _Sorry for the long name._
+    ///
+    /// Verifies the conditions listed in [section #3.1](https://docs.polyphony.chat/Protocol%20Specifications/core/#31-well-known)
+    /// of the polyproto protocol specification regarding hosting a polyproto server under a different
+    /// domain name than the one visible to the public.
+    ///
+    /// ## Returns
+    ///
+    /// ### `false`, if
+    ///
+    /// - Any of the 5 conditions listed in section #3.1 are found to be violated
+    /// - The server hosting the "visible domain name" is not reachable, but the "actual domain name"
+    ///   server is reachable.
+    /// - Both servers are not reachable
+    ///
+    /// ### `true`, if
+    ///
+    /// - The _magic_ 5 conditions are all met
+    /// - There is no difference between the "visible" and "actual" domain names
     // TODO: Test me
-    pub fn subject_url(&self) -> Result<url::Url, url::ParseError> {
-        rdns_to_url(&self.id_cert_tbs.issuer)
+    pub async fn verify_link_visible_actual_domain_names(&self, client: &HttpClient) -> bool {
+        let well_known = match WellKnown::new(
+            client,
+            &match self.issuer_url() {
+                Ok(url) => url,
+                Err(_) => return false,
+            },
+        )
+        .await
+        {
+            Ok(wk) => wk,
+            Err(_) => return false,
+        };
+        well_known.matches_certificate(self)
     }
-}
-
-fn rdns_to_url(rdn_sequence: &RdnSequence) -> Result<url::Url, url::ParseError> {
-    use url::Url;
-
-    let mut url_str = String::new();
-    for rdn in rdn_sequence.0.iter() {
-        url_str += &rdn.to_string();
-    }
-    Url::parse(url_str.trim())
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<IdCert<S, P>> for Certificate {
