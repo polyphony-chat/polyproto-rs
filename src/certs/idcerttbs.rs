@@ -7,7 +7,7 @@ use der::{Decode, Encode};
 use spki::AlgorithmIdentifierOwned;
 use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
-use x509_cert::name::Name;
+use x509_cert::name::{Name, RdnSequence};
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 use x509_cert::TbsCertificate;
@@ -152,6 +152,23 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         time >= self.validity.not_before.to_unix_duration().as_secs()
             && time <= self.validity.not_after.to_unix_duration().as_secs()
     }
+
+    /// From an [IdCertTbs], retrieve the `issuer` as a [Url].
+    // TODO: Test me
+    pub fn issuer_url(&self) -> Result<url::Url, url::ParseError> {
+        rdns_to_url(&self.issuer)
+    }
+}
+
+// TODO: Test me
+fn rdns_to_url(rdn_sequence: &RdnSequence) -> Result<url::Url, url::ParseError> {
+    use url::Url;
+
+    let mut url_str = String::new();
+    for rdn in rdn_sequence.0.iter() {
+        url_str += &rdn.to_string();
+    }
+    Url::parse(url_str.trim())
 }
 
 impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
