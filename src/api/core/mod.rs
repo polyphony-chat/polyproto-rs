@@ -7,7 +7,7 @@ use std::time::UNIX_EPOCH;
 use crate::types::x509_cert::SerialNumber;
 use crate::url::Url;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{from_str, json};
 
 use crate::certs::idcert::IdCert;
 use crate::certs::idcsr::IdCsr;
@@ -424,8 +424,8 @@ impl HttpClient {
     /// ## Errors
     ///
     /// This method will error if the server is unreachable or if the resource is malformed.
-    pub async fn get_well_known(&self, url: &str) -> HttpResult<WellKnown> {
-        let url = Url::parse(url)?.join(".well-known/polyproto-core")?;
+    pub async fn get_well_known(&self, url: &Url) -> HttpResult<WellKnown> {
+        let url = url.join(".well-known/polyproto-core")?;
         self.request_as(http::Method::GET, url.as_str(), None).await
     }
 }
@@ -525,9 +525,12 @@ impl WellKnown {
 
 impl WellKnown {
     /**
-    # A little preamble
+    Checks whether the "visible domain" in a certificate matches the "actual url" specified by the
+    `.well-known` endpoint of that "visible domain".
 
-    The following is an excerpt from section 3.1 of the polyproto specification.
+    ## .well-known validation criterions
+
+    > *The following is an excerpt from section 3.1 of the polyproto specification.*
 
     polyproto servers can be hosted under a domain name different from the domain name appearing on ID-Certs managed by that server if all the following conditions are met:
     1. Define the "visible domain name" as the domain name visible on an ID-Cert.
@@ -552,18 +555,34 @@ impl WellKnown {
     name. Clients must not treat the server located at the actual domain name as a polyproto server
     serving the actual domain name.
 
-    # TL;DR
+    ## TL;DR
 
     This function verifies these 5 criteria. If all of these criteria
     are fulfilled, `true` is returned. If any of the criteria are not fulfilled, `false` is returned.
     Criterion #3 is fulfilled by the existence of this struct object.
     */
+    // TODO: Test me
     pub fn matches_certificate<S: Signature, P: PublicKey<S>>(&self, cert: &IdCert<S, P>) -> bool {
         self.api
             == match cert.issuer_url() {
                 Ok(issuer_url) => issuer_url,
                 Err(_) => return false,
             }
+    }
+
+    /// Request the contents of the polyproto `.well-known` endpoint from a base url.
+    ///
+    /// This is a shorthand for
+    /// ```rs
+    /// self.request_as::<WellKnown>(http::Method::GET, url, None).await
+    /// ```
+    ///
+    /// ## Errors
+    ///
+    /// This method will error if the server is unreachable or if the resource is malformed.
+    // TODO: Test me
+    pub async fn new(client: &HttpClient, url: &Url) -> HttpResult<Self> {
+        client.get_well_known(url).await
     }
 }
 
@@ -576,12 +595,6 @@ impl std::fmt::Display for WellKnown {
 impl<'a> From<&'a WellKnown> for &'a str {
     fn from(value: &'a WellKnown) -> Self {
         value.api.as_str()
-    }
-}
-
-impl From<Url> for WellKnown {
-    fn from(api: Url) -> Self {
-        WellKnown { api }
     }
 }
 
