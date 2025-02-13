@@ -4,10 +4,11 @@
 
 use std::time::UNIX_EPOCH;
 
+use crate::certs::idcerttbs::IdCertTbs;
 use crate::types::x509_cert::SerialNumber;
 use crate::url::Url;
 use serde::{Deserialize, Serialize};
-use serde_json::{from_str, json};
+use serde_json::json;
 
 use crate::certs::idcert::IdCert;
 use crate::certs::idcsr::IdCsr;
@@ -521,9 +522,7 @@ impl WellKnown {
     pub fn api(&self) -> &Url {
         &self.api
     }
-}
 
-impl WellKnown {
     /**
     Checks whether the "visible domain" in a certificate matches the "actual url" specified by the
     `.well-known` endpoint of that "visible domain".
@@ -562,7 +561,10 @@ impl WellKnown {
     Criterion #3 is fulfilled by the existence of this struct object.
     */
     // TODO: Test me
-    pub fn matches_certificate<S: Signature, P: PublicKey<S>>(&self, cert: &IdCert<S, P>) -> bool {
+    pub fn matches_certificate<S: Signature, P: PublicKey<S>>(
+        &self,
+        cert: &IdCertTbs<S, P>,
+    ) -> bool {
         self.api
             == match cert.issuer_url() {
                 Ok(issuer_url) => issuer_url,
