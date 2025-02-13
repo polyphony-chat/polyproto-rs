@@ -664,14 +664,17 @@ async fn get_well_known() {
     let server = Server::run();
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new(&url).unwrap();
-    let response = WellKnown::from(
-        Url::parse(&url)
+    let response = WellKnown::new(
+        &client,
+        &Url::parse(&url)
             .unwrap()
             .join(".p2")
             .unwrap()
             .join("core")
             .unwrap(),
-    );
+    )
+    .await
+    .unwrap();
     server.expect(
         Expectation::matching(all_of![
             request::method(WELL_KNOWN.method.to_string()),
@@ -679,5 +682,8 @@ async fn get_well_known() {
         ])
         .respond_with(json_encoded(json!(response))),
     );
-    let _well_known = client.get_well_known(&url).await.unwrap();
+    let _well_known = client
+        .get_well_known(&Url::parse(&url).unwrap())
+        .await
+        .unwrap();
 }
