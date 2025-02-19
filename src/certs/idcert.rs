@@ -9,6 +9,7 @@ use x509_cert::name::Name;
 use x509_cert::time::Validity;
 use x509_cert::Certificate;
 
+#[cfg(feature = "reqwest")]
 use crate::api::HttpClient;
 use crate::errors::{ConstraintError, ConversionError, InvalidCert, ERR_CERTIFICATE_TO_DER_ERROR};
 use crate::key::{PrivateKey, PublicKey};
@@ -361,6 +362,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// - The _magic_ 5 conditions are all met
     /// - There is no difference between the "visible" and "actual" domain names
     // TODO: Test me
+    #[cfg(feature = "reqwest")]
     pub async fn verify_link_visible_actual_domain_names(&self, client: &HttpClient) -> bool {
         self.id_cert_tbs
             .verify_link_visible_actual_domain_names(client)

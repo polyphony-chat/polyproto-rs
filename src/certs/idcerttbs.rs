@@ -12,8 +12,8 @@ use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 use x509_cert::TbsCertificate;
 
-use crate::api::core::WellKnown;
-use crate::api::HttpClient;
+#[cfg(feature = "reqwest")]
+use crate::api::{core::WellKnown, HttpClient};
 use crate::errors::ConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
@@ -181,6 +181,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     /// - The _magic_ 5 conditions are all met
     /// - There is no difference between the "visible" and "actual" domain names
     // TODO: Test me
+    #[cfg(feature = "reqwest")]
     pub async fn verify_link_visible_actual_domain_names(&self, client: &HttpClient) -> bool {
         let well_known = match WellKnown::new(
             client,
