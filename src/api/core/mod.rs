@@ -497,21 +497,7 @@ pub struct ServiceDeleteResponse {
 #[derive(
     Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Deserialize, serde::Serialize,
 )]
-/// Response from querying a polyproto `.well-known` endpoint. Retrieve the url as such
-///
-/// ```
-/// # use url::Url;
-/// # let url = Url::parse("https://example.com").unwrap();
-/// let well_known = WellKnown::from(url);
-/// well_known.api();
-/// ```
-///
-/// This struct implements a whole bunch of `From<T>` variants for convenience:
-///
-/// - `impl<'a> From<&'a WellKnown> for &'a str`
-/// - `impl From<Url> for WellKnown`
-/// - `impl From<WellKnown> for Url`
-/// - `impl From<WellKnown> for String`
+/// Response from querying a polyproto `.well-known` endpoint.
 // TODO: move into submodule
 pub struct WellKnown {
     api: Url,
