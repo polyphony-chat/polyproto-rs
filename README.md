@@ -26,12 +26,12 @@ crate.
 
 ## Implementing polyproto
 
-Start by implementing the trait [crate::signature::Signature] for a signature algorithm of your
+Start by implementing the trait `[crate::signature::Signature]` for a signature algorithm of your
 choice. Popular crates for cryptography and signature algorithms supply their own `PublicKey` and
 `PrivateKey` types. You should extend upon these types with your own structs and implement the
-[crate::key] traits for these new structs.
+`[crate::key]` traits for these new structs.
 
-You can then use the [crate::certs] types to build certificates using your implementations of the
+You can then use the `[crate::certs]` types to build certificates using your implementations of the
 aforementioned traits.
 
 **View the [examples](./examples/)** directory for a simple example on how to implement and use this
