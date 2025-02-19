@@ -24,7 +24,7 @@ use polyproto::types::routes::core::v1::{
 use polyproto::types::spki::AlgorithmIdentifierOwned;
 use polyproto::types::x509_cert::SerialNumber;
 use polyproto::types::{EncryptedPkm, FederationId, PrivateKeyInfo, Service, ServiceName};
-use serde_json::json;
+use serde_json::{from_str, json};
 use spki::ObjectIdentifier;
 use url::Url;
 use x509_cert::time::Validity;
@@ -664,23 +664,13 @@ async fn get_well_known() {
     let server = Server::run();
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new(&url).unwrap();
-    let response = WellKnown::new(
-        &client,
-        &Url::parse(&url)
-            .unwrap()
-            .join(".p2")
-            .unwrap()
-            .join("core")
-            .unwrap(),
-    )
-    .await
-    .unwrap();
+    let response = from_str::<WellKnown>(&format!(r#"{{"api":"{}/.p2/core"}}"#, url)).unwrap();
     server.expect(
         Expectation::matching(all_of![
             request::method(WELL_KNOWN.method.to_string()),
             request::path(WELL_KNOWN.path),
         ])
-        .respond_with(json_encoded(json!(response))),
+        .respond_with(json_encoded(response)),
     );
     let _well_known = client
         .get_well_known(&Url::parse(&url).unwrap())
