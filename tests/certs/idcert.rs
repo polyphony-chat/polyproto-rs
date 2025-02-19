@@ -281,9 +281,12 @@ fn cert_from_der() {
     );
     assert_eq!(cert_from_der, cert);
 
+    // Actor cert ^
+    // Home server cert v
+
     let csr = polyproto::certs::idcsr::IdCsr::new(
         &RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
-        &priv_key_actor,
+        &priv_key_home_server,
         &Capabilities::default_home_server(),
         Some(Target::HomeServer),
     )
@@ -306,7 +309,7 @@ fn cert_from_der() {
     let data = cert.clone().to_der().unwrap();
     let cert_from_der = IdCert::from_der(
         &data,
-        polyproto::certs::Target::Actor,
+        polyproto::certs::Target::HomeServer,
         10,
         &priv_key_home_server.public_key,
     )
