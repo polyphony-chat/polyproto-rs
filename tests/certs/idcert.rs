@@ -198,7 +198,7 @@ fn cert_from_pem() {
 
     let csr = polyproto::certs::idcsr::IdCsr::new(
         &RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
-        &priv_key_actor,
+        &priv_key_home_server,
         &Capabilities::default_home_server(),
         Some(Target::HomeServer),
     )
@@ -221,7 +221,7 @@ fn cert_from_pem() {
     let data = cert.clone().to_pem(der::pem::LineEnding::LF).unwrap();
     let cert_from_pem = IdCert::from_pem(
         &data,
-        polyproto::certs::Target::Actor,
+        polyproto::certs::Target::HomeServer,
         10,
         &priv_key_home_server.public_key,
     )
