@@ -568,7 +568,6 @@ impl WellKnown {
     /// ## Errors
     ///
     /// This method will error if the server is unreachable or if the resource is malformed.
-    // TODO: Test me
     pub async fn new(client: &HttpClient, url: &Url) -> HttpResult<Self> {
         client.get_well_known(url).await
     }
