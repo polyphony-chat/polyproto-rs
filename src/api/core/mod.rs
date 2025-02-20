@@ -509,6 +509,12 @@ impl WellKnown {
         &self.api
     }
 
+    /// Create [Self] from a [Url], setting the `api` field to the supplied URL without performing any
+    /// validity checks. Use [Self::new()] if you want to create [Self] from a link to a "visible domain".
+    pub fn from_url(url: &Url) -> Self {
+        Self::from(url.clone())
+    }
+
     /**
     Checks whether the "visible domain" in a certificate matches the "actual url" specified by the
     `.well-known` endpoint of that "visible domain".
@@ -551,11 +557,12 @@ impl WellKnown {
         &self,
         cert: &IdCertTbs<S, P>,
     ) -> bool {
-        self.api
-            == match cert.issuer_url() {
-                Ok(issuer_url) => issuer_url,
-                Err(_) => return false,
-            }
+        let visible_domain = match cert.issuer_url() {
+            Ok(url) => url,
+            Err(_) => return false,
+        };
+        let actual_domain = &self.api.host();
+        visible_domain.host() == *actual_domain
     }
 
     /// Request the contents of the polyproto `.well-known` endpoint from a base url.
@@ -576,6 +583,13 @@ impl WellKnown {
 impl std::fmt::Display for WellKnown {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.api.as_str())
+    }
+}
+
+impl From<Url> for WellKnown {
+    /// Does NOT check whether [Self] is valid. Use [Self::new()] instead.
+    fn from(value: Url) -> Self {
+        WellKnown { api: value }
     }
 }
 

@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use std::sync::Arc;
+
 use serde::Deserialize;
 use serde_json::from_str;
 use url::Url;
@@ -31,9 +33,6 @@ pub struct HttpClient {
     /// The reqwest client used to make requests.
     pub client: reqwest::Client,
     headers: reqwest::header::HeaderMap,
-    version: http::Version, //TODO: Allow setting HTTP version?
-    pub(crate) url: Url,
-    zstd_compression: bool,
 }
 
 /// A type alias for the result of an HTTP request.
@@ -50,22 +49,15 @@ impl HttpClient {
     /// # Errors
     ///
     /// Will fail if the URL is invalid or if there are issues creating the reqwest client.
-    pub fn new(url: &str) -> HttpResult<Self> {
+    pub fn new() -> HttpResult<Self> {
         let client = reqwest::ClientBuilder::new()
             .zstd(true)
             .user_agent(format!("polyproto-rs/{}", env!("CARGO_PKG_VERSION")))
             .build()?;
         let headers = reqwest::header::HeaderMap::new();
         let url = Url::parse(url)?;
-        let version = http::Version::HTTP_11;
 
-        Ok(Self {
-            client,
-            headers,
-            url,
-            version,
-            zstd_compression: true,
-        })
+        Ok(Self { client, headers })
     }
 
     /// Creates a new instance of the client with the specified arguments. To access routes which
@@ -82,9 +74,7 @@ impl HttpClient {
     ///
     /// Will fail if the URL is invalid or if there are issues creating the reqwest client.
     pub fn new_with_args(
-        url: &str,
         headers: reqwest::header::HeaderMap,
-        version: http::Version,
         zstd_compression: bool,
     ) -> HttpResult<Self> {
         let client = reqwest::ClientBuilder::new()
@@ -92,29 +82,12 @@ impl HttpClient {
             .user_agent(format!("polyproto-rs/{}", env!("CARGO_PKG_VERSION")))
             .build()?;
         let url = Url::parse(url)?;
-        Ok(Self {
-            client,
-            headers,
-            version,
-            url,
-            zstd_compression,
-        })
+        Ok(Self { client, headers })
     }
 
     /// Sets the headers for the client.
     pub fn headers(&mut self, headers: reqwest::header::HeaderMap) {
         self.headers = headers;
-    }
-
-    /// Returns the URL
-    pub fn url(&self) -> String {
-        self.url.to_string()
-    }
-
-    /// Sets the base URL of the client.
-    pub fn set_url(&mut self, url: &str) -> HttpResult<()> {
-        self.url = Url::parse(url)?;
-        Ok(())
     }
 
     /// Sends a request and returns a [HttpResult].
@@ -159,5 +132,25 @@ impl HttpClient {
         let response_text = response.text().await?;
         let object = from_str::<T>(&response_text)?;
         Ok(object)
+    }
+}
+
+// i would like to move all routes requiring auth to the Session struct. all other routes can stay
+// at HttpClient.
+
+#[derive(Debug, Clone)]
+pub struct Session {
+    token: String,
+    client: Arc<HttpClient>,
+    instance_url: Url,
+}
+
+impl Session {
+    pub fn new(client: &HttpClient, token: &str, instance_url: Url) -> Self {
+        Self {
+            token: token.to_string(),
+            client: Arc::new(client.clone()),
+            instance_url,
+        }
     }
 }

@@ -30,7 +30,7 @@ use url::Url;
 use x509_cert::time::Validity;
 
 use crate::common::{
-    actor_id_cert, actor_subject, default_validity, gen_priv_key, home_server_id_cert,
+    self, actor_id_cert, actor_subject, default_validity, gen_priv_key, home_server_id_cert,
     home_server_subject, init_logger, Ed25519PublicKey, Ed25519Signature,
 };
 
@@ -676,4 +676,12 @@ async fn get_well_known() {
         .get_well_known(&Url::parse(&url).unwrap())
         .await
         .unwrap();
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn well_known_matches_certificate() {
+    let well_known = WellKnown::from_url(&Url::parse("https://polyphony.chat/.p2/core").unwrap());
+    let cert = common::actor_id_cert("flori");
+    assert!(well_known.matches_certificate(&cert.id_cert_tbs))
 }
