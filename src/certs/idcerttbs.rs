@@ -4,6 +4,7 @@
 
 use der::asn1::Uint;
 use der::{Decode, Encode};
+use log::trace;
 use spki::AlgorithmIdentifierOwned;
 use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
@@ -156,7 +157,6 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     }
 
     /// From an [IdCertTbs], retrieve the `issuer` as a [Url].
-    // TODO: Test me
     pub fn issuer_url(&self) -> Result<url::Url, url::ParseError> {
         rdns_to_url(&self.issuer)
     }
@@ -199,14 +199,21 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     }
 }
 
-// TODO: Test me
 fn rdns_to_url(rdn_sequence: &RdnSequence) -> Result<url::Url, url::ParseError> {
     use url::Url;
 
-    let mut url_str = String::new();
+    let mut url_parts = Vec::new();
+    let mut url_str = String::from("https://");
     for rdn in rdn_sequence.0.iter() {
-        url_str += &rdn.to_string();
+        url_parts.push(rdn);
     }
+    url_parts.reverse();
+    for part in url_parts.iter() {
+        url_str += &part.to_string().split_off(3);
+        url_str += ".";
+    }
+    let _ = url_str.pop();
+    trace!(r#"Trying to parse string "{}" as url::Url..."#, url_str);
     Url::parse(url_str.trim())
 }
 

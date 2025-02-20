@@ -19,13 +19,14 @@ use polyproto::signature::Signature;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 use thiserror::Error;
+use url::Url;
 use x509_cert::attr::Attributes;
 use x509_cert::name::RdnSequence;
 use x509_cert::request::CertReq;
 use x509_cert::time::{Time, Validity};
 use x509_cert::Certificate;
 
-use crate::common::*;
+use crate::common::{self, *};
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
@@ -319,4 +320,13 @@ fn cert_from_der() {
         cert_from_der.id_cert_tbs.capabilities.key_usage.key_usages
     );
     assert_eq!(cert_from_der, cert);
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn issuer_url() {
+    init_logger();
+    let id_cert_actor = common::actor_id_cert("flori");
+    let url = id_cert_actor.issuer_url().unwrap();
+    assert_eq!(url, Url::parse("https://polyphony.chat").unwrap())
 }
