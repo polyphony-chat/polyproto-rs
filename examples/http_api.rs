@@ -47,16 +47,17 @@ async fn main() {
     // Create an authorized session
     let session: polyproto::api::Session<Ed25519Signature, Ed25519PrivateKey> =
         polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
-    // You can now use the client to make requests to the polyproto home server!
+    // You can now use the client and session to make requests to the polyproto home server!
+    // The client is responsible for all unauthenticated requests, while sessions handle all
+    // the routes needing authentication of some sort.
     // Routes are documented under <https://docs.polyphony.chat/APIs/core/>, and each route has a
-    // corresponding method in the `HttpClient` struct. For example, if we wanted to get a challenge
-    // string from the server, we would call:
-    let challenge = session.get_challenge_string().await.unwrap();
-    println!("Challenge string: {}", challenge.challenge());
-    println!(
-        "Challenge expires at UNIX timestamp: {}",
-        challenge.expires()
-    );
+    // corresponding method in the `HttpClient` struct. For example, if we wanted to get the certificate
+    // of the home server, we'd call:
+    let cert: polyproto::certs::idcert::IdCert<Ed25519Signature, Ed25519PublicKey> = client
+        .get_server_id_cert(None, &Url::parse("https://example.com/").unwrap())
+        .await
+        .unwrap();
+    dbg!(cert);
 }
 
 #[test]
