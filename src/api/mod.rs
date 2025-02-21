@@ -29,8 +29,6 @@ pub mod core;
 /// header_map.insert("Authorization", "nx8r902hjkxlo2n8n72x0");
 /// let client = HttpClient::new("https://example.com").unwrap();
 /// client.headers(header_map);
-///
-/// let challenge: ChallengeString = client.get_challenge_string().await.unwrap();
 /// ```
 pub struct HttpClient {
     /// The reqwest client used to make requests.
