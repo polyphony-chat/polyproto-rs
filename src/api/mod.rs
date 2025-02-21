@@ -8,7 +8,10 @@ use serde::Deserialize;
 use serde_json::from_str;
 use url::Url;
 
+use crate::certs::idcert::IdCert;
 use crate::errors::RequestError;
+use crate::key::PrivateKey;
+use crate::signature::Signature;
 
 /// The `core` module contains all API routes for implementing the core polyproto protocol in a client or server.
 pub mod core;
@@ -55,7 +58,6 @@ impl HttpClient {
             .user_agent(format!("polyproto-rs/{}", env!("CARGO_PKG_VERSION")))
             .build()?;
         let headers = reqwest::header::HeaderMap::new();
-        let url = Url::parse(url)?;
 
         Ok(Self { client, headers })
     }
@@ -81,7 +83,6 @@ impl HttpClient {
             .zstd(zstd_compression)
             .user_agent(format!("polyproto-rs/{}", env!("CARGO_PKG_VERSION")))
             .build()?;
-        let url = Url::parse(url)?;
         Ok(Self { client, headers })
     }
 
@@ -139,18 +140,31 @@ impl HttpClient {
 // at HttpClient.
 
 #[derive(Debug, Clone)]
-pub struct Session {
+pub struct Session<S: Signature, T: PrivateKey<S>> {
     token: String,
-    client: Arc<HttpClient>,
-    instance_url: Url,
+    pub client: Arc<HttpClient>,
+    pub instance_url: Url,
+    certificate: Option<IdCert<S, T::PublicKey>>,
+    signing_key: Option<T>,
 }
 
-impl Session {
-    pub fn new(client: &HttpClient, token: &str, instance_url: Url) -> Self {
+impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
+    pub fn new(
+        client: &HttpClient,
+        token: &str,
+        instance_url: Url,
+        cert_and_key: Option<(IdCert<S, T::PublicKey>, T)>,
+    ) -> Self {
+        let (certificate, signing_key) = match cert_and_key {
+            Some((c, s)) => (Some(c), Some(s)),
+            None => (None, None),
+        };
         Self {
             token: token.to_string(),
             client: Arc::new(client.clone()),
             instance_url,
+            certificate,
+            signing_key,
         }
     }
 }
