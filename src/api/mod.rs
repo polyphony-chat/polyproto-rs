@@ -145,7 +145,9 @@ impl HttpClient {
 /// unauthenticated APIs by exposing the inner [HttpClient].
 pub struct Session<S: Signature, T: PrivateKey<S>> {
     token: String,
+    /// A reference to the underlying [HttpClient].
     pub client: Arc<HttpClient>,
+    /// The URL of the instance this session belongs to.
     pub instance_url: Url,
     certificate: Option<IdCert<S, T::PublicKey>>,
     signing_key: Option<T>,
