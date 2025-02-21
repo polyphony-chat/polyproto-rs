@@ -7,13 +7,13 @@ use std::time::UNIX_EPOCH;
 use crate::certs::idcerttbs::IdCertTbs;
 use crate::types::x509_cert::SerialNumber;
 use crate::url::Url;
+use cacheable_cert::CacheableIdCert;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::certs::idcert::IdCert;
-use crate::certs::idcsr::IdCsr;
 use crate::certs::SessionId;
-use crate::errors::{ConversionError, RequestError};
+use crate::errors::RequestError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 use crate::types::routes::core::v1::*;
@@ -92,34 +92,6 @@ impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
             .send()
             .await?;
         Ok(())
-    }
-
-    /// Rotate your keys for a given session. The `session_id` in the supplied [IdCsr] must
-    /// correspond to the session token used in the authorization-Header.
-    ///
-    /// Returns the new [IdCert] and a token which can be used to authenticate future requests.
-    ///
-    /// ## Safety guarantees
-    ///
-    /// The resulting [IdCert] is not verified. The caller is responsible for verifying the correctness
-    /// of this `IdCert` using either [IdCert::full_verify_actor()] or [IdCert::full_verify_home_server()].
-    pub async fn rotate_session_id_cert(
-        &self,
-        csr: IdCsr<S, T::PublicKey>,
-    ) -> HttpResult<(IdCert<S, T::PublicKey>, String)> {
-        let request_url = self.instance_url.join(ROTATE_SESSION_IDCERT.path)?;
-        let request_response = self
-            .client
-            .client
-            .request(ROTATE_SESSION_IDCERT.method.clone(), request_url)
-            .bearer_auth(&self.token)
-            .body(csr.to_pem(der::pem::LineEnding::LF)?)
-            .send()
-            .await;
-        let response_value = HttpClient::handle_response::<IdCertToken>(request_response).await?;
-        let id_cert =
-            IdCert::<S, T::PublicKey>::from_pem_unchecked(&response_value.id_cert.to_string())?;
-        Ok((id_cert, response_value.token))
     }
 
     /// Upload encrypted private key material to the server for later retrieval. The upload size
@@ -280,13 +252,14 @@ impl HttpClient {
     ///
     /// ## Safety guarantees
     ///
-    /// The resulting [IdCert] is verified and has the same safety guarantees as specified under
+    /// The resulting [CacheableIdCert] has not been verified. After converting it into an [IdCert],
+    /// you should verify it – if the conversion has not done this already.
     /// [IdCert::full_verify_home_server()], as this method calls that method internally.
     pub async fn get_server_id_cert<S: Signature, P: PublicKey<S>>(
         &self,
         unix_time: Option<u64>,
         instance_url: &Url,
-    ) -> HttpResult<IdCert<S, P>> {
+    ) -> HttpResult<CacheableIdCert> {
         let request_url = instance_url.join(GET_SERVER_IDCERT.path)?;
         let mut request = self
             .client
@@ -295,12 +268,7 @@ impl HttpClient {
             request = request.body(json!({ "timestamp": time }).to_string());
         }
         let response = request.send().await;
-        let pem = HttpClient::handle_response::<String>(response).await?;
-        let id_cert = IdCert::<S, P>::from_pem_unchecked(&pem)?;
-        match id_cert.full_verify_home_server(unix_time.unwrap_or(current_unix_time())) {
-            Ok(_) => (),
-            Err(e) => return Err(RequestError::ConversionError(e.into())),
-        };
+        let id_cert = HttpClient::handle_response::<CacheableIdCert>(response).await?;
         Ok(id_cert)
     }
 
@@ -310,15 +278,15 @@ impl HttpClient {
     ///
     /// ## Safety guarantees
     ///
-    /// The resulting [IdCert]s are not verified. The caller is responsible for verifying the correctness
-    /// of these `IdCert`s using [IdCert::full_verify_actor()] before using them.
+    /// The resulting [CacheableIdCert]s are not verified. The caller is responsible for verifying the correctness
+    /// of these `IdCert`s by converting verifying them using [IdCert::full_verify_actor()] before use.
     pub async fn get_actor_id_certs<S: Signature, P: PublicKey<S>>(
         &self,
         fid: &str,
         unix_time: Option<u64>,
         session_id: Option<&SessionId>,
         instance_url: &Url,
-    ) -> HttpResult<Vec<IdCertExt<S, P>>> {
+    ) -> HttpResult<Vec<CacheableIdCert>> {
         let request_url = instance_url.join(&format!("{}{}", GET_ACTOR_IDCERTS.path, fid))?;
         let mut request = self
             .client
@@ -336,10 +304,10 @@ impl HttpClient {
             request = request.body(body.to_string());
         }
         let response = request.send().await;
-        let pems = HttpClient::handle_response::<Vec<IdCertExtJson>>(response).await?;
+        let pems = HttpClient::handle_response::<Vec<CacheableIdCert>>(response).await?;
         let mut vec_idcert = Vec::new();
-        for json in pems.into_iter() {
-            vec_idcert.push(IdCertExt::try_from(json)?);
+        for cert in pems.into_iter() {
+            vec_idcert.push(cert);
         }
         Ok(vec_idcert)
     }
@@ -438,47 +406,6 @@ impl HttpClient {
     pub async fn get_well_known(&self, url: &Url) -> HttpResult<WellKnown> {
         let url = url.join(".well-known/polyproto-core")?;
         self.request_as(http::Method::GET, url.as_str(), None).await
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-/// Represents an [IdCert] with an additional field `invalidated` which indicates whether the
-/// certificate has been invalidated. This type is used in the API as a response to the
-/// `GET /.p2/core/v1/idcert/actor/:fid`
-/// route. Can be converted to and (try)from [IdCertExtJson].
-pub struct IdCertExt<S: Signature, P: PublicKey<S>> {
-    /// The [IdCert] itself
-    pub id_cert: IdCert<S, P>,
-    /// Whether the certificate has been marked as invalidated
-    pub invalidated: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-/// Stringly typed version of [IdCertExt], used for serialization and deserialization.
-pub struct IdCertExtJson {
-    /// The [IdCert] as a PEM encoded string
-    pub id_cert: String,
-    /// Whether the certificate has been marked as invalidated
-    pub invalidated: bool,
-}
-
-impl<S: Signature, P: PublicKey<S>> From<IdCertExt<S, P>> for IdCertExtJson {
-    fn from(id_cert: IdCertExt<S, P>) -> Self {
-        Self {
-            id_cert: id_cert.id_cert.to_pem(der::pem::LineEnding::LF).unwrap(),
-            invalidated: id_cert.invalidated,
-        }
-    }
-}
-
-impl<S: Signature, P: PublicKey<S>> TryFrom<IdCertExtJson> for IdCertExt<S, P> {
-    type Error = ConversionError;
-
-    fn try_from(id_cert: IdCertExtJson) -> Result<Self, Self::Error> {
-        Ok(Self {
-            id_cert: IdCert::from_pem_unchecked(id_cert.id_cert.as_str())?,
-            invalidated: id_cert.invalidated,
-        })
     }
 }
 
