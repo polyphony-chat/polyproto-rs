@@ -21,6 +21,9 @@ use crate::types::{EncryptedPkm, FederationId, Service, ServiceName};
 
 use super::{HttpClient, HttpResult, Session};
 
+/// Module containing code for cacheable ID-Certs.
+pub mod cacheable_cert;
+
 /// Get the current UNIX timestamp according to the system clock.
 pub fn current_unix_time() -> u64 {
     std::time::SystemTime::now()
