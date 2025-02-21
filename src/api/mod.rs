@@ -197,4 +197,16 @@ impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
             signing_key,
         }
     }
+
+    /// Re-set the token, in case it changes.
+    pub fn set_token(&mut self, token: &str) {
+        self.token = token.to_string();
+    }
+
+    /// Add or update the [IdCert] and [PrivateKey] stored by the [Session], used for authenticated
+    /// operations requiring signing.
+    pub fn set_cert_and_key(&mut self, cert: IdCert<S, T::PublicKey>, signing_key: T) {
+        self.certificate = Some(cert);
+        self.signing_key = Some(signing_key);
+    }
 }
