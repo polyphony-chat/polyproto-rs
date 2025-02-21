@@ -202,6 +202,10 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// Create an [IdCert] from a byte slice containing a PEM encoded X.509 Certificate.
     /// The resulting `IdCert` has the same validity guarantees as when using [IdCert::full_verify_actor()]
     /// or [IdCert::full_verify_home_server()].
+    ///
+    /// ## Parameters
+    ///
+    /// - `time`: UNIX Timestamp; Certificate validity will be tested for given this timestamp.
     pub fn from_pem(
         pem: &str,
         target: Target,
