@@ -140,6 +140,9 @@ impl HttpClient {
 // at HttpClient.
 
 #[derive(Debug, Clone)]
+/// An authenticated polyproto session on an instance. Can optionally store the corresponding [IdCert]
+/// and [PrivateKey] for easy access to APIs requiring these parameters. Also gives access to
+/// unauthenticated APIs by exposing the inner [HttpClient].
 pub struct Session<S: Signature, T: PrivateKey<S>> {
     token: String,
     pub client: Arc<HttpClient>,
@@ -149,6 +152,33 @@ pub struct Session<S: Signature, T: PrivateKey<S>> {
 }
 
 impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
+    /// Creates a new authenticated `Session` instance.
+    ///
+    /// # Parameters
+    /// - `client`: A reference to the [`HttpClient`] used for making API requests.
+    /// - `token`: A string slice representing the authentication token.
+    /// - `instance_url`: The [`Url`] of the instance to which the session connects.
+    /// - `cert_and_key`: An optional tuple containing an [`IdCert`] and a corresponding private key.
+    ///   If provided, these values will be used for authenticated operations requiring signing.
+    ///
+    /// # Returns
+    /// A new `Session` instance initialized with the provided parameters.
+    ///
+    /// # Example
+    /// ```rust
+    /// use std::sync::Arc;
+    /// use some_crate::{Session, HttpClient, IdCert, Url};
+    ///
+    /// let client = HttpClient::new();
+    /// let token = "some_auth_token";
+    /// let instance_url = Url::parse("https://example.com").unwrap();
+    /// let cert_and_key = None; // or Some((id_cert, private_key));
+    ///
+    /// let session = Session::new(&client, token, instance_url, cert_and_key);
+    /// ```
+    ///
+    /// The returned `Session` provides access to authenticated and unauthenticated APIs,
+    /// and stores optional credentials for signing requests when required.
     pub fn new(
         client: &HttpClient,
         token: &str,
