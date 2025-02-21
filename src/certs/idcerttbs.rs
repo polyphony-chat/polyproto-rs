@@ -46,15 +46,15 @@ use super::{PublicKeyInfo, Target};
 /// `TryFrom<IdCertTbs<T>> for TbsCertificateInner<P>`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdCertTbs<S: Signature, P: PublicKey<S>> {
-    /// The certificates' serial number, as issued by the Certificate Authority.
+    /// The certificates' serial number, as issued by the Certificate Authority. Unique per home server.
     pub serial_number: Uint,
     /// The signature algorithm used by the Certificate Authority to sign this certificate.
     pub signature_algorithm: AlgorithmIdentifierOwned,
-    /// X.501 name, identifying the issuer of the certificate.
+    /// A polyproto Distinguished Name (pDN) "issuer", describing the home server that issued the certificate.
     pub issuer: Name,
     /// Validity period of this certificate
     pub validity: Validity,
-    /// X.501 name, identifying the subject (actor) of the certificate.
+    /// A polyproto Distinguished Name (pDN) "subject", describing the actor the certificate is issued to.
     pub subject: Name,
     /// The subjects' public key: [PublicKey].
     pub subject_public_key: P,
