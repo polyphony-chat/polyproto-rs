@@ -17,7 +17,7 @@ use crate::errors::{ConversionError, RequestError};
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 use crate::types::routes::core::v1::*;
-use crate::types::{ChallengeString, EncryptedPkm, FederationId, Service, ServiceName};
+use crate::types::{EncryptedPkm, FederationId, Service, ServiceName};
 
 use super::{HttpClient, HttpResult, Session};
 
@@ -30,19 +30,6 @@ pub fn current_unix_time() -> u64 {
 }
 
 impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
-    /// Request a [ChallengeString] from the server.
-    pub async fn get_challenge_string(&self) -> HttpResult<ChallengeString> {
-        let request_url = self.instance_url.join(GET_CHALLENGE_STRING.path)?;
-        let request_response = self
-            .client
-            .client
-            .request(GET_CHALLENGE_STRING.method.clone(), request_url.to_string())
-            .bearer_auth(&self.token)
-            .send()
-            .await;
-        HttpClient::handle_response(request_response).await
-    }
-
     /// Request the server to rotate its identity key and return the new [IdCert]. This route is
     /// only available to server administrators.
     ///
