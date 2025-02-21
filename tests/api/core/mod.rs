@@ -55,7 +55,9 @@ async fn get_challenge_string() {
     );
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
-    let challenge_string = client.get_challenge_string().await.unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+    let challenge_string = session.get_challenge_string().await.unwrap();
     assert_eq!(challenge_string.challenge(), "a".repeat(32));
     assert_eq!(challenge_string.expires(), 1);
 }
@@ -105,10 +107,9 @@ async fn rotate_server_identity_key() {
     );
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
-    let cert = client
-        .rotate_server_identity_key::<Ed25519Signature, Ed25519PublicKey>()
-        .await
-        .unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+    let cert = session.rotate_server_identity_key().await.unwrap();
     assert_eq!(cert.to_pem(der::pem::LineEnding::LF).unwrap(), cert_pem);
 }
 
@@ -120,6 +121,7 @@ async fn get_server_id_cert() {
     let server = Server::run();
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
+
     server.expect(
         Expectation::matching(all_of![
             request::method(GET_SERVER_IDCERT.method.as_str()),
@@ -129,8 +131,8 @@ async fn get_server_id_cert() {
         .respond_with(json_encoded(json!(cert_pem))),
     );
 
-    let cert = client
-        .get_server_id_cert::<Ed25519Signature, Ed25519PublicKey>(Some(10))
+    let cert: IdCert<Ed25519Signature, Ed25519PublicKey> = client
+        .get_server_id_cert(Some(10), &Url::parse(&url).unwrap())
         .await
         .unwrap();
     assert_eq!(cert.to_pem(der::pem::LineEnding::LF).unwrap(), cert_pem);
@@ -177,6 +179,7 @@ async fn get_actor_id_certs() {
             "flori@polyphony.chat",
             Some(12345),
             Some(&SessionId::new_validated("cool_session_id").unwrap()),
+            &Url::parse(&url).unwrap(),
         )
         .await
         .unwrap();
@@ -206,6 +209,7 @@ async fn get_actor_id_certs() {
             "flori@polyphony.chat",
             Some(12345),
             Some(&SessionId::new_validated("cool_session_id").unwrap()),
+            &Url::parse(&url).unwrap(),
         )
         .await
         .unwrap();
@@ -238,6 +242,7 @@ async fn get_actor_id_certs() {
             "flori@polyphony.chat",
             Some(12345),
             None,
+            &Url::parse(&url).unwrap(),
         )
         .await
         .unwrap();
@@ -271,6 +276,7 @@ async fn get_actor_id_certs() {
             "flori@polyphony.chat",
             None,
             Some(&SessionId::new_validated("cool_session_id").unwrap()),
+            &Url::parse(&url).unwrap(),
         )
         .await
         .unwrap();
@@ -302,10 +308,9 @@ async fn update_session_id_cert() {
     );
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
-    client
-        .update_session_id_cert::<Ed25519Signature, Ed25519PublicKey>(id_cert)
-        .await
-        .unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+    session.update_session_id_cert(id_cert).await.unwrap();
 }
 
 #[tokio::test]
@@ -324,7 +329,9 @@ async fn delete_session() {
     );
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
-    client
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+    session
         .delete_session(&SessionId::new_validated("cool_session_id").unwrap())
         .await
         .unwrap();
@@ -365,10 +372,9 @@ async fn rotate_session_id_cert() {
     );
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
-    client
-        .rotate_session_id_cert::<Ed25519Signature, Ed25519PublicKey>(id_csr)
-        .await
-        .unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+    session.rotate_session_id_cert(id_csr).await.unwrap();
 }
 
 fn encrypted_pkm(serial: u128) -> EncryptedPkm {
@@ -410,7 +416,9 @@ async fn upload_encrypted_pkm() {
     );
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
-    client
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+    session
         .upload_encrypted_pkm(vec![encrypted_pkm])
         .await
         .unwrap();
@@ -422,6 +430,8 @@ async fn get_encrypted_pkm() {
     let server = Server::run();
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
     let serial = 7923184u128;
     let encrypted_pkm = encrypted_pkm(serial);
     server.expect(
@@ -432,7 +442,7 @@ async fn get_encrypted_pkm() {
         ])
         .respond_with(json_encoded(json!([encrypted_pkm]))),
     );
-    let pkm = client
+    let pkm = session
         .get_encrypted_pkm(vec![SerialNumber::from(serial)])
         .await
         .unwrap();
@@ -445,6 +455,8 @@ async fn delete_encrypted_pkm() {
     let server = Server::run();
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
     let serial = 7923184u128;
     server.expect(
         Expectation::matching(all_of![
@@ -455,7 +467,7 @@ async fn delete_encrypted_pkm() {
         .respond_with(status_code(204)),
     );
 
-    client
+    session
         .delete_encrypted_pkm(vec![SerialNumber::from(serial)])
         .await
         .unwrap();
@@ -475,7 +487,10 @@ async fn get_pkm_upload_size_limit() {
         ])
         .respond_with(json_encoded(limit)),
     );
-    let resp = client.get_pkm_upload_size_limit().await.unwrap();
+    let resp = client
+        .get_pkm_upload_size_limit(&Url::parse(&url).unwrap())
+        .await
+        .unwrap();
     assert_eq!(resp, limit);
 }
 
@@ -500,7 +515,11 @@ async fn discover_services() {
         .respond_with(json_encoded(json!(vec![&service]))),
     );
     let resp = client
-        .discover_services(&FederationId::new(FID).unwrap(), None)
+        .discover_services(
+            &FederationId::new(FID).unwrap(),
+            None,
+            &Url::parse(&url).unwrap(),
+        )
         .await
         .unwrap();
     assert_eq!(resp[0], service);
@@ -516,7 +535,11 @@ async fn discover_services() {
         .respond_with(json_encoded(json!(vec![&service]))),
     );
     let resp = client
-        .discover_services(&FederationId::new(FID).unwrap(), Some(1))
+        .discover_services(
+            &FederationId::new(FID).unwrap(),
+            Some(1),
+            &Url::parse(&url).unwrap(),
+        )
         .await
         .unwrap();
     assert_eq!(resp[0], service);
@@ -547,7 +570,12 @@ async fn discover_single_service() {
         .respond_with(json_encoded(json!([service]))),
     );
     let result = client
-        .discover_service(&FederationId::new(FID).unwrap(), &service_name, None)
+        .discover_service(
+            &FederationId::new(FID).unwrap(),
+            &service_name,
+            None,
+            &Url::parse(&url).unwrap(),
+        )
         .await
         .unwrap();
     assert_eq!(result[0], service);
@@ -564,7 +592,12 @@ async fn discover_single_service() {
         .respond_with(json_encoded(json!([service]))),
     );
     let result = client
-        .discover_service(&FederationId::new(FID).unwrap(), &service_name, Some(1))
+        .discover_service(
+            &FederationId::new(FID).unwrap(),
+            &service_name,
+            Some(1),
+            &Url::parse(&url).unwrap(),
+        )
         .await
         .unwrap();
     assert_eq!(result[0], service);
@@ -582,6 +615,8 @@ async fn add_discoverable_service() {
     let server = Server::run();
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
     server.expect(
         Expectation::matching(all_of![
             request::method(CREATE_DISCOVERABLE.method.to_string()),
@@ -590,7 +625,7 @@ async fn add_discoverable_service() {
         ])
         .respond_with(json_encoded(json!([service]))),
     );
-    let services = client.add_discoverable_service(&service).await.unwrap();
+    let services = session.add_discoverable_service(&service).await.unwrap();
     assert_eq!(services[0], service);
 }
 
@@ -606,6 +641,8 @@ async fn set_primary_service_provider() {
     let server = Server::run();
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
     server.expect(
         Expectation::matching(all_of![
             request::method(SET_PRIMARY_DISCOVERABLE.method.to_string()),
@@ -617,7 +654,7 @@ async fn set_primary_service_provider() {
         ])
         .respond_with(json_encoded(json!([service]))),
     );
-    let services = client
+    let services = session
         .set_primary_service_provider(&service.url, &service.service)
         .await
         .unwrap();
@@ -640,6 +677,8 @@ async fn delete_service_provider() {
     let server = Server::run();
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
     server.expect(
         Expectation::matching(all_of![
             request::method(DELETE_DISCOVERABLE.method.to_string()),
@@ -651,7 +690,7 @@ async fn delete_service_provider() {
         ])
         .respond_with(json_encoded(json!(delete_response))),
     );
-    let services = client
+    let services = session
         .delete_discoverable_service(&service.url, &service.service)
         .await
         .unwrap();
