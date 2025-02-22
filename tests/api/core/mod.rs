@@ -16,10 +16,9 @@ use polyproto::certs::idcsr::IdCsr;
 use polyproto::certs::SessionId;
 use polyproto::types::routes::core::v1::{
     CREATE_DISCOVERABLE, DELETE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_SESSION,
-    DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS, GET_CHALLENGE_STRING,
-    GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_IDCERT,
-    ROTATE_SERVER_IDENTITY_KEY, ROTATE_SESSION_IDCERT, SET_PRIMARY_DISCOVERABLE,
-    UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM, WELL_KNOWN,
+    DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS, GET_ENCRYPTED_PKM,
+    GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_IDCERT, ROTATE_SERVER_IDENTITY_KEY,
+    SET_PRIMARY_DISCOVERABLE, UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM, WELL_KNOWN,
 };
 use polyproto::types::spki::AlgorithmIdentifierOwned;
 use polyproto::types::x509_cert::SerialNumber;
@@ -30,36 +29,13 @@ use url::Url;
 use x509_cert::time::Validity;
 
 use crate::common::{
-    self, actor_id_cert, actor_subject, default_validity, gen_priv_key, home_server_id_cert,
-    home_server_subject, init_logger, Ed25519PublicKey, Ed25519Signature,
+    self, actor_id_cert, gen_priv_key, home_server_id_cert, home_server_subject, init_logger,
+    Ed25519PublicKey, Ed25519Signature,
 };
 
 /// Correctly format the server URL for the test.
 fn server_url(server: &Server) -> String {
     format!("http://{}", server.addr())
-}
-
-#[tokio::test]
-async fn get_challenge_string() {
-    init_logger();
-    let server = Server::run();
-    server.expect(
-        Expectation::matching(request::method_path(
-            GET_CHALLENGE_STRING.method.as_str(),
-            GET_CHALLENGE_STRING.path,
-        ))
-        .respond_with(json_encoded(json!({
-            "challenge": "a".repeat(32),
-            "expires": 1
-        }))),
-    );
-    let url = server_url(&server);
-    let client = polyproto::api::HttpClient::new().unwrap();
-    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
-        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
-    let challenge_string = session.get_challenge_string().await.unwrap();
-    assert_eq!(challenge_string.challenge(), "a".repeat(32));
-    assert_eq!(challenge_string.expires(), 1);
 }
 
 #[tokio::test]
@@ -128,14 +104,19 @@ async fn get_server_id_cert() {
             request::path(GET_SERVER_IDCERT.path),
             request::body(json_decoded(eq(json!({"timestamp": 10})))),
         ])
-        .respond_with(json_encoded(json!(cert_pem))),
+        .respond_with(json_encoded(json!({
+            "idCertPem": cert_pem,
+            "cacheNotValidBefore": 0,
+            "cacheNotValidAfter": u64::MAX,
+            "cacheSignature": "idk"
+        }))),
     );
 
-    let cert: IdCert<Ed25519Signature, Ed25519PublicKey> = client
+    let cert = client
         .get_server_id_cert(Some(10), &Url::parse(&url).unwrap())
         .await
         .unwrap();
-    assert_eq!(cert.to_pem(der::pem::LineEnding::LF).unwrap(), cert_pem);
+    assert_eq!(cert.cert, cert_pem);
 }
 
 #[tokio::test]
@@ -169,13 +150,15 @@ async fn get_actor_id_certs() {
             }))))
         ])
         .respond_with(json_encoded(json!([{
-            "id_cert": certs_pem[0],
-            "invalidated": false
+            "idCertPem": certs_pem[0],
+            "cacheNotValidBefore": 0,
+            "cacheNotValidAfter": u64::MAX,
+            "cacheSignature": "idk"
         }]))),
     );
 
     let certs = client
-        .get_actor_id_certs::<Ed25519Signature, Ed25519PublicKey>(
+        .get_actor_id_certs(
             "flori@polyphony.chat",
             Some(12345),
             Some(&SessionId::new_validated("cool_session_id").unwrap()),
@@ -184,15 +167,8 @@ async fn get_actor_id_certs() {
         .await
         .unwrap();
     assert_eq!(certs.len(), 1);
-    assert_eq!(
-        certs[0]
-            .id_cert
-            .clone()
-            .to_pem(der::pem::LineEnding::LF)
-            .unwrap(),
-        certs_pem[0]
-    );
-    assert!(!certs[0].invalidated);
+    assert_eq!(certs[0].cert, certs_pem[0]);
+    assert!(certs[0].invalidated_at.is_none());
 
     server.expect(
         Expectation::matching(all_of![
@@ -200,12 +176,14 @@ async fn get_actor_id_certs() {
             request::path(matches(format!("^{}.*$", GET_ACTOR_IDCERTS.path))),
         ])
         .respond_with(json_encoded(json!([{
-            "id_cert": certs_pem[0],
-            "invalidated": false
+            "idCertPem": certs_pem[0],
+            "cacheNotValidBefore": 0,
+            "cacheNotValidAfter": u64::MAX,
+            "cacheSignature": "idk"
         }]))),
     );
     let certs = client
-        .get_actor_id_certs::<Ed25519Signature, Ed25519PublicKey>(
+        .get_actor_id_certs(
             "flori@polyphony.chat",
             Some(12345),
             Some(&SessionId::new_validated("cool_session_id").unwrap()),
@@ -214,15 +192,8 @@ async fn get_actor_id_certs() {
         .await
         .unwrap();
     assert_eq!(certs.len(), 1);
-    assert_eq!(
-        certs[0]
-            .id_cert
-            .clone()
-            .to_pem(der::pem::LineEnding::LF)
-            .unwrap(),
-        certs_pem[0]
-    );
-    assert!(!certs[0].invalidated);
+    assert_eq!(certs[0].cert, certs_pem[0]);
+    assert!(certs[0].invalidated_at.is_none());
 
     server.expect(
         Expectation::matching(all_of![
@@ -232,13 +203,15 @@ async fn get_actor_id_certs() {
                 "timestamp": 12345            }))))
         ])
         .respond_with(json_encoded(json!([{
-            "id_cert": certs_pem[0],
-            "invalidated": false
+            "idCertPem": certs_pem[0],
+            "cacheNotValidBefore": 0,
+            "cacheNotValidAfter": u64::MAX,
+            "cacheSignature": "idk"
         }]))),
     );
 
     let certs = client
-        .get_actor_id_certs::<Ed25519Signature, Ed25519PublicKey>(
+        .get_actor_id_certs(
             "flori@polyphony.chat",
             Some(12345),
             None,
@@ -247,15 +220,8 @@ async fn get_actor_id_certs() {
         .await
         .unwrap();
     assert_eq!(certs.len(), 1);
-    assert_eq!(
-        certs[0]
-            .id_cert
-            .clone()
-            .to_pem(der::pem::LineEnding::LF)
-            .unwrap(),
-        certs_pem[0]
-    );
-    assert!(!certs[0].invalidated);
+    assert_eq!(certs[0].cert, certs_pem[0]);
+    assert!(certs[0].invalidated_at.is_none());
 
     server.expect(
         Expectation::matching(all_of![
@@ -266,13 +232,15 @@ async fn get_actor_id_certs() {
             }))))
         ])
         .respond_with(json_encoded(json!([{
-            "id_cert": certs_pem[0],
-            "invalidated": false
+            "idCertPem": certs_pem[0],
+            "cacheNotValidBefore": 0,
+            "cacheNotValidAfter": u64::MAX,
+            "cacheSignature": "idk"
         }]))),
     );
 
     let certs = client
-        .get_actor_id_certs::<Ed25519Signature, Ed25519PublicKey>(
+        .get_actor_id_certs(
             "flori@polyphony.chat",
             None,
             Some(&SessionId::new_validated("cool_session_id").unwrap()),
@@ -281,15 +249,8 @@ async fn get_actor_id_certs() {
         .await
         .unwrap();
     assert_eq!(certs.len(), 1);
-    assert_eq!(
-        certs[0]
-            .id_cert
-            .clone()
-            .to_pem(der::pem::LineEnding::LF)
-            .unwrap(),
-        certs_pem[0]
-    );
-    assert!(!certs[0].invalidated);
+    assert_eq!(certs[0].cert, certs_pem[0]);
+    assert!(certs[0].invalidated_at.is_none());
 }
 
 #[tokio::test]
@@ -335,46 +296,6 @@ async fn delete_session() {
         .delete_session(&SessionId::new_validated("cool_session_id").unwrap())
         .await
         .unwrap();
-}
-
-#[tokio::test]
-async fn rotate_session_id_cert() {
-    init_logger();
-    let actor_signing_key = gen_priv_key();
-    let home_server_signing_key = gen_priv_key();
-    let id_csr = IdCsr::new(
-        &actor_subject("flori"),
-        &actor_signing_key,
-        &Capabilities::default_actor(),
-        Some(polyproto::certs::Target::Actor),
-    )
-    .unwrap();
-    let id_cert = IdCert::from_actor_csr(
-        id_csr.clone(),
-        &home_server_signing_key,
-        Uint::new(&[8]).unwrap(),
-        home_server_subject(),
-        default_validity(),
-    )
-    .unwrap();
-    let csr_pem = id_csr.clone().to_pem(der::pem::LineEnding::LF).unwrap();
-    let server = Server::run();
-    server.expect(
-        Expectation::matching(all_of![
-            request::method(ROTATE_SESSION_IDCERT.method.to_string()),
-            request::path(ROTATE_SESSION_IDCERT.path),
-            request::body(csr_pem)
-        ])
-        .respond_with(json_encoded(json!({
-            "id_cert": id_cert.to_pem(der::pem::LineEnding::LF).unwrap(),
-            "token": "meow"
-        }))),
-    );
-    let url = server_url(&server);
-    let client = polyproto::api::HttpClient::new().unwrap();
-    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
-        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
-    session.rotate_session_id_cert(id_csr).await.unwrap();
 }
 
 fn encrypted_pkm(serial: u128) -> EncryptedPkm {
