@@ -80,6 +80,10 @@ impl Signature for Ed25519Signature {
     // We define the signature type from the ed25519-dalek crate as the associated type.
     type Signature = Ed25519DalekSignature;
 
+    fn as_bytes(&self) -> Vec<u8> {
+        self.as_signature().to_vec()
+    }
+
     // This is straightforward: we return a reference to the signature.
     fn as_signature(&self) -> &Self::Signature {
         &self.signature

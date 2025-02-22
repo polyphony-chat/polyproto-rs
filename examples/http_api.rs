@@ -112,6 +112,10 @@ impl Signature for Ed25519Signature {
             algorithm: Self::algorithm_identifier(),
         }
     }
+
+    fn as_bytes(&self) -> Vec<u8> {
+        self.as_signature().to_vec()
+    }
 }
 
 // The `SignatureBitStringEncoding` trait is used to convert a signature to a bit string. We implement
