@@ -76,10 +76,10 @@ the polyproto crate acting as a single source of truth for request and response 
 request routes and methods through the exported `static` `Route`s.
 
 [dev-status]: https://img.shields.io/static/v1?label=Status&message=Alpha&color=blue
-[build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/polyproto/build_and_test.yml?style=flat
-[build-url]: https://github.com/polyphony-chat/polyproto/blob/main/.github/workflows/build_and_test.yml
-[coverage-shield]: https://coveralls.io/repos/github/polyphony-chat/polyproto/badge.svg?branch=main
-[coverage-url]: https://coveralls.io/github/polyphony-chat/polyproto?branch=main
+[build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/polyproto-rs/build_and_test.yml?style=flat
+[build-url]: https://github.com/polyphony-chat/polyproto-rs/blob/main/.github/workflows/build_and_test.yml
+[coverage-shield]: https://coveralls.io/repos/github/polyphony-chat/polyproto-rs/badge.svg?branch=main
+[coverage-url]: https://coveralls.io/github/polyphony-chat/polyproto-rs?branch=main
 [Discord]: https://dcbadge.vercel.app/api/server/m3FpcapGDD?style=flat
 [Discord-invite]: https://discord.com/invite/m3FpcapGDD
 [crates-link]: https://crates.io/crates/polyproto
