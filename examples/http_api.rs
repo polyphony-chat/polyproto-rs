@@ -44,8 +44,8 @@ async fn main() {
     // The actual example starts here.
     // Create a new HTTP client
     let client = HttpClient::new().unwrap();
-    // Create an authorized session
-    let session: polyproto::api::Session<Ed25519Signature, Ed25519PrivateKey> =
+    // Create an authorized session, if you need it
+    let _session: polyproto::api::Session<Ed25519Signature, Ed25519PrivateKey> =
         polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
     // You can now use the client and session to make requests to the polyproto home server!
     // The client is responsible for all unauthenticated requests, while sessions handle all
@@ -53,7 +53,7 @@ async fn main() {
     // Routes are documented under <https://docs.polyphony.chat/APIs/core/>, and each route has a
     // corresponding method in the `HttpClient` struct. For example, if we wanted to get the certificate
     // of the home server, we'd call:
-    let cert: polyproto::certs::idcert::IdCert<Ed25519Signature, Ed25519PublicKey> = client
+    let cert = client
         .get_server_id_cert(None, &Url::parse("https://example.com/").unwrap())
         .await
         .unwrap();
