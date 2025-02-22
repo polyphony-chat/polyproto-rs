@@ -10,6 +10,7 @@ use crate::certs::idcert::IdCert;
 use crate::certs::Target;
 use crate::key::PublicKey;
 use crate::signature::Signature;
+use crate::types::der::asn1::Uint;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -79,5 +80,41 @@ impl CacheableIdCert {
     ) -> Result<AlgorithmIdentifier<Any>, crate::errors::ConversionError> {
         let certificate = x509_cert::Certificate::from_pem(&self.cert)?;
         Ok(certificate.signature_algorithm)
+    }
+
+    // TODO: Test me
+    pub fn verify<S: Signature, P: PublicKey<S>>(
+        &self,
+        verifying_key: &P,
+    ) -> Result<(), crate::errors::InvalidCert> {
+        let raw_cert = IdCert::<S, P>::from_pem_unchecked(&self.cert).map_err(|e| {
+            crate::errors::InvalidCert::InvalidProperties(
+                crate::errors::ConstraintError::Malformed(Some(e.to_string())),
+            )
+        })?;
+        let serial_number =
+            u64::try_from(Uint(raw_cert.id_cert_tbs.serial_number)).map_err(|e| {
+                crate::errors::InvalidCert::InvalidProperties(
+                    crate::errors::ConstraintError::Malformed(Some(format!(
+                        "Serial number is not valid: {}",
+                        e
+                    ))),
+                )
+            })?;
+        let string_to_check = serial_number.to_string()
+            + &self.not_valid_before.to_string()
+            + &self.not_valid_after.to_string()
+            + &self
+                .invalidated_at
+                .map(|v| v.to_string())
+                .unwrap_or("".to_string());
+        // TODO: In polyproto, change 6.4.1 to include invalidated_at
+        verifying_key
+            .verify_signature(
+                &S::from_bytes(self.cache_signature.as_bytes()),
+                string_to_check.as_bytes(),
+            )
+            .map(|_| ())
+            .map_err(crate::errors::InvalidCert::PublicKeyError)
     }
 }
