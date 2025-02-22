@@ -108,7 +108,6 @@ impl CacheableIdCert {
                 .invalidated_at
                 .map(|v| v.to_string())
                 .unwrap_or("".to_string());
-        // TODO: In polyproto, change 6.4.1 to include invalidated_at
         verifying_key
             .verify_signature(
                 &S::from_bytes(self.cache_signature.as_bytes()),
