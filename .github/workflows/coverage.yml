@@ -1,0 +1,29 @@
+name: Publish Coverage
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          prefix-key: "coverage"
+      - name: Build, Test with nextest, Publish Coverage
+        run: |
+          if [ -n "${{ secrets.COVERALLS_REPO_TOKEN }}" ]; then
+              curl -L --proto '=https' --tlsv1.3 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+              cargo binstall --no-confirm cargo-tarpaulin --force
+              cargo tarpaulin --all-features --tests --verbose --skip-clean --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }} --timeout 120
+          else
+              echo "Code Coverage step is skipped on PRs from forks."
+          fi
