@@ -36,6 +36,7 @@ async fn setup_example() -> Server {
     server
 }
 
+#[cfg(not(test))]
 #[tokio::main]
 async fn main() {
     let server = setup_example().await;
@@ -60,8 +61,8 @@ async fn main() {
     dbg!(cert);
 }
 
-#[test]
-fn test_example() {
+#[cfg(test)]
+fn main() {
     main()
 }
 
