@@ -8,6 +8,7 @@ use std::time::Duration;
 use der::asn1::{BitString, Uint, UtcTime};
 use ed25519_dalek::ed25519::signature::Signer;
 use ed25519_dalek::{Signature as Ed25519DalekSignature, SigningKey, VerifyingKey};
+use log::debug;
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
@@ -119,7 +120,7 @@ pub(crate) struct Ed25519Signature {
 
 impl std::fmt::Display for Ed25519Signature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.signature)
+        write!(f, "{:?}", self.as_signature())
     }
 }
 
@@ -156,6 +157,10 @@ impl Signature for Ed25519Signature {
             signature: Ed25519DalekSignature::from_bytes(&signature_array),
             algorithm: Self::algorithm_identifier(),
         }
+    }
+
+    fn as_bytes(&self) -> Vec<u8> {
+        self.as_signature().to_vec()
     }
 }
 
@@ -223,7 +228,10 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
     ) -> Result<(), polyproto::errors::composite::PublicKeyError> {
         match self.key.verify_strict(data, signature.as_signature()) {
             Ok(_) => Ok(()),
-            Err(_) => Err(polyproto::errors::composite::PublicKeyError::BadSignature),
+            Err(e) => {
+                debug!("{e}");
+                Err(polyproto::errors::composite::PublicKeyError::BadSignature)
+            }
         }
     }
 
