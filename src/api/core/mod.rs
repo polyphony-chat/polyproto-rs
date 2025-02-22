@@ -8,6 +8,7 @@ use crate::certs::idcerttbs::IdCertTbs;
 use crate::types::x509_cert::SerialNumber;
 use crate::url::Url;
 use cacheable_cert::CacheableIdCert;
+use log::trace;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -255,7 +256,7 @@ impl HttpClient {
     /// The resulting [CacheableIdCert] has not been verified. After converting it into an [IdCert],
     /// you should verify it – if the conversion has not done this already.
     /// [IdCert::full_verify_home_server()], as this method calls that method internally.
-    pub async fn get_server_id_cert<S: Signature, P: PublicKey<S>>(
+    pub async fn get_server_id_cert(
         &self,
         unix_time: Option<u64>,
         instance_url: &Url,
@@ -268,6 +269,7 @@ impl HttpClient {
             request = request.body(json!({ "timestamp": time }).to_string());
         }
         let response = request.send().await;
+        trace!("Got response: {:?}", response);
         let id_cert = HttpClient::handle_response::<CacheableIdCert>(response).await?;
         Ok(id_cert)
     }
@@ -280,7 +282,7 @@ impl HttpClient {
     ///
     /// The resulting [CacheableIdCert]s are not verified. The caller is responsible for verifying the correctness
     /// of these `IdCert`s by converting verifying them using [IdCert::full_verify_actor()] before use.
-    pub async fn get_actor_id_certs<S: Signature, P: PublicKey<S>>(
+    pub async fn get_actor_id_certs(
         &self,
         fid: &str,
         unix_time: Option<u64>,
