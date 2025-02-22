@@ -6,7 +6,7 @@ use std::io::Read;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Uint(der::asn1::Uint);
+pub struct Uint(pub der::asn1::Uint);
 
 impl Deref for Uint {
     type Target = der::asn1::Uint;
