@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use der::{Any, DecodePem};
+use log::{debug, trace};
 use serde::{Deserialize, Serialize};
 use spki::AlgorithmIdentifier;
 
@@ -152,6 +153,16 @@ impl CacheableIdCert {
                     ))),
                 )
             })?;
+        trace!("Serial number: {}", serial_number);
+        trace!("Not valid before: {}", &self.not_valid_before.to_string());
+        trace!("Not valid after: {}", &self.not_valid_after.to_string());
+        trace!(
+            "Invalidated at: {}",
+            &self
+                .invalidated_at
+                .map(|v| v.to_string())
+                .unwrap_or("".to_string())
+        );
         let string_to_check = serial_number.to_string()
             + &self.not_valid_before.to_string()
             + &self.not_valid_after.to_string()
@@ -159,9 +170,15 @@ impl CacheableIdCert {
                 .invalidated_at
                 .map(|v| v.to_string())
                 .unwrap_or("".to_string());
+        trace!("Computed string: {}", string_to_check);
         verifying_key
             .verify_signature(
-                &S::from_bytes(self.cache_signature.as_bytes()),
+                &S::try_from_hex(&self.cache_signature).map_err(|e| {
+                    debug!("{e}");
+                    crate::errors::InvalidCert::PublicKeyError(
+                        crate::errors::PublicKeyError::BadSignature,
+                    )
+                })?,
                 string_to_check.as_bytes(),
             )
             .map(|_| ())
