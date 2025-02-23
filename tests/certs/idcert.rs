@@ -68,8 +68,26 @@ fn test_create_actor_cert() {
     )
     .unwrap();
     let cert_data = cert.clone().to_der().unwrap();
-    let data = Certificate::try_from(cert).unwrap().to_der().unwrap();
+    let data = Certificate::try_from(cert.clone())
+        .unwrap()
+        .to_der()
+        .unwrap();
     assert_eq!(cert_data, data);
+    assert!(cert
+        .full_verify_actor(
+            Time::UtcTime(UtcTime::from_unix_duration(Duration::from_secs(100)).unwrap(),)
+                .to_unix_duration()
+                .as_secs(),
+            priv_key.pubkey()
+        )
+        .is_ok());
+    assert!(cert
+        .full_verify_home_server(
+            Time::UtcTime(UtcTime::from_unix_duration(Duration::from_secs(100)).unwrap(),)
+                .to_unix_duration()
+                .as_secs(),
+        )
+        .is_err())
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -105,8 +123,26 @@ fn test_create_ca_cert() {
     )
     .unwrap();
     let cert_data = cert.clone().to_der().unwrap();
-    let data = Certificate::try_from(cert).unwrap().to_der().unwrap();
+    let data = Certificate::try_from(cert.clone())
+        .unwrap()
+        .to_der()
+        .unwrap();
     assert_eq!(cert_data, data);
+    assert!(cert
+        .full_verify_actor(
+            Time::UtcTime(UtcTime::from_unix_duration(Duration::from_secs(100)).unwrap(),)
+                .to_unix_duration()
+                .as_secs(),
+            priv_key.pubkey()
+        )
+        .is_err());
+    assert!(cert
+        .full_verify_home_server(
+            Time::UtcTime(UtcTime::from_unix_duration(Duration::from_secs(100)).unwrap(),)
+                .to_unix_duration()
+                .as_secs(),
+        )
+        .is_ok())
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -329,4 +365,83 @@ fn issuer_url() {
     let id_cert_actor = common::actor_id_cert("flori");
     let url = id_cert_actor.issuer_url().unwrap();
     assert_eq!(url, Url::parse("https://polyphony.chat").unwrap())
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn invalid_signature() {
+    init_logger();
+    let mut csprng = rand::rngs::OsRng;
+    let priv_key_actor = Ed25519PrivateKey::gen_keypair(&mut csprng);
+    let priv_key_home_server = Ed25519PrivateKey::gen_keypair(&mut csprng);
+
+    let csr = polyproto::certs::idcsr::IdCsr::new(
+        &RdnSequence::from_str(
+            "CN=flori,DC=polyphony,DC=chat,UID=flori@polyphony.chat,uniqueIdentifier=client1",
+        )
+        .unwrap(),
+        &priv_key_actor,
+        &Capabilities::default_actor(),
+        Some(Target::Actor),
+    )
+    .unwrap();
+
+    let cert = IdCert::from_actor_csr(
+        csr,
+        &priv_key_home_server,
+        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
+        Validity {
+            not_before: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
+            ),
+            not_after: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
+            ),
+        },
+    )
+    .unwrap();
+    let mut other_cert = cert.clone();
+    other_cert.id_cert_tbs.serial_number = Uint::new(&[12, 13, 11]).unwrap();
+    assert!(other_cert
+        .full_verify_actor(
+            Time::UtcTime(UtcTime::from_unix_duration(Duration::from_secs(100)).unwrap(),)
+                .to_unix_duration()
+                .as_secs(),
+            &priv_key_home_server.public_key
+        )
+        .is_err());
+
+    let csr = polyproto::certs::idcsr::IdCsr::new(
+        &RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
+        &priv_key_home_server,
+        &Capabilities::default_home_server(),
+        Some(Target::HomeServer),
+    )
+    .unwrap();
+    let cert = IdCert::from_ca_csr(
+        csr,
+        &priv_key_home_server,
+        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
+        Validity {
+            not_before: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
+            ),
+            not_after: Time::UtcTime(
+                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
+            ),
+        },
+    )
+    .unwrap();
+
+    let mut other_cert = cert.clone();
+    other_cert.id_cert_tbs.serial_number = Uint::new(&[12, 13, 11]).unwrap();
+    assert!(other_cert
+        .full_verify_home_server(
+            Time::UtcTime(UtcTime::from_unix_duration(Duration::from_secs(100)).unwrap(),)
+                .to_unix_duration()
+                .as_secs()
+        )
+        .is_err());
 }
