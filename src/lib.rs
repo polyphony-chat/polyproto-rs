@@ -127,12 +127,13 @@ pub mod certs;
 /// Error types used in this crate
 pub mod errors;
 /// polyproto gateway server connection
+#[cfg(feature = "gateway")]
 pub mod gateway;
 /// Generic polyproto public- and private key traits.
 pub mod key;
 /// Generic polyproto signature traits.
 pub mod signature;
-#[cfg(feature = "types")]
+#[cfg(any(feature = "types", feature = "gateway"))]
 /// Types used in polyproto and the polyproto HTTP/REST APIs
 pub mod types;
 
@@ -140,7 +141,6 @@ mod constraints;
 
 pub use der;
 pub use spki;
-#[cfg(feature = "reqwest")]
 pub use url;
 pub use x509_cert::name::*;
 
