@@ -23,7 +23,8 @@ impl Constrained for Name {
     /// - MAY have other attributes, which might be ignored by other home servers and other clients.
     // I apologize. This is horrible. I'll redo it eventually. Depression made me do it. -bitfl0wer
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
-        log::trace!("[Name::validate()] Validating Name: {}", self.to_string());
+        #[cfg(not(tarpaulin_include))]
+        trace!("[Name::validate()] Validating Name: {}", self.to_string());
         let mut num_cn: u8 = 0;
         let mut num_dc: u8 = 0;
         let mut num_uid: u8 = 0;
@@ -34,20 +35,23 @@ impl Constrained for Name {
 
         let rdns = &self.0;
         for rdn in rdns.iter() {
-            log::trace!(
+            #[cfg(not(tarpaulin_include))]
+            trace!(
                 "[Name::validate()] Determining OID of RDN {} and performing appropriate validation",
                 rdn.to_string()
             );
             for item in rdn.0.iter() {
                 match item.oid.to_string().as_str() {
                     OID_RDN_UID => {
-                        log::trace!("[Name::validate()] Found UID in RDN: {}", item.to_string());
+                        #[cfg(not(tarpaulin_include))]
+                        trace!("[Name::validate()] Found UID in RDN: {}", item.to_string());
                         num_uid += 1;
                         uid = rdn.clone();
                         validate_rdn_uid(item)?;
                     }
                     OID_RDN_UNIQUE_IDENTIFIER => {
-                        log::trace!(
+                        #[cfg(not(tarpaulin_include))]
+                        trace!(
                             "[Name::validate()] Found uniqueIdentifier in RDN: {}",
                             item.to_string()
                         );
@@ -55,7 +59,8 @@ impl Constrained for Name {
                         validate_rdn_unique_identifier(item)?;
                     }
                     OID_RDN_COMMON_NAME => {
-                        log::trace!(
+                        #[cfg(not(tarpaulin_include))]
+                        trace!(
                             "[Name::validate()] Found Common Name in RDN: {}",
                             item.to_string()
                         );
@@ -71,7 +76,8 @@ impl Constrained for Name {
                         }
                     }
                     OID_RDN_DOMAIN_COMPONENT => {
-                        log::trace!(
+                        #[cfg(not(tarpaulin_include))]
+                        trace!(
                             "[Name::validate()] Found Domain Component in RDN: {}",
                             item.to_string()
                         );
@@ -79,7 +85,8 @@ impl Constrained for Name {
                         vec_dc.push(rdn.clone());
                     }
                     _ => {
-                        log::trace!(
+                        #[cfg(not(tarpaulin_include))]
+                        trace!(
                             "[Name::validate()] Found unknown/non-validated component in RDN: {}",
                             item.to_string()
                         );
@@ -92,7 +99,8 @@ impl Constrained for Name {
         if let Some(target) = target {
             match target {
                 Target::Actor => {
-                    log::trace!(
+                    #[cfg(not(tarpaulin_include))]
+                    trace!(
                         "[Name::validate()] Validating DC {:?} matches DC in UID {}",
                         vec_dc
                             .iter()
@@ -117,13 +125,16 @@ impl Constrained for Name {
         } else if num_uid != 0 {
             validate_dc_matches_dc_in_uid(&vec_dc, &uid)?;
         }
-        log::trace!(
+
+        #[cfg(not(tarpaulin_include))]
+        trace!(
             "Encountered {} UID components and {} Common Name components",
             num_uid,
             num_cn
         );
         if num_uid != 0 && num_cn != 0 {
-            log::trace!("Validating UID username matches Common Name");
+            #[cfg(not(tarpaulin_include))]
+            trace!("Validating UID username matches Common Name");
             validate_uid_username_matches_cn(&uid, &cn)?;
         }
         if num_dc == 0 {
@@ -196,6 +207,8 @@ fn validate_dc_matches_dc_in_uid(
     // Split the UID at the @
     let uid_without_username = uid.to_string().split_at(position_of_at + 1).1.to_string(); // +1 to not include the @
     let dc_normalized_uid: Vec<&str> = uid_without_username.split('.').collect();
+    #[cfg(not(tarpaulin_include))]
+    #[cfg(not(tarpaulin_include))]
     trace!("UID domain components: {:?}", dc_normalized_uid.clone());
     let mut index = 0u8;
     // Iterate over the DCs in the UID and check if they are equal to the DCs in the vec of DCs
@@ -208,6 +221,8 @@ fn validate_dc_matches_dc_in_uid(
                 )))
             }
         };
+        #[cfg(not(tarpaulin_include))]
+        #[cfg(not(tarpaulin_include))]
         trace!("Found an equivalent domain component: {}", equivalent_dc);
         let equivalent_dc = equivalent_dc.to_string().split_at(3).1.to_string();
         if component != &equivalent_dc.to_string() {

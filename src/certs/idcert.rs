@@ -5,6 +5,7 @@
 use der::asn1::Uint;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
+use log::trace;
 use x509_cert::name::Name;
 use x509_cert::time::Validity;
 use x509_cert::Certificate;
@@ -126,14 +127,19 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, ConversionError> {
-        log::trace!("[IdCert::from_actor_csr()] creating actor certificate");
+        #[cfg(not(tarpaulin_include))]
+        trace!("[IdCert::from_actor_csr()] creating actor certificate");
         let signature_algorithm = signing_key.algorithm_identifier();
-        log::trace!("[IdCert::from_actor_csr()] creating IdCertTbs");
-        log::trace!("[IdCert::from_actor_csr()] Issuer: {}", issuer.to_string());
-        log::trace!(
-            "[IdCert::from_actor_csr()] Subject: {}",
-            id_csr.inner_csr.subject.to_string()
-        );
+        #[cfg(not(tarpaulin_include))]
+        {
+            trace!("[IdCert::from_actor_csr()] creating IdCertTbs");
+            trace!("[IdCert::from_actor_csr()] Issuer: {}", issuer.to_string());
+            trace!(
+                "[IdCert::from_actor_csr()] Subject: {}",
+                id_csr.inner_csr.subject.to_string()
+            );
+        }
+
         let id_cert_tbs = IdCertTbs::<S, P> {
             serial_number,
             signature_algorithm,
@@ -144,13 +150,15 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             capabilities: id_csr.inner_csr.capabilities,
             s: std::marker::PhantomData,
         };
-        log::trace!("[IdCert::from_actor_csr()] creating Signature");
+        #[cfg(not(tarpaulin_include))]
+        trace!("[IdCert::from_actor_csr()] creating Signature");
         let signature = signing_key.sign(&id_cert_tbs.clone().to_der()?);
         let cert = IdCert {
             id_cert_tbs,
             signature,
         };
-        log::trace!(
+        #[cfg(not(tarpaulin_include))]
+        trace!(
             "[IdCert::from_actor_csr()] validating certificate with target {:?}",
             Some(Target::Actor)
         );
@@ -285,7 +293,8 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             return Err(InvalidCert::InvalidValidity);
         }
         self.validate(Some(Target::Actor))?;
-        log::trace!("[IdCert::full_verify_actor(&self)] verifying signature (actor certificate)");
+        #[cfg(not(tarpaulin_include))]
+        trace!("[IdCert::full_verify_actor(&self)] verifying signature (actor certificate)");
         let der = match self.id_cert_tbs.clone().to_der() {
             Ok(der) => der,
             Err(_) => {
@@ -332,9 +341,8 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
                 )));
             }
         };
-        log::trace!(
-            "[IdCert::full_verify_home_server(&self)] verifying signature (self-signed IdCert)"
-        );
+        #[cfg(not(tarpaulin_include))]
+        trace!("[IdCert::full_verify_home_server(&self)] verifying signature (self-signed IdCert)");
         Ok(self
             .id_cert_tbs
             .subject_public_key

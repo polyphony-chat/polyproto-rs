@@ -269,7 +269,8 @@ impl HttpClient {
             request = request.body(json!({ "timestamp": time }).to_string());
         }
         let response = request.send().await;
-        trace!("Got response: {:?}", response);
+        #[cfg(not(tarpaulin_include))]
+trace!("Got response: {:?}", response);
         let id_cert = HttpClient::handle_response::<CacheableIdCert>(response).await?;
         Ok(id_cert)
     }

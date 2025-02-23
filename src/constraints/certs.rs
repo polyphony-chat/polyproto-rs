@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use log::{debug, warn};
+use log::{debug, trace, warn};
 
 use crate::errors::{
     ERR_MSG_ACTOR_CANNOT_BE_CA, ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT,
@@ -13,12 +13,14 @@ use super::*;
 
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCsrInner<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
-        log::trace!(
+        #[cfg(not(tarpaulin_include))]
+        trace!(
             "[IdCsrInner::validate()] validating capabilities for target: {:?}",
             target
         );
         self.capabilities.validate(target)?;
-        log::trace!(
+        #[cfg(not(tarpaulin_include))]
+        trace!(
             "[IdCsrInner::validate()] validating subject for target: {:?}",
             target
         );
@@ -47,12 +49,13 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsrInner<S, P> {
 
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
-        log::trace!(
+        trace!(
             "[IdCsr::validate()] validating inner CSR with target {:?}",
             target
         );
         self.inner_csr.validate(target)?;
-        log::trace!("[IdCsr::validate()] verifying signature");
+        #[cfg(not(tarpaulin_include))]
+        trace!("[IdCsr::validate()] verifying signature");
         match self.inner_csr.subject_public_key.verify_signature(
             &self.signature,
             match &self.inner_csr.clone().to_der() {
@@ -74,7 +77,8 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
 
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCert<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
-        log::trace!(
+        #[cfg(not(tarpaulin_include))]
+        trace!(
             "[IdCert::validate()] validating inner IdCertTbs with target {:?}",
             target
         );
@@ -85,7 +89,8 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCert<S, P> {
 
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCertTbs<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
-        log::trace!(
+        #[cfg(not(tarpaulin_include))]
+        trace!(
             "[IdCertTbs::validate()] validating if DER encoding is intact for certificate serial {:?}",
             self.serial_number
         );
@@ -101,7 +106,8 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCertTbs<S, P> {
                 )));
             }
         };
-        log::trace!(
+        #[cfg(not(tarpaulin_include))]
+        trace!(
             "[IdCertTbs::validate()] validating capabilities for target: {:?}",
             target
         );
@@ -109,17 +115,21 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCertTbs<S, P> {
         dbg!(self.issuer.to_string());
         self.issuer.validate(Some(Target::HomeServer))?;
         self.subject.validate(target)?;
-        log::trace!(
-            "[IdCertTbs::validate()] checking if domain components of issuer and subject are equal"
-        );
-        log::trace!(
-            "[IdCertTbs::validate()] Issuer: {}",
-            self.issuer.to_string()
-        );
-        log::trace!(
-            "[IdCertTbs::validate()] Subject: {}",
-            self.subject.to_string()
-        );
+        #[cfg(not(tarpaulin_include))]
+        {
+            trace!(
+                "[IdCertTbs::validate()] checking if domain components of issuer and subject are equal"
+            );
+            trace!(
+                "[IdCertTbs::validate()] Issuer: {}",
+                self.issuer.to_string()
+            );
+            trace!(
+                "[IdCertTbs::validate()] Subject: {}",
+                self.subject.to_string()
+            );
+        }
+
         match equal_domain_components(&self.issuer, &self.subject) {
             true => debug!("Domain components of issuer and subject are equal"),
             false => {

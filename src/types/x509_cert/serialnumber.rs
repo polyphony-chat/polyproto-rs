@@ -94,6 +94,7 @@ impl SerialNumber {
         if *bytes.first().unwrap() == 0 {
             bytes.remove(0);
         }
+        #[cfg(not(tarpaulin_include))]
         trace!("bytes: {:?}", bytes);
         if bytes.len() > 16 {
             return Err(InvalidInput::Length {
@@ -193,7 +194,9 @@ mod test {
         init_logger();
         let serial_number = SerialNumber::new(&2347812387874u128.to_be_bytes()).unwrap();
         let serialized = json!(serial_number);
+        #[cfg(not(tarpaulin_include))]
         trace!("is_array: {:?}", serialized.is_array());
+        #[cfg(not(tarpaulin_include))]
         trace!("serialized: {}", serialized);
         let deserialized: SerialNumber = serde_json::from_value(serialized).unwrap();
 
@@ -232,6 +235,7 @@ mod test {
             let serial_number = SerialNumber::new(&val.to_be_bytes()).unwrap();
             let u128 = serial_number.try_as_u128().unwrap();
             assert_eq!(u128, val);
+            #[cfg(not(tarpaulin_include))]
             trace!("u128: {}", u128);
             if val == u128::MAX {
                 break;
