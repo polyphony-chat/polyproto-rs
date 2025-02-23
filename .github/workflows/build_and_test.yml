@@ -20,9 +20,8 @@ jobs:
           cache-all-crates: "true"
           prefix-key: "linux"
       - uses: taiki-e/install-action@nextest
-      - name: Build, Test and Publish Coverage
+      - name: nextest run
         run: |
-          cargo build --verbose --all-features
           cargo nextest run --verbose --all-features --tests --examples
 
   # wasm:
