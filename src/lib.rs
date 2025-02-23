@@ -176,6 +176,7 @@ pub trait Constrained {
 }
 
 #[cfg(test)]
+#[cfg(not(tarpaulin_include))]
 pub(crate) mod testing_utils {
     pub(crate) fn init_logger() {
         if std::env::var("RUST_LOG").is_err() {
