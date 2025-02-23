@@ -1,4 +1,4 @@
-name: Build, Test, Publish Coverage
+name: Build and Test (nextest)
 
 on:
   push:
@@ -19,17 +19,12 @@ jobs:
         with:
           cache-all-crates: "true"
           prefix-key: "linux"
+      - uses: taiki-e/install-action@nextest
       - name: Build, Test and Publish Coverage
         run: |
-          if [ -n "${{ secrets.COVERALLS_REPO_TOKEN }}" ]; then
-            curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-            cargo binstall --no-confirm cargo-tarpaulin --force
-            cargo tarpaulin --all-features --avoid-cfg-tarpaulin --tests --examples --verbose --skip-clean --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }} --timeout 120
-          else
-            echo "Code Coverage step is skipped on forks!"
-            cargo build --verbose --all-features
-            cargo test --verbose --all-features --tests --examples
-          fi
+          cargo build --verbose --all-features
+          cargo nextest run --verbose --all-features --tests --examples
+
   # wasm:
   #   runs-on: ubuntu-latest
   #   steps:
