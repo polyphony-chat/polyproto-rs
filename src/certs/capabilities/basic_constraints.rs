@@ -165,8 +165,10 @@ impl TryFrom<Extension> for BasicConstraints {
     /// this property is critical, use the [Constrained] trait to verify the well-formedness of
     /// these resulting [BasicConstraints].
     fn try_from(value: Extension) -> Result<Self, Self::Error> {
-        trace!("Converting Extension to BasicConstraints");
-        trace!("Extension: {:#?}", value);
+        #[cfg(not(tarpaulin_include))]
+trace!("Converting Extension to BasicConstraints");
+        #[cfg(not(tarpaulin_include))]
+trace!("Extension: {:#?}", value);
         #[allow(unreachable_patterns)]
         if value.critical && !matches!(value.extn_id.to_string().as_str(), OID_BASIC_CONSTRAINTS) {
             // Error if we encounter a "critical" X.509 extension which we do not know of

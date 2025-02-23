@@ -213,7 +213,8 @@ fn rdns_to_url(rdn_sequence: &RdnSequence) -> Result<url::Url, url::ParseError> 
         url_str += ".";
     }
     let _ = url_str.pop();
-    trace!(r#"Trying to parse string "{}" as url::Url..."#, url_str);
+    #[cfg(not(tarpaulin_include))]
+trace!(r#"Trying to parse string "{}" as url::Url..."#, url_str);
     Url::parse(url_str.trim())
 }
 

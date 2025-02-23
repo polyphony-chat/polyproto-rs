@@ -10,6 +10,7 @@ use std::time::Duration;
 use der::asn1::{BitString, Ia5String, Uint, UtcTime};
 use der::{Decode, Encode};
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
+use log::trace;
 use polyproto::certs::capabilities::{self, Capabilities};
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::{PublicKeyInfo, Target};
@@ -227,7 +228,8 @@ fn cert_from_pem() {
         &priv_key_home_server.public_key,
     )
     .unwrap();
-    log::trace!(
+    #[cfg(not(tarpaulin_include))]
+    trace!(
         "Cert from pem key usages: {:#?}",
         cert_from_pem.id_cert_tbs.capabilities.key_usage.key_usages
     );
@@ -263,7 +265,9 @@ fn cert_from_pem() {
         &priv_key_home_server.public_key,
     )
     .unwrap();
-    log::trace!(
+    #[cfg(not(tarpaulin_include))]
+    #[cfg(not(tarpaulin_include))]
+    trace!(
         "Cert from pem key usages: {:#?}",
         cert_from_pem.id_cert_tbs.capabilities.key_usage.key_usages
     );
@@ -312,7 +316,9 @@ fn cert_from_der() {
         &priv_key_home_server.public_key,
     )
     .unwrap();
-    log::trace!(
+
+    #[cfg(not(tarpaulin_include))]
+    trace!(
         "Cert from pem key usages: {:#?}",
         cert_from_der.id_cert_tbs.capabilities.key_usage.key_usages
     );
@@ -351,7 +357,9 @@ fn cert_from_der() {
         &priv_key_home_server.public_key,
     )
     .unwrap();
-    log::trace!(
+
+    #[cfg(not(tarpaulin_include))]
+    trace!(
         "Cert from pem key usages: {:#?}",
         cert_from_der.id_cert_tbs.capabilities.key_usage.key_usages
     );

@@ -6,6 +6,7 @@ use std::str::FromStr;
 
 use der::asn1::{BitString, OctetString, SetOfVec};
 use der::{Any, Decode, Encode, Tag, Tagged};
+use log::trace;
 use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
@@ -90,7 +91,8 @@ impl KeyUsages {
     /// ```
     pub fn from_bitstring(bitstring: BitString) -> Result<Self, ConversionError> {
         let mut byte_array = bitstring.raw_bytes().to_vec();
-        log::trace!("[from_bitstring] BitString raw bytes: {:?}", byte_array);
+        #[cfg(not(tarpaulin_include))]
+        trace!("[from_bitstring] BitString raw bytes: {:?}", byte_array);
         let mut key_usages = Vec::new();
         if byte_array == [0] || byte_array.is_empty() {
             // TODO: PLEASE write a test for this. Is an empty byte array valid? Is a byte array with a single 0 valid, and does it mean that no KeyUsage is set? -bitfl0wer

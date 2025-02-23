@@ -26,6 +26,7 @@ fn to_bitstring() {
         key_usages: key_usages_vec,
     };
     let bitstring = key_usages.to_bitstring();
+    #[cfg(not(tarpaulin_include))]
     trace!("Unused bits: {}", bitstring.unused_bits());
     assert_eq!(bitstring.raw_bytes(), &[128, 255]);
 
@@ -34,6 +35,7 @@ fn to_bitstring() {
         key_usages: key_usages_vec,
     };
     let bitstring = key_usages.to_bitstring();
+    #[cfg(not(tarpaulin_include))]
     trace!("Unused bits: {}", bitstring.unused_bits());
     assert_eq!(bitstring.raw_bytes(), &[128, 0]);
 
@@ -42,6 +44,7 @@ fn to_bitstring() {
         key_usages: key_usages_vec,
     };
     let bitstring = key_usages.to_bitstring();
+    #[cfg(not(tarpaulin_include))]
     trace!("Unused bits: {}", bitstring.unused_bits());
     assert_eq!(bitstring.raw_bytes(), &[128]);
 
@@ -59,6 +62,7 @@ fn to_bitstring() {
         key_usages: key_usages_vec,
     };
     let bitstring = key_usages.to_bitstring();
+    #[cfg(not(tarpaulin_include))]
     trace!("Unused bits: {}", bitstring.unused_bits());
     assert_eq!(bitstring.raw_bytes(), &[255]);
 }

@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
+use log::trace;
 use spki::AlgorithmIdentifierOwned;
 use x509_cert::attr::Attributes;
 use x509_cert::name::Name;
@@ -84,7 +85,8 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
             signature_algorithm,
             signature,
         };
-        log::trace!("[IdCsr::new()] Validating self with Target: {:?}", target);
+        #[cfg(not(tarpaulin_include))]
+        trace!("[IdCsr::new()] Validating self with Target: {:?}", target);
         id_csr.validate(target)?;
         Ok(id_csr)
     }

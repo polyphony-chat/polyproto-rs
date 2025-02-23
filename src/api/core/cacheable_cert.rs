@@ -153,9 +153,13 @@ impl CacheableIdCert {
                     ))),
                 )
             })?;
+        #[cfg(not(tarpaulin_include))]
         trace!("Serial number: {}", serial_number);
+        #[cfg(not(tarpaulin_include))]
         trace!("Not valid before: {}", &self.not_valid_before.to_string());
+        #[cfg(not(tarpaulin_include))]
         trace!("Not valid after: {}", &self.not_valid_after.to_string());
+        #[cfg(not(tarpaulin_include))]
         trace!(
             "Invalidated at: {}",
             &self
@@ -170,6 +174,7 @@ impl CacheableIdCert {
                 .invalidated_at
                 .map(|v| v.to_string())
                 .unwrap_or("".to_string());
+        #[cfg(not(tarpaulin_include))]
         trace!("Computed string: {}", string_to_check);
         verifying_key
             .verify_signature(

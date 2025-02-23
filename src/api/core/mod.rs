@@ -119,9 +119,9 @@ impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
         Ok(())
     }
 
-    /// Retrieve encrypted private key material from the server. The serial_numbers, if provided,
+    /// Retrieve encrypted private key material from the server. The `serial_numbers`, if provided,
     /// must match the serial numbers of ID-Certs that the client has uploaded key material for.
-    /// If no serial_numbers are provided, the server will return all key material that the client
+    /// If no `serial_numbers` are provided, the server will return all key material that the client
     /// has uploaded.
     pub async fn get_encrypted_pkm(
         &self,
@@ -269,6 +269,7 @@ impl HttpClient {
             request = request.body(json!({ "timestamp": time }).to_string());
         }
         let response = request.send().await;
+        #[cfg(not(tarpaulin_include))]
         trace!("Got response: {:?}", response);
         let id_cert = HttpClient::handle_response::<CacheableIdCert>(response).await?;
         Ok(id_cert)
