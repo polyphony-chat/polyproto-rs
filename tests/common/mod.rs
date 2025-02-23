@@ -58,14 +58,7 @@ pub fn actor_id_cert(cn: &str) -> IdCert<Ed25519Signature, Ed25519PublicKey> {
         &priv_key,
         Uint::new(&[8]).unwrap(),
         home_server_subject(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
+        default_validity(),
     )
     .unwrap()
 }
@@ -90,14 +83,7 @@ pub fn home_server_id_cert() -> IdCert<Ed25519Signature, Ed25519PublicKey> {
         &priv_key,
         Uint::new(&[8]).unwrap(),
         home_server_subject(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
+        default_validity(),
     )
     .unwrap()
 }

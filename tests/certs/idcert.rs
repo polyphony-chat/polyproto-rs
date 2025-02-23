@@ -57,14 +57,7 @@ fn test_create_actor_cert() {
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
+        default_validity(),
     )
     .unwrap();
     let cert_data = cert.clone().to_der().unwrap();
@@ -112,14 +105,7 @@ fn test_create_ca_cert() {
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
+        default_validity(),
     )
     .unwrap();
     let cert_data = cert.clone().to_der().unwrap();
@@ -170,14 +156,7 @@ fn mismatched_dcs_in_csr_and_cert() {
         &priv_key,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
+        default_validity(),
     )
     .unwrap();
     let cert_data = cert.clone().to_der().unwrap();
@@ -209,14 +188,7 @@ fn cert_from_pem() {
         &priv_key_home_server,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
+        default_validity(),
     )
     .unwrap();
     let data = cert.clone().to_pem(der::pem::LineEnding::LF).unwrap();
@@ -245,14 +217,7 @@ fn cert_from_pem() {
         &priv_key_home_server,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
+        default_validity(),
     )
     .unwrap();
     let data = cert.clone().to_pem(der::pem::LineEnding::LF).unwrap();
@@ -294,14 +259,7 @@ fn cert_from_der() {
         &priv_key_home_server,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
+        default_validity(),
     )
     .unwrap();
     let data = cert.clone().to_der().unwrap();
@@ -333,14 +291,7 @@ fn cert_from_der() {
         &priv_key_home_server,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
+        default_validity(),
     )
     .unwrap();
     let data = cert.clone().to_der().unwrap();
@@ -391,14 +342,7 @@ fn invalid_signature() {
         &priv_key_home_server,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
+        default_validity(),
     )
     .unwrap();
     let mut other_cert = cert.clone();
@@ -424,14 +368,7 @@ fn invalid_signature() {
         &priv_key_home_server,
         Uint::new(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
+        default_validity(),
     )
     .unwrap();
 
