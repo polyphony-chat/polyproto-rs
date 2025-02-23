@@ -93,23 +93,75 @@ mod sealer {
     pub trait Glue {}
 }
 
+/// Type has a corresponding gateway opcode
 pub trait HasOpcode: sealer::Glue {
+    /// Get the gateway opcode of this type
     fn opcode(&self) -> u16;
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Data (`d`) payload of a Gateway event.
 pub enum Payload {
+    /// The heartbeat event is sent by the client to the server to keep the WebSocket connection alive.
+    /// The payload for the heartbeat event is a minified number list. Minified number lists are a
+    /// `JSON` object with the fields `from`, `to`, and `except`. The `from` and `to` fields are
+    /// strings representing a range of numbers. The `except` field is an array of strings
+    /// representing numbers that are not included in the range.
+    ///
+    /// The range described by the `from` and to `fields` is a mathematical, closed interval
     Heartbeat(Heartbeat),
+    /// The "Hello" event is sent by the server to the client upon establishing a connection.
+    /// The `d` payload for a "Hello" event is an object containing a `heartbeat_interval` field,
+    /// which specifies the interval in milliseconds at which the client should send heartbeat
+    /// events to the server.
     Hello(Hello),
+    /// The "identify" event is sent by the client to the server to let the server know which actor the client is.
     Identify(Identify),
+    /// The "New Session" event is sent by the server to all sessions except the new one. The `d`
+    /// payload of this event contains the ASCII-PEM encoded ID-Cert of the new session. You can
+    /// find more information about the new session mechanism in [section 4.3.](https://docs.polyphony.chat/Protocol%20Specifications/core/#43-protection-against-misuse-by-malicious-home-servers)
     NewSession(NewSession),
+    /// The actor certificate invalidation event is crucial to ensure that the client can detect
+    /// and respond to changes in actor certificates. This prevents clients and servers from
+    /// accepting outdated [IdCert]s. This event is only sent by servers if an early revocation of
+    /// an actor ID-Cert occurs.
     ActorCertificateInvalidation(ActorCertificateInvalidation),
+    /// When a client re-connects to a polyproto WebSocket gateway server, the client may send a
+    /// resume event to the server instead of identifying. The resumed event sent by the server
+    /// informs the client about everything the client has missed since their last active
+    /// connection to the gateway.
+    ///
+    /// Servers may reject a clients' wish to resume, if the number of events that would need to be
+    /// replayed is too high for the server to process. In this case, the request to resume is met
+    /// with a close code of 4010 by the server and the connection is terminated.
     Resume(Resume),
+    /// The server certificate change event notifies clients about a new server ID-Cert. The
+    /// `d` payload of this event contains the ASCII-PEM encoded [IdCert] of the server.
     ServerCertificateChange(ServerCertificateChange),
+    /// A heartbeat ACK contains events that the client has re-requested as part of their heartbeat
+    /// message.
+    ///
+    /// As such, the field `d` in a heartbeat ack may be empty, but never not present. The `d` field
+    /// contains an array of other gateway events. Heartbeat ACK payloads must not be present in
+    /// this array, making recursion impossible.
     HeartbeatAck(HeartbeatAck),
+    /// Service channels act like topics in a pub/sub system. They allow clients to subscribe to a
+    /// specific topic and receive messages sent to that topic.
+    ///
+    /// Converting that analogy to polyproto, service channels allow clients to subscribe to gateway
+    /// events of additional namespaces. Service channels allow a unified way of giving extensions
+    /// access to WebSockets without having to initialize a separate WebSocket connection.
     ServiceChannel(ServiceChannel),
+    /// Response to a [Payload::ServiceChannel] payload, indicating whether the
+    /// action was successful or not. Clients should expect that the server sends a Service Channel
+    /// payload indicating the closing of a channel.
     ServiceChannelAck(ServiceChannelAck),
+    /// The "resumed" event contains all relevant events the client has missed.
+    ///
+    /// A set of "relevant events" is a set of events which meet both of the following conditions:
+    /// 1. Each event in the set is intended to be received by the client
+    /// 2. The set must contain the lowest possible amount of events necessary for the client to be
+    ///    informed about everything that happened while they were disconnected.
     Resumed(Resumed),
 }
 
