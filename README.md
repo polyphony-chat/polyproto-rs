@@ -55,6 +55,10 @@ This crate has not undergone any security audits.
 
 ## WebAssembly
 
+!!! warning
+
+    As of `v0.10`, the `wasm` target is currently untested. Support will be re-added in the future.
+
 This crate is designed to work with the `wasm32-unknown-unknown` target. To compile for `wasm`, you
 will have to use the `wasm` feature:
 
