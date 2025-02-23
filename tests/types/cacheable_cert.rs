@@ -14,7 +14,7 @@ fn verify_cache_signature() {
 
     let some_cert = common::actor_id_cert("someactor");
 
-    let cert_to_check = CacheableIdCert {
+    let mut cert_to_check = CacheableIdCert {
         cert: some_cert.clone().to_pem(der::pem::LineEnding::LF).unwrap(),
         invalidated_at: None,
         not_valid_before: 0,
@@ -46,5 +46,7 @@ fn verify_cache_signature() {
         )
         .unwrap();
 
-    assert!(cert_to_check.verify(public_key).is_ok())
+    assert!(cert_to_check.verify(public_key).is_ok());
+    cert_to_check.invalidated_at = Some(1);
+    assert!(cert_to_check.verify(public_key).is_err());
 }
