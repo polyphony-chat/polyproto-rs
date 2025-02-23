@@ -23,7 +23,7 @@ jobs:
           if [ -n "${{ secrets.COVERALLS_REPO_TOKEN }}" ]; then
               curl -L --proto '=https' --tlsv1.3 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
               cargo binstall --no-confirm cargo-tarpaulin --force
-              cargo tarpaulin --no-dead-code --engine llvm --all-features --tests --verbose --skip-clean --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }} --timeout 120
+              cargo tarpaulin --all-features --tests --verbose --skip-clean --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }} --timeout 120
           else
               echo "Code Coverage step is skipped on PRs from forks."
           fi
