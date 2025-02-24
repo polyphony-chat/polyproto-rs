@@ -33,7 +33,7 @@ pub enum PublicKeyError {
 }
 
 #[derive(Error, Debug, PartialEq, Clone)]
-/// Errors that can occur when converting between types
+/// Errors that can occur when converting between certificate-related types
 pub enum ConversionError {
     #[error(transparent)]
     /// The constraints of the source or target types were met
