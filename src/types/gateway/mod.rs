@@ -2,7 +2,7 @@
 pub mod payload;
 
 use serde::de::Error;
-use serde_json::Value;
+use serde_json::{from_str, json, Value};
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -13,9 +13,8 @@ use serde_with::{serde_as, DisplayFromStr};
 
 #[serde_as]
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-// TODO: Needs custom deserializer to deserialize `d` based on opcode
-/// A generic gateway event. [Documentation link](https://docs.polyphony.chat/Protocol%20Specifications/core/#321-gateway-event-payloads)
-pub struct Event {
+/// A gateway event from the `core` namespace. [Documentation link](https://docs.polyphony.chat/Protocol%20Specifications/core/#321-gateway-event-payloads)
+pub struct CoreEvent {
     /// [Namespace](https://docs.polyphony.chat/Protocol%20Specifications/core/#82-namespaces) context for this payload.
     pub n: String,
     /// Gateway Opcode indicating the type of payload.
@@ -27,6 +26,65 @@ pub struct Event {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Sequence number of the event, used for guaranteed, ordered delivery. This field is only received by clients and never sent to the server.
     pub s: Option<u64>,
+}
+
+#[serde_as]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash)]
+/// A gateway event from any namespace. Can contain arbitrary data as its `d` payload.
+pub struct AnyEvent {
+    /// [Namespace](https://docs.polyphony.chat/Protocol%20Specifications/core/#82-namespaces) context for this payload.
+    pub n: String,
+    /// Gateway Opcode indicating the type of payload.
+    #[serde_as(as = "DisplayFromStr")]
+    pub op: u16,
+    /// The data associated with this payload.
+    pub d: Value,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Sequence number of the event, used for guaranteed, ordered delivery. This field is only received by clients and never sent to the server.
+    pub s: Option<u64>,
+}
+
+impl From<CoreEvent> for AnyEvent {
+    fn from(value: CoreEvent) -> Self {
+        Self {
+            n: value.n,
+            op: value.op,
+            d: json!(value.d),
+            s: value.s,
+        }
+    }
+}
+
+impl TryFrom<AnyEvent> for CoreEvent {
+    type Error = serde_json::Error;
+
+    fn try_from(value: AnyEvent) -> Result<Self, Self::Error> {
+        Ok(Self {
+            n: value.n,
+            op: value.op,
+            d: from_str(value.d.to_string().as_str())?,
+            s: value.s,
+        })
+    }
+}
+
+impl CoreEvent {
+    /// Convert [Self] into an [AnyEvent]. Shorthand for `AnyEvent::from(self)`.
+    pub fn into_any_event(self) -> AnyEvent {
+        AnyEvent::from(self)
+    }
+}
+
+impl AnyEvent {
+    /// Try to convert [Self] into a [CoreEvent]. Shorthand for `CoreEvent::try_from(self)`.
+    ///
+    /// ## Errors
+    ///
+    /// The conversion will fail, if `self.d` is not a valid [Payload].
+    pub fn try_into_core_event(self) -> Result<CoreEvent, serde_json::Error> {
+        CoreEvent::try_from(self)
+    }
 }
 
 #[repr(u16)]
@@ -218,7 +276,7 @@ impl Serialize for Payload {
     }
 }
 
-impl<'de> Deserialize<'de> for Event {
+impl<'de> Deserialize<'de> for CoreEvent {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -227,7 +285,7 @@ impl<'de> Deserialize<'de> for Event {
             struct EventVisitor;
 
             impl<'de> Visitor<'de> for EventVisitor {
-                type Value = Event;
+                type Value = CoreEvent;
 
                 fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     formatter.write_str("a Payload with a field `d` and a field `op`")
@@ -329,7 +387,7 @@ impl<'de> Deserialize<'de> for Event {
                         ),
                     };
 
-                    let event = Event {
+                    let event = CoreEvent {
                         n: "core".to_string(),
                         op: op.into(),
                         d,
