@@ -1,0 +1,7 @@
+[
+	{
+		"include": ["**/*.rs"],
+		"license": "./.github/license-check/header-mpl-2.0.txt",
+		"exclude": ["target/**"]
+	}
+]
