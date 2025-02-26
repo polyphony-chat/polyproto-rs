@@ -151,12 +151,8 @@ impl TryFrom<u16> for Opcode {
     }
 }
 
-mod sealer {
-    pub trait Glue {}
-}
-
 /// Type has a corresponding gateway opcode
-pub trait HasOpcode: sealer::Glue {
+pub trait HasOpcode: crate::sealer::Glue {
     /// Get the gateway opcode of this type
     fn opcode(&self) -> u16;
 }
@@ -227,7 +223,7 @@ pub enum Payload {
     Resumed(Resumed),
 }
 
-impl sealer::Glue for Payload {}
+impl crate::sealer::Glue for Payload {}
 
 impl HasOpcode for Payload {
     fn opcode(&self) -> u16 {

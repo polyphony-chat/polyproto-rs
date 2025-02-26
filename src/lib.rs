@@ -144,6 +144,10 @@ pub use spki;
 pub use url;
 pub use x509_cert::name::*;
 
+pub(crate) mod sealer {
+    pub trait Glue {}
+}
+
 /// Types implementing [Constrained] can be validated to be well-formed.
 ///
 /// ## `Target` parameter
