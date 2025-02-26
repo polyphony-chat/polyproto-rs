@@ -145,6 +145,9 @@ pub use url;
 pub use x509_cert::name::*;
 
 pub(crate) mod sealer {
+    /// > Ferri-Stik: An adhesive as strong as `rustc`!
+    ///
+    /// Look up "sealed trait pattern rust" to learn more.
     pub trait Glue {}
 }
 
