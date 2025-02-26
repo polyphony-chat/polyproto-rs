@@ -3,7 +3,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use std::fmt::Debug;
+use std::hash::Hash;
 
+use tokio::sync::broadcast::error::SendError;
 use url::Url;
 
 use crate::key::PrivateKey;
@@ -23,13 +25,31 @@ pub mod wasm;
 pub type GatewayBackend = wasm::Backend;
 
 /// Trait defining required functionality for a gateway backend.
-pub trait BackendBehavior {
+pub trait BackendBehavior: crate::sealer::Glue {
     /// Try and open a WebSocket connection to a [Gateway] server under a certain [Url].
-    async fn connect<S, T>(url: &Url) -> GatewayResult<Gateway<S, T>>
+    async fn connect<S, T>(url: &Url, token: String) -> GatewayResult<Gateway<S, T>>
     where
         S: Debug + Signature,
         <T as crate::key::PrivateKey<S>>::PublicKey: Debug,
         T: PrivateKey<S>;
+    /// Get a [tokio::sync::broadcast::Receiver<GatewayMessage>], with which you can listen to incoming
+    /// [GatewayMessages](GatewayMessage).
+    ///
+    /// ## Additional documentation
+    ///
+    /// Implementees of [BackendBehavior] use a [tokio::sync::broadcast::channel]
+    /// to pass values to the [GatewayBackend]. As such, take a look at the documentation of [tokio::sync::broadcast::Receiver]
+    /// to learn more about this function.
+    fn subscribe(&self) -> tokio::sync::broadcast::Receiver<GatewayMessage>;
+    /// Attempt to send a value to the [GatewayBackend] which will attempt to forward this message to the
+    /// gateway server.
+    ///
+    /// ## Additional documentation
+    ///
+    /// Implementees of [BackendBehavior] use a [tokio::sync::broadcast::channel]
+    /// to pass values to the [GatewayBackend]. As such, take a look at the documentation of [tokio::sync::broadcast::Sender]
+    /// to learn more about this function.
+    fn send(&self, value: GatewayMessage) -> Result<usize, SendError<GatewayMessage>>;
 }
 
 pub type GatewayResult<T> = Result<T, Error>;
@@ -38,14 +58,21 @@ pub type GatewayResult<T> = Result<T, Error>;
 pub enum Error {}
 
 /// A gateway server payload.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum GatewayMessage {
     Text(String),
     Binary(Vec<u8>),
     Close(Option<CloseMessage>),
 }
 
+impl Hash for GatewayMessage {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+    }
+}
+
 /// A gateway close message, indicating why the connection is closing.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CloseMessage {
     pub code: CloseCode,
     pub reason: String,
@@ -71,7 +98,7 @@ pub struct CloseMessage {
 /// The original source code was licensed under the MIT License and the Apache License, Version 2.0.
 /// Copies of these licenses are provided in the `third_party/tungstenite/LICENSE-MIT` and
 /// `third_party/tungstenite/LICENSE-APACHE` files of this repository for reference.
-#[derive(Debug, Eq, PartialEq, Clone, Copy, PartialOrd, Ord)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy, PartialOrd, Ord, Hash)]
 pub enum CloseCode {
     /// Indicates a normal closure, meaning that the purpose for
     /// which the connection was established has been fulfilled.
