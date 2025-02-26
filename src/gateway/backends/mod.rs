@@ -37,12 +37,15 @@ pub type GatewayResult<T> = Result<T, Error>;
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Eq)]
 pub enum Error {}
 
+/// A gateway server payload.
 pub enum GatewayMessage {
     Text(String),
     Binary(Vec<u8>),
     Close(Option<CloseMessage>),
 }
 
+/// A gateway close message, indicating why the connection is closing.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CloseMessage {
     pub code: CloseCode,
     pub reason: String,
@@ -68,6 +71,7 @@ pub struct CloseMessage {
 /// The original source code was licensed under the MIT License and the Apache License, Version 2.0.
 /// Copies of these licenses are provided in the `third_party/tungstenite/LICENSE-MIT` and
 /// `third_party/tungstenite/LICENSE-APACHE` files of this repository for reference.
+#[derive(Debug, Eq, PartialEq, Clone, Copy, PartialOrd, Ord)]
 pub enum CloseCode {
     /// Indicates a normal closure, meaning that the purpose for
     /// which the connection was established has been fulfilled.
@@ -132,4 +136,140 @@ pub enum CloseCode {
     Iana(u16),
     Library(u16),
     Bad(u16),
+}
+
+impl std::fmt::Display for CloseCode {
+    /// ## Credit
+    ///
+    /// This code was adapted from the [tungstenite](https://docs.rs/tungstenite/latest/tungstenite/) crate,
+    /// which was originally licensed under both the MIT and Apache-2.0 licenses. These portions have been modified and are
+    /// incorporated into this file, which is licensed in its entirety under the Mozilla Public License 2.0 (MPL-2.0).
+    ///
+    /// For the full terms of the MPL-2.0, see the `LICENSE` file in this repository or <https://www.mozilla.org/MPL/2.0/>.
+    ///
+    /// ### Copyright Notice
+    ///
+    /// Copyright (c) 2017 Alexey Galakhov  
+    /// Copyright (c) 2016 Jason Housley
+    ///
+    /// ### Original Licensing Terms
+    ///
+    /// The original source code was licensed under the MIT License and the Apache License, Version 2.0.
+    /// Copies of these licenses are provided in the `third_party/tungstenite/LICENSE-MIT` and
+    /// `third_party/tungstenite/LICENSE-APACHE` files of this repository for reference.
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let code: u16 = self.into();
+        write!(f, "{code}")
+    }
+}
+
+impl From<CloseCode> for u16 {
+    /// ## Credit
+    ///
+    /// This code was adapted from the [tungstenite](https://docs.rs/tungstenite/latest/tungstenite/) crate,
+    /// which was originally licensed under both the MIT and Apache-2.0 licenses. These portions have been modified and are
+    /// incorporated into this file, which is licensed in its entirety under the Mozilla Public License 2.0 (MPL-2.0).
+    ///
+    /// For the full terms of the MPL-2.0, see the `LICENSE` file in this repository or <https://www.mozilla.org/MPL/2.0/>.
+    ///
+    /// ### Copyright Notice
+    ///
+    /// Copyright (c) 2017 Alexey Galakhov  
+    /// Copyright (c) 2016 Jason Housley
+    ///
+    /// ### Original Licensing Terms
+    ///
+    /// The original source code was licensed under the MIT License and the Apache License, Version 2.0.
+    /// Copies of these licenses are provided in the `third_party/tungstenite/LICENSE-MIT` and
+    /// `third_party/tungstenite/LICENSE-APACHE` files of this repository for reference.
+    fn from(code: CloseCode) -> u16 {
+        match code {
+            CloseCode::Normal => 1000,
+            CloseCode::Away => 1001,
+            CloseCode::Protocol => 1002,
+            CloseCode::Unsupported => 1003,
+            CloseCode::Status => 1005,
+            CloseCode::Abnormal => 1006,
+            CloseCode::Invalid => 1007,
+            CloseCode::Policy => 1008,
+            CloseCode::Size => 1009,
+            CloseCode::Extension => 1010,
+            CloseCode::Error => 1011,
+            CloseCode::Restart => 1012,
+            CloseCode::Again => 1013,
+            CloseCode::Tls => 1015,
+            CloseCode::Reserved(code) => code,
+            CloseCode::Iana(code) => code,
+            CloseCode::Library(code) => code,
+            CloseCode::Bad(code) => code,
+        }
+    }
+}
+
+impl<'t> From<&'t CloseCode> for u16 {
+    /// ## Credit
+    ///
+    /// This code was adapted from the [tungstenite](https://docs.rs/tungstenite/latest/tungstenite/) crate,
+    /// which was originally licensed under both the MIT and Apache-2.0 licenses. These portions have been modified and are
+    /// incorporated into this file, which is licensed in its entirety under the Mozilla Public License 2.0 (MPL-2.0).
+    ///
+    /// For the full terms of the MPL-2.0, see the `LICENSE` file in this repository or <https://www.mozilla.org/MPL/2.0/>.
+    ///
+    /// ### Copyright Notice
+    ///
+    /// Copyright (c) 2017 Alexey Galakhov  
+    /// Copyright (c) 2016 Jason Housley
+    ///
+    /// ### Original Licensing Terms
+    ///
+    /// The original source code was licensed under the MIT License and the Apache License, Version 2.0.
+    /// Copies of these licenses are provided in the `third_party/tungstenite/LICENSE-MIT` and
+    /// `third_party/tungstenite/LICENSE-APACHE` files of this repository for reference.
+    fn from(code: &'t CloseCode) -> u16 {
+        (*code).into()
+    }
+}
+
+impl From<u16> for CloseCode {
+    /// ## Credit
+    ///
+    /// This code was adapted from the [tungstenite](https://docs.rs/tungstenite/latest/tungstenite/) crate,
+    /// which was originally licensed under both the MIT and Apache-2.0 licenses. These portions have been modified and are
+    /// incorporated into this file, which is licensed in its entirety under the Mozilla Public License 2.0 (MPL-2.0).
+    ///
+    /// For the full terms of the MPL-2.0, see the `LICENSE` file in this repository or <https://www.mozilla.org/MPL/2.0/>.
+    ///
+    /// ### Copyright Notice
+    ///
+    /// Copyright (c) 2017 Alexey Galakhov  
+    /// Copyright (c) 2016 Jason Housley
+    ///
+    /// ### Original Licensing Terms
+    ///
+    /// The original source code was licensed under the MIT License and the Apache License, Version 2.0.
+    /// Copies of these licenses are provided in the `third_party/tungstenite/LICENSE-MIT` and
+    /// `third_party/tungstenite/LICENSE-APACHE` files of this repository for reference.
+    fn from(code: u16) -> CloseCode {
+        match code {
+            1000 => Self::Normal,
+            1001 => Self::Away,
+            1002 => Self::Protocol,
+            1003 => Self::Unsupported,
+            1005 => Self::Status,
+            1006 => Self::Abnormal,
+            1007 => Self::Invalid,
+            1008 => Self::Policy,
+            1009 => Self::Size,
+            1010 => Self::Extension,
+            1011 => Self::Error,
+            1012 => Self::Restart,
+            1013 => Self::Again,
+            1015 => Self::Tls,
+            1..=999 => Self::Bad(code),
+            1016..=2999 => Self::Reserved(code),
+            3000..=3999 => Self::Iana(code),
+            4000..=4999 => Self::Library(code),
+            _ => Self::Bad(code),
+        }
+    }
 }
