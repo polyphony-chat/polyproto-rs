@@ -27,6 +27,7 @@ pub type GatewayBackend = wasm::Backend;
 /// Trait defining required functionality for a gateway backend.
 pub trait BackendBehavior: crate::sealer::Glue {
     /// Try and open a WebSocket connection to a [Gateway] server under a certain [Url].
+    #[allow(async_fn_in_trait)] // We don't care about a `Send` bound here.
     async fn connect<S, T>(url: &Url, token: String) -> GatewayResult<Gateway<S, T>>
     where
         S: Debug + Signature,
