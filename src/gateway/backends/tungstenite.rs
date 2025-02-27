@@ -2,9 +2,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use tokio::sync::broadcast;
+use tokio::task::JoinHandle;
+
 use super::*;
-#[derive(Debug, Clone)]
-pub struct TungsteniteBackend {}
+#[derive(Debug)]
+pub struct TungsteniteBackend {
+    kill_send: broadcast::Sender<()>,
+    kill_receive: broadcast::Receiver<()>,
+    gateway_task: JoinHandle<Result<(), super::Error>>,
+}
 
 impl From<tokio_tungstenite::tungstenite::Message> for GatewayMessage {
     fn from(value: tokio_tungstenite::tungstenite::Message) -> Self {
