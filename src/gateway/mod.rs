@@ -12,7 +12,7 @@ use crate::signature::Signature;
 mod backends;
 pub use backends::{BackendBehavior, GatewayBackend};
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Gateway<S: Signature, T: PrivateKey<S>>
 where
     S: Debug,
