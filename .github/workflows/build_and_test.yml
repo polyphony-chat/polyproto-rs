@@ -22,7 +22,7 @@ jobs:
       - uses: taiki-e/install-action@nextest
       - name: nextest run
         run: |
-          cargo nextest run --verbose --all-features --tests --examples
+          cargo nextest run --all-features --failure-output final --no-fail-fast
 
   # wasm:
   #   runs-on: ubuntu-latest
