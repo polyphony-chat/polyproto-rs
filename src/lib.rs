@@ -185,64 +185,15 @@ pub trait Constrained {
 #[cfg(test)]
 #[cfg(not(tarpaulin_include))]
 pub(crate) mod testing_utils {
-    use log::LevelFilter;
-    use log4rs::append::console::ConsoleAppender;
-    use log4rs::config::{Appender, Logger, Root};
-    use log4rs::encode::pattern::PatternEncoder;
-    use log4rs::filter::Filter;
-    #[derive(Debug)]
-    struct LogFilter;
-
-    impl Filter for LogFilter {
-        fn filter(&self, record: &log::Record) -> log4rs::filter::Response {
-            if record.target().starts_with("polyproto") {
-                log4rs::filter::Response::Accept
-            } else {
-                log4rs::filter::Response::Reject
-            }
-        }
-    }
 
     pub(crate) fn init_logger() {
         if std::env::var("RUST_LOG").is_err() {
             std::env::set_var("RUST_LOG", "trace");
         }
-        let log_target_stdout = ConsoleAppender::builder()
-            .target(log4rs::append::console::Target::Stdout)
-            .encoder(Box::new(PatternEncoder::new(
-                "{d(%Y-%m-%d %H:%M:%S)} | {h({l:<6.6})} | {t:<35} | {m}{n}",
-            )))
-            .build();
-        let loglevel = match std::env::var("RUST_LOG")
-            .unwrap_or("trace".to_string())
-            .to_lowercase()
-            .as_str()
-        {
-            "info" => LevelFilter::Info,
-            "debug" => LevelFilter::Debug,
-            "trace" => LevelFilter::Trace,
-            x => {
-                eprintln!("Found RUST_LOG variable to be {x}. Valid values are 'info', 'debug', 'trace'. Defaulting to 'trace'.");
-                LevelFilter::Trace
-            }
-        };
-        let log_config = log4rs::Config::builder()
-            .appender(
-                Appender::builder()
-                    .filter(Box::new(LogFilter))
-                    .build("stdout", Box::new(log_target_stdout)),
-            )
-            .logger(
-                Logger::builder()
-                    .appender("stdout")
-                    .build("polyproto", loglevel),
-            )
-            .build(Root::builder().appender("stdout").build(loglevel))
-            .map_err(|e| Box::new(e) as Box<dyn std::fmt::Debug>)
-            .unwrap();
-
-        let _handle = log4rs::init_config(log_config);
-        let _ = _handle.expect("Using `cargo test` to test the entire project is unsupported - Use `cargo nextest` instead by installing nextest. `cargo test` can still be used to test individual modules and single tests.");
+        env_logger::builder()
+            .filter_module("crate", log::LevelFilter::Trace)
+            .try_init()
+            .unwrap_or(());
     }
 }
 

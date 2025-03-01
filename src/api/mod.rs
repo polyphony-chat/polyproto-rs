@@ -164,19 +164,6 @@ impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
     /// # Returns
     /// A new `Session` instance initialized with the provided parameters.
     ///
-    /// # Example
-    /// ```rust
-    /// use std::sync::Arc;
-    /// use some_crate::{Session, HttpClient, IdCert, Url};
-    ///
-    /// let client = HttpClient::new();
-    /// let token = "some_auth_token";
-    /// let instance_url = Url::parse("https://example.com").unwrap();
-    /// let cert_and_key = None; // or Some((id_cert, private_key));
-    ///
-    /// let session = Session::new(&client, token, instance_url, cert_and_key);
-    /// ```
-    ///
     /// The returned `Session` provides access to authenticated and unauthenticated APIs,
     /// and stores optional credentials for signing requests when required.
     pub fn new(
