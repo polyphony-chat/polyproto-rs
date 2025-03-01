@@ -25,7 +25,7 @@ pub enum InvalidCert {
 /// Errors related to Public Keys and Signatures
 pub enum PublicKeyError {
     #[error("The signature does not match the data")]
-    /// The signature does not match the data
+    /// The signature does not match the data or the signature is malformed
     BadSignature,
     #[error("The provided PublicKeyInfo could not be made into a PublicKey")]
     /// The provided PublicKey is invalid
@@ -33,7 +33,7 @@ pub enum PublicKeyError {
 }
 
 #[derive(Error, Debug, PartialEq, Clone)]
-/// Errors that can occur when converting between types
+/// Errors that can occur when converting between certificate-related types
 pub enum ConversionError {
     #[error(transparent)]
     /// The constraints of the source or target types were met

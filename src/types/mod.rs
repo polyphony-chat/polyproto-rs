@@ -2,8 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/// Module defining the [ChallengeString] type.
-pub mod challenge_string;
 /// This module contains wrappers for types from the `der` crate which interface directly with the
 /// HTTP API of polyproto. These wrappers enable the types to be serialized and deserialized using
 /// the `serde` crate, if the `serde` feature is enabled.
@@ -28,7 +26,6 @@ pub mod x509_cert;
 /// Module defining types associated with the polyproto WebSocket gateway.
 pub mod gateway;
 
-pub use challenge_string::*;
 pub use encrypted_pkm::*;
 pub use federation_id::*;
 pub use service::*;
@@ -58,6 +55,11 @@ pub mod routes {
             use http::Method;
 
             use super::super::Route;
+
+            pub const WELL_KNOWN: Route = Route {
+                method: Method::GET,
+                path: "/.well-known/polyproto-core",
+            };
 
             pub const GET_CHALLENGE_STRING: Route = Route {
                 method: Method::GET,
