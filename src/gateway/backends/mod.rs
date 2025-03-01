@@ -25,9 +25,9 @@ pub mod wasm;
 pub type GatewayBackend = wasm::Backend;
 
 /// Trait defining required functionality for a gateway backend.
+#[allow(async_fn_in_trait)] // We don't care about a `Send` bound here.
 pub trait BackendBehavior: crate::sealer::Glue {
     /// Try and open a WebSocket connection to a [Gateway] server under a certain [Url].
-    #[allow(async_fn_in_trait)] // We don't care about a `Send` bound here.
     async fn connect<S, T>(url: &Url, token: String) -> GatewayResult<Gateway<S, T>>
     where
         S: Debug + Signature,
@@ -50,7 +50,8 @@ pub trait BackendBehavior: crate::sealer::Glue {
     /// Implementees of [BackendBehavior] use a [tokio::sync::broadcast::channel]
     /// to pass values to the [GatewayBackend]. As such, take a look at the documentation of [tokio::sync::broadcast::Sender]
     /// to learn more about this function.
-    fn send(&self, value: GatewayMessage) -> Result<usize, SendError<GatewayMessage>>;
+    async fn send(&self, value: GatewayMessage) -> Result<usize, SendError<GatewayMessage>>;
+    async fn disconnect(reason: Option<CloseMessage>) -> Result<(), Error>;
 }
 
 pub type GatewayResult<T> = Result<T, Error>;
