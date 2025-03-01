@@ -10,7 +10,9 @@ use crate::key::PrivateKey;
 use crate::signature::Signature;
 
 mod backends;
+use backends::GatewayMessage;
 pub use backends::{BackendBehavior, GatewayBackend};
+use tokio::sync::broadcast;
 
 #[derive(Debug)]
 pub struct Gateway<S: Signature, T: PrivateKey<S>>
@@ -20,5 +22,7 @@ where
 {
     /// A reference to a corresponding [Session].
     pub session: Arc<Session<S, T>>,
-    backend: GatewayBackend,
+    send_channel: broadcast::Sender<GatewayMessage>,
+    receive_channel: broadcast::Receiver<GatewayMessage>,
+    kill_send: broadcast::Sender<()>,
 }
