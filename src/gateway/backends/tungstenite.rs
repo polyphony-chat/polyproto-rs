@@ -5,12 +5,39 @@
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
 
+use crate::sealer::Glue;
+
 use super::*;
 #[derive(Debug)]
 pub struct TungsteniteBackend {
     kill_send: broadcast::Sender<()>,
     kill_receive: broadcast::Receiver<()>,
     gateway_task: JoinHandle<Result<(), super::Error>>,
+}
+
+impl Glue for TungsteniteBackend {}
+
+impl BackendBehavior for TungsteniteBackend {
+    async fn connect<S, T>(url: &Url, token: String) -> GatewayResult<Gateway<S, T>>
+    where
+        S: Debug + Signature,
+        <T as crate::key::PrivateKey<S>>::PublicKey: Debug,
+        T: PrivateKey<S>,
+    {
+        todo!()
+    }
+
+    fn subscribe(&self) -> tokio::sync::broadcast::Receiver<GatewayMessage> {
+        todo!()
+    }
+
+    async fn send(&self, value: GatewayMessage) -> Result<usize, SendError<GatewayMessage>> {
+        todo!()
+    }
+
+    async fn disconnect(reason: Option<CloseMessage>) -> Result<(), Error> {
+        todo!()
+    }
 }
 
 impl From<tokio_tungstenite::tungstenite::Message> for GatewayMessage {
