@@ -78,7 +78,7 @@ pub(crate) fn init_logger() {
 
     let _handle = log4rs::init_config(log_config);
     let _ = _handle
-        .expect("`cargo test` is unsupported - Use `cargo nextest` instead by installing nextest.");
+        .expect("Using `cargo test` to test the entire project is unsupported - Use `cargo nextest` instead by installing nextest. `cargo test` can still be used to test individual modules and single tests.");
 }
 
 pub fn actor_subject(cn: &str) -> Name {
