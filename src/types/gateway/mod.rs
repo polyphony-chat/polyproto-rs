@@ -18,18 +18,37 @@ use serde_with::{serde_as, DisplayFromStr};
 #[serde_as]
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// A gateway event from the `core` namespace. [Documentation link](https://docs.polyphony.chat/Protocol%20Specifications/core/#321-gateway-event-payloads)
+///
+/// You can access the events' internal fields through getter methods `.n()`, `.s()`, `.d()` and `.opcode()` (as [HasOpcode]).
 pub struct CoreEvent {
     /// [Namespace](https://docs.polyphony.chat/Protocol%20Specifications/core/#82-namespaces) context for this payload.
-    pub n: String,
+    pub(crate) n: String,
     /// Gateway Opcode indicating the type of payload.
     #[serde_as(as = "DisplayFromStr")]
-    pub op: u16,
+    pub(crate) op: u16,
     /// The event data associated with this payload.
-    pub d: Payload,
+    pub(crate) d: Payload,
     #[serde_as(as = "Option<DisplayFromStr>")]
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Sequence number of the event, used for guaranteed, ordered delivery. This field is only received by clients and never sent to the server.
-    pub s: Option<u64>,
+    pub(crate) s: Option<u64>,
+}
+
+impl CoreEvent {
+    /// Access the `n` field of this object.
+    pub fn n(&self) -> &str {
+        &self.n
+    }
+
+    /// Access the `d` field of this object.
+    pub fn d(&self) -> &Payload {
+        &self.d
+    }
+
+    /// Access the `s` field of this object.
+    pub fn s(&self) -> Option<u64> {
+        self.s
+    }
 }
 
 #[serde_as]
@@ -224,6 +243,8 @@ pub enum Payload {
 }
 
 impl crate::sealer::Glue for Payload {}
+impl crate::sealer::Glue for CoreEvent {}
+impl crate::sealer::Glue for AnyEvent {}
 
 impl HasOpcode for Payload {
     fn opcode(&self) -> u16 {
@@ -240,6 +261,18 @@ impl HasOpcode for Payload {
             Payload::ServiceChannelAck(_) => Opcode::Heartbeat as u16,
             Payload::Resumed(_) => Opcode::Heartbeat as u16,
         }
+    }
+}
+
+impl HasOpcode for CoreEvent {
+    fn opcode(&self) -> u16 {
+        self.op
+    }
+}
+
+impl HasOpcode for AnyEvent {
+    fn opcode(&self) -> u16 {
+        self.op
     }
 }
 
