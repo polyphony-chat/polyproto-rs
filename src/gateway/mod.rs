@@ -10,7 +10,7 @@ use crate::key::PrivateKey;
 use crate::signature::Signature;
 
 mod backends;
-pub use backends::{BackendBehavior, GatewayBackend};
+pub use backends::BackendBehavior;
 use backends::{Closed, GatewayMessage};
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
