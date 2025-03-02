@@ -11,6 +11,7 @@ use tokio::select;
 use tokio::sync::watch;
 use tokio_tungstenite::{connect_async_tls_with_config, connect_async_with_config};
 
+use crate::gateway::KILL_LOG_MESSAGE;
 use crate::sealer::Glue;
 
 use super::*;
@@ -70,7 +71,7 @@ impl BackendBehavior for TungsteniteBackend {
             loop {
                 select! {
                     _ = receive_task_kill_receive.changed() => {
-                        trace!("Received kill signal, shutting down");
+                        trace!("{KILL_LOG_MESSAGE}");
                         receive_task_kill_receive.borrow_and_update();
                         break;
                     }
@@ -117,7 +118,7 @@ impl BackendBehavior for TungsteniteBackend {
             loop {
                 select! {
                     _ = send_task_kill_receive.changed() => {
-                        trace!("Received kill signal, shutting down");
+                        trace!("{KILL_LOG_MESSAGE}");
                         send_task_kill_receive.borrow_and_update();
                         break;
                     }

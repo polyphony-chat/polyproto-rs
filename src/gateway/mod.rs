@@ -15,6 +15,8 @@ use backends::{Closed, GatewayMessage};
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 
+pub(crate) static KILL_LOG_MESSAGE: &str = "Received kill signal, shutting down";
+
 #[derive(Debug)]
 pub struct Gateway<S: Signature, T: PrivateKey<S>>
 where
