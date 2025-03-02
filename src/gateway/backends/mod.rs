@@ -16,7 +16,7 @@ use crate::signature::Signature;
 use super::Gateway;
 
 #[cfg(not(feature = "wasm"))]
-pub type GatewayBackend = tungstenite::TungsteniteBackend;
+pub(crate) type GatewayBackend = tungstenite::TungsteniteBackend;
 #[cfg(not(feature = "wasm"))]
 /// The tungstenite gateway backend. Used on non-wasm targets.
 pub mod tungstenite;
@@ -24,7 +24,7 @@ pub mod tungstenite;
 /// The wasm gateway backend. Used only on the wasm-target.
 pub mod wasm;
 #[cfg(feature = "wasm")]
-pub type GatewayBackend = wasm::Backend;
+pub(crate) type GatewayBackend = wasm::Backend;
 
 /// Trait defining required functionality for a gateway backend.
 #[allow(async_fn_in_trait)] // We don't care about a `Send` bound here.
