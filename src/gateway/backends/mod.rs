@@ -4,10 +4,12 @@
 
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::sync::Arc;
 
 use tokio::sync::broadcast::error::SendError;
 use url::Url;
 
+use crate::api::Session;
 use crate::key::PrivateKey;
 use crate::signature::Signature;
 
@@ -27,8 +29,13 @@ pub type GatewayBackend = wasm::Backend;
 /// Trait defining required functionality for a gateway backend.
 #[allow(async_fn_in_trait)] // We don't care about a `Send` bound here.
 pub trait BackendBehavior: crate::sealer::Glue {
-    /// Try and open a WebSocket connection to a [Gateway] server under a certain [Url].
-    async fn connect<S, T>(url: &Url, token: String) -> GatewayResult<Gateway<S, T>>
+    /// Try and establish a WebSocket connection to a [Gateway] server under a certain [Url].
+    /// The resulting [Gateway] will not yet have any messages sent to the server, meaning you will
+    /// still have to authenticate and establish a Heartbeat loop.
+    async fn connect<S, T>(
+        session: Arc<Session<S, T>>,
+        gateway_url: &Url,
+    ) -> GatewayResult<Gateway<S, T>>
     where
         S: Debug + Signature,
         <T as crate::key::PrivateKey<S>>::PublicKey: Debug,
@@ -68,6 +75,23 @@ pub enum Error {
 pub enum ConnectionError {
     #[error("Unsupported connection scheme: {0}")]
     ConnectionScheme(String),
+    #[error(transparent)]
+    Closed(Closed),
+}
+
+#[derive(thiserror::Error, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub enum Closed {
+    Exhausted,
+    Error(String),
+}
+
+impl std::fmt::Display for Closed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Closed::Exhausted => f.write_str("Receiver stream exhausted"),
+            Closed::Error(s) => f.write_str(s),
+        }
+    }
 }
 
 /// A gateway server payload.

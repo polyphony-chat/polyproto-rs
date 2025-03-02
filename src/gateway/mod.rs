@@ -10,9 +10,10 @@ use crate::key::PrivateKey;
 use crate::signature::Signature;
 
 mod backends;
-use backends::GatewayMessage;
 pub use backends::{BackendBehavior, GatewayBackend};
-use tokio::sync::broadcast;
+use backends::{Closed, GatewayMessage};
+use tokio::sync::watch;
+use tokio::task::JoinHandle;
 
 #[derive(Debug)]
 pub struct Gateway<S: Signature, T: PrivateKey<S>>
@@ -22,7 +23,9 @@ where
 {
     /// A reference to a corresponding [Session].
     pub session: Arc<Session<S, T>>,
-    send_channel: broadcast::Sender<GatewayMessage>,
-    receive_channel: broadcast::Receiver<GatewayMessage>,
-    kill_send: broadcast::Sender<()>,
+    pub send_channel: watch::Sender<GatewayMessage>,
+    pub receive_channel: watch::Receiver<GatewayMessage>,
+    kill_send: watch::Sender<Closed>,
+    receiver_task: JoinHandle<()>,
+    sender_task: JoinHandle<()>,
 }
