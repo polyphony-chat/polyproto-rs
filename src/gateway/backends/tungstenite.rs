@@ -2,8 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use futures_util::stream::StreamExt;
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
+use tokio_tungstenite::{connect_async_tls_with_config, connect_async_with_config};
 
 use crate::sealer::Glue;
 
@@ -24,6 +26,35 @@ impl BackendBehavior for TungsteniteBackend {
         <T as crate::key::PrivateKey<S>>::PublicKey: Debug,
         T: PrivateKey<S>,
     {
+        let (stream, _) = match url.scheme() {
+            "ws" => match connect_async_with_config(url, None, false).await {
+                Ok(stream) => stream,
+                Err(e) => return Err(Error::BackendError(e.to_string())),
+            },
+            "wss" => {
+                let certs = webpki_roots::TLS_SERVER_ROOTS;
+                let roots = rustls::RootCertStore {
+                    roots: certs.iter().map(|cert| cert.to_owned()).collect(),
+                };
+                match connect_async_tls_with_config(
+                    url,
+                    None,
+                    false,
+                    Some(tokio_tungstenite::Connector::Rustls(std::sync::Arc::new(
+                        rustls::ClientConfig::builder()
+                            .with_root_certificates(roots)
+                            .with_no_client_auth(),
+                    ))),
+                )
+                .await
+                {
+                    Ok(stream) => stream,
+                    Err(e) => return Err(Error::BackendError(e.to_string())),
+                }
+            }
+            e => return Err(ConnectionError::ConnectionScheme(e.to_string()).into()),
+        };
+        let (mut split_sink, mut split_stream) = stream.split();
         todo!()
     }
 

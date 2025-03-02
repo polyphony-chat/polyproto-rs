@@ -57,7 +57,18 @@ pub trait BackendBehavior: crate::sealer::Glue {
 pub type GatewayResult<T> = Result<T, Error>;
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Eq)]
-pub enum Error {}
+pub enum Error {
+    #[error(transparent)]
+    ConnectionError(#[from] ConnectionError),
+    #[error("Backend has encountered the following error: {0}")]
+    BackendError(String),
+}
+
+#[derive(thiserror::Error, Debug, Clone, PartialEq, Eq)]
+pub enum ConnectionError {
+    #[error("Unsupported connection scheme: {0}")]
+    ConnectionScheme(String),
+}
 
 /// A gateway server payload.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
