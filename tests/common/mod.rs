@@ -8,6 +8,7 @@ use std::time::Duration;
 use der::asn1::{BitString, Uint, UtcTime};
 use ed25519_dalek::ed25519::signature::Signer;
 use ed25519_dalek::{Signature as Ed25519DalekSignature, SigningKey, VerifyingKey};
+use log::debug;
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
@@ -20,11 +21,14 @@ use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 use x509_cert::time::{Time, Validity};
 
-pub fn init_logger() {
+pub(crate) fn init_logger() {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "trace");
     }
-    env_logger::builder().is_test(true).try_init().unwrap_or(());
+    env_logger::builder()
+        .filter_module("crate", log::LevelFilter::Trace)
+        .try_init()
+        .unwrap_or(());
 }
 
 pub fn actor_subject(cn: &str) -> Name {
@@ -57,14 +61,7 @@ pub fn actor_id_cert(cn: &str) -> IdCert<Ed25519Signature, Ed25519PublicKey> {
         &priv_key,
         Uint::new(&[8]).unwrap(),
         home_server_subject(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
+        default_validity(),
     )
     .unwrap()
 }
@@ -89,14 +86,7 @@ pub fn home_server_id_cert() -> IdCert<Ed25519Signature, Ed25519PublicKey> {
         &priv_key,
         Uint::new(&[8]).unwrap(),
         home_server_subject(),
-        Validity {
-            not_before: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(10)).unwrap(),
-            ),
-            not_after: Time::UtcTime(
-                UtcTime::from_unix_duration(Duration::from_secs(1000)).unwrap(),
-            ),
-        },
+        default_validity(),
     )
     .unwrap()
 }
@@ -119,7 +109,7 @@ pub(crate) struct Ed25519Signature {
 
 impl std::fmt::Display for Ed25519Signature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.signature)
+        write!(f, "{:?}", self.as_signature())
     }
 }
 
@@ -156,6 +146,10 @@ impl Signature for Ed25519Signature {
             signature: Ed25519DalekSignature::from_bytes(&signature_array),
             algorithm: Self::algorithm_identifier(),
         }
+    }
+
+    fn as_bytes(&self) -> Vec<u8> {
+        self.as_signature().to_vec()
     }
 }
 
@@ -223,7 +217,10 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
     ) -> Result<(), polyproto::errors::composite::PublicKeyError> {
         match self.key.verify_strict(data, signature.as_signature()) {
             Ok(_) => Ok(()),
-            Err(_) => Err(polyproto::errors::composite::PublicKeyError::BadSignature),
+            Err(e) => {
+                debug!("{e}");
+                Err(polyproto::errors::composite::PublicKeyError::BadSignature)
+            }
         }
     }
 

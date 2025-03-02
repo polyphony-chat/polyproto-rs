@@ -2,8 +2,5 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-mod cacheable_cert;
-mod federation_id;
-#[cfg(feature = "gateway")]
-mod gateway;
-mod keys;
+#[derive(Debug, Clone)]
+pub struct Backend {}

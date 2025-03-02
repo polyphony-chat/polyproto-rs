@@ -26,12 +26,12 @@ crate.
 
 ## Implementing polyproto
 
-Start by implementing the trait [crate::signature::Signature] for a signature algorithm of your
+Start by implementing the trait `[crate::signature::Signature]` for a signature algorithm of your
 choice. Popular crates for cryptography and signature algorithms supply their own `PublicKey` and
 `PrivateKey` types. You should extend upon these types with your own structs and implement the
-[crate::key] traits for these new structs.
+`[crate::key]` traits for these new structs.
 
-You can then use the [crate::certs] types to build certificates using your implementations of the
+You can then use the `[crate::certs]` types to build certificates using your implementations of the
 aforementioned traits.
 
 **View the [examples](./examples/)** directory for a simple example on how to implement and use this
@@ -54,6 +54,10 @@ mention the safety guarantees they provide in their respective documentation.
 This crate has not undergone any security audits.
 
 ## WebAssembly
+
+!!! warning
+
+    As of `v0.10`, the `wasm` target is currently untested. Support will be re-added in the future.
 
 This crate is designed to work with the `wasm32-unknown-unknown` target. To compile for `wasm`, you
 will have to use the `wasm` feature:
@@ -89,3 +93,5 @@ request routes and methods through the exported `static` `Route`s.
 ## Logo
 
 The polyproto logo was designed by the wonderful [antidoxi](https://antidoxi.carrd.co/).
+The polyproto logos provided in this document are not covered by the MPL-2.0 license covering the rest
+of this project.

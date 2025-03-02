@@ -1,23 +1,24 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 /*!
-<div align="center">
+<img src="https://cloud.bitfl0wer.de/apps/files_sharing/publicpreview/2qCxoXJ27yW7QNR?file=/&fileId=1143147&x=256&y=256&a=true" align="left" alt="a purple cog, split in the middle along the horizontal axis with a gap inbetween the two halves. three overlayed, offset sinus-like waves travel through that gap. each wave has a different shade of purple" width="128px" height="auto"></img>
 
+### `polyproto`
+
+![dev-status]
 [![Discord]][Discord-invite]
-[![Matrix]][Matrix-invite]
 [![Build][build-shield]][build-url]
 [![Coverage][coverage-shield]][coverage-url]
-<img src="https://img.shields.io/static/v1?label=Status&message=Alpha&color=blue" alt="Blue status badge, reading 'Alpha'">
-
-</div>
-
-# polyproto
 
 Crate supplying (generic) Rust types and traits to quickly get a
 [polyproto](https://docs.polyphony.chat/Protocol%20Specifications/core/) implementation up and
 running, as well as an HTTP client for the polyproto API.
+
+**[Overview/TL;DR][overview]** • **[Protocol Specification][docs]**
+
+## Crate overview
 
 Building upon types offered by the [der](https://crates.io/crates/der),
 [x509_cert](https://crates.io/crates/x509_cert) and [spki](https://crates.io/crates/spki) crates,
@@ -79,14 +80,23 @@ the `types` and `serde` features. Using these features, you can implement your o
 the polyproto crate acting as a single source of truth for request and response types, as well as
 request routes and methods through the exported `static` `Route`s.
 
+[dev-status]: https://img.shields.io/static/v1?label=Status&message=Alpha&color=blue
 [build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/polyproto/build_and_test.yml?style=flat
 [build-url]: https://github.com/polyphony-chat/polyproto/blob/main/.github/workflows/build_and_test.yml
 [coverage-shield]: https://coveralls.io/repos/github/polyphony-chat/polyproto/badge.svg?branch=main
 [coverage-url]: https://coveralls.io/github/polyphony-chat/polyproto?branch=main
 [Discord]: https://dcbadge.vercel.app/api/server/m3FpcapGDD?style=flat
 [Discord-invite]: https://discord.com/invite/m3FpcapGDD
-[Matrix]: https://img.shields.io/matrix/polyproto%3Atu-dresden.de?server_fqdn=matrix.org&style=flat&label=Matrix%20Room
-[Matrix-invite]: https://matrix.to/#/#polyproto:tu-dresden.de
+[crates-link]: https://crates.io/crates/polyproto
+[docs]: https://docs.polyphony.chat/Protocol%20Specifications/core/
+[overview]: https://docs.polyphony.chat/Overviews/core/
+
+## Logo
+
+The polyproto logo was designed by the wonderful [antidoxi](https://antidoxi.carrd.co/).
+Logos, artwork and other multimedial assets provided in this document are not covered by this
+documents' MPL-2.0 license.
+
 */
 
 #![forbid(unsafe_code)]
@@ -117,12 +127,13 @@ pub mod certs;
 /// Error types used in this crate
 pub mod errors;
 /// polyproto gateway server connection
+#[cfg(feature = "gateway")]
 pub mod gateway;
 /// Generic polyproto public- and private key traits.
 pub mod key;
 /// Generic polyproto signature traits.
 pub mod signature;
-#[cfg(feature = "types")]
+#[cfg(any(feature = "types", feature = "gateway"))]
 /// Types used in polyproto and the polyproto HTTP/REST APIs
 pub mod types;
 
@@ -130,9 +141,15 @@ mod constraints;
 
 pub use der;
 pub use spki;
-#[cfg(feature = "reqwest")]
 pub use url;
 pub use x509_cert::name::*;
+
+pub(crate) mod sealer {
+    /// > Ferri-Stik: An adhesive as strong as `rustc`!
+    ///
+    /// Look up "sealed trait pattern rust" to learn more.
+    pub trait Glue {}
+}
 
 /// Types implementing [Constrained] can be validated to be well-formed.
 ///
@@ -166,7 +183,9 @@ pub trait Constrained {
 }
 
 #[cfg(test)]
+#[cfg(not(tarpaulin_include))]
 pub(crate) mod testing_utils {
+
     pub(crate) fn init_logger() {
         if std::env::var("RUST_LOG").is_err() {
             std::env::set_var("RUST_LOG", "trace");
