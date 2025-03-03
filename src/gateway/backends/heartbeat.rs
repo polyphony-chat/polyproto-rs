@@ -47,10 +47,22 @@ impl Heartbeat {
                                 continue
                             },
                         };
+                        match payload.d() {
+                            crate::types::gateway::Payload::Heartbeat(heartbeat) => todo!(),
+                            crate::types::gateway::Payload::HeartbeatAck(heartbeat_ack) => todo!(),
+                            _ => continue
+                        };
                     }
                 }
             }
         });
         todo!()
+    }
+
+    fn handle_heartbeat(
+        &self,
+        heartbeat: crate::types::gateway::payload::Heartbeat,
+        message_sender: watch::Sender<GatewayMessage>,
+    ) {
     }
 }
