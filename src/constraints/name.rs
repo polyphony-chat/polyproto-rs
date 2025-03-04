@@ -4,6 +4,7 @@
 
 use crate::errors::ERR_MSG_DC_UID_MISMATCH;
 
+use log::{debug, trace};
 use x509_cert::attr::AttributeTypeAndValue;
 
 use super::*;
@@ -175,6 +176,10 @@ fn validate_dc_matches_dc_in_uid(
     vec_dc: &[RelativeDistinguishedName],
     uid: &RelativeDistinguishedName,
 ) -> Result<(), ConstraintError> {
+    debug!(
+        "Validating vec_dc {:?} and uid {} have same domain components",
+        vec_dc, uid
+    );
     // Find the position of the @ in the UID
     let position_of_at = match uid.to_string().find('@') {
         Some(pos) => pos,
@@ -191,9 +196,9 @@ fn validate_dc_matches_dc_in_uid(
     // Split the UID at the @
     let uid_without_username = uid.to_string().split_at(position_of_at + 1).1.to_string(); // +1 to not include the @
     let dc_normalized_uid: Vec<&str> = uid_without_username.split('.').collect();
-    dbg!(dc_normalized_uid.clone());
+    trace!("UID domain components: {:?}", dc_normalized_uid.clone());
     let mut index = 0u8;
-    // Iterate over the DCs in the UID and check if they are equal to the DCs in the DCs
+    // Iterate over the DCs in the UID and check if they are equal to the DCs in the vec of DCs
     for component in dc_normalized_uid.iter() {
         let equivalent_dc = match vec_dc.get(index as usize) {
             Some(dc) => dc,
@@ -203,6 +208,7 @@ fn validate_dc_matches_dc_in_uid(
                 )))
             }
         };
+        trace!("Found an equivalent domain component: {}", equivalent_dc);
         let equivalent_dc = equivalent_dc.to_string().split_at(3).1.to_string();
         if component != &equivalent_dc.to_string() {
             return Err(ConstraintError::Malformed(Some(

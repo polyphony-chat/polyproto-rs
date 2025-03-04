@@ -1,6 +1,6 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use std::str::FromStr;
 use std::time::Duration;
@@ -100,6 +100,10 @@ impl std::fmt::Display for Ed25519Signature {
 impl Signature for Ed25519Signature {
     // We define the signature type from the ed25519-dalek crate as the associated type.
     type Signature = Ed25519DalekSignature;
+
+    fn as_bytes(&self) -> Vec<u8> {
+        self.as_signature().to_vec()
+    }
 
     // This is straightforward: we return a reference to the signature.
     fn as_signature(&self) -> &Self::Signature {
