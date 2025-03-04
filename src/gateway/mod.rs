@@ -10,6 +10,7 @@ use crate::key::PrivateKey;
 use crate::signature::Signature;
 
 mod backends;
+use backends::heartbeat::Heartbeat;
 pub use backends::BackendBehavior;
 use backends::{Closed, GatewayMessage};
 use tokio::sync::watch;
@@ -30,4 +31,5 @@ where
     kill_send: watch::Sender<Closed>,
     receiver_task: JoinHandle<()>,
     sender_task: JoinHandle<()>,
+    heartbeat_task: Heartbeat,
 }
