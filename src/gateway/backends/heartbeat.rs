@@ -105,10 +105,16 @@ impl Heartbeat {
         );
         let send_result = message_sender.send(message);
         match send_result {
-            Ok(_) => return,
+            Ok(_) => (),
             Err(e) => {
                 debug!("Sending heartbeat to gateway failed, retrying: {e}");
-                Self::try_send_heartbeat(message_sender, received_sequences, kill_send, attempt + 1)
+                Box::pin(Self::try_send_heartbeat(
+                    message_sender,
+                    received_sequences,
+                    kill_send,
+                    attempt + 1,
+                ))
+                .await
             }
         };
     }
