@@ -5,6 +5,11 @@
 /// Module defining gateway `d` payloads.
 pub mod payload;
 
+/// Minified number lists are a JSON object with the fields `from`, `to`, and `except`. The `from` and `to`
+/// fields are strings representing a range of numbers. The `except` field is an array of strings
+/// representing numbers that are not included in the range.
+pub type MinifiedNumberList = payload::Heartbeat;
+
 use log::trace;
 use serde::de::Error;
 use serde_json::{from_str, json, Map, Value};
