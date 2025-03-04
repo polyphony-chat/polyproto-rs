@@ -2,12 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use log::info;
 use polyproto::types::gateway::payload::{
     ActorCertificateInvalidation, Heartbeat, HeartbeatAck, Hello, Identify, NewSession, Resume,
     Resumed, ServerCertificateChange, ServiceChannel, ServiceChannelAck, ServiceChannelAction,
 };
-use polyproto::types::gateway::{CoreEvent, Opcode, Payload};
+use polyproto::types::gateway::{CoreEvent, Payload};
 use serde_json::json;
+
+use crate::common;
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
@@ -168,8 +171,10 @@ fn serde_event_payload_resume() {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn serde_event_payload_resumed() {
+    common::init_logger();
     let resumed = CoreEvent::new(Payload::Resumed(Resumed { inner: Vec::new() }), None);
     let resumed_json = serde_json::to_string(&resumed).unwrap();
+    info!("{resumed_json}");
     let resumed_from_json = serde_json::from_str::<CoreEvent>(&resumed_json).unwrap();
     assert_eq!(resumed, resumed_from_json);
 }
