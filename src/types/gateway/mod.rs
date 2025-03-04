@@ -5,9 +5,10 @@
 /// Module defining gateway `d` payloads.
 pub mod payload;
 
+use log::trace;
 use serde::de::Error;
 use serde_json::{from_str, json, Map, Value};
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
 use payload::*;
@@ -153,6 +154,25 @@ pub enum Opcode {
     RequestHeartbeat = 11,
 }
 
+impl Display for Opcode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Opcode::Heartbeat => f.write_str("Heartbeat"),
+            Opcode::Hello => f.write_str("Hello"),
+            Opcode::Identify => f.write_str("Identify"),
+            Opcode::NewSession => f.write_str("NewSession"),
+            Opcode::ActorCertificateInvalidation => f.write_str("ActorCertificateInvalidation"),
+            Opcode::Resume => f.write_str("Resume"),
+            Opcode::ServerCertificateChange => f.write_str("ServerCertificateChange"),
+            Opcode::HeartbeatAck => f.write_str("HeartbeatAck"),
+            Opcode::ServiceChannel => f.write_str("ServiceChannel"),
+            Opcode::ServiceChannelAck => f.write_str("ServiceChannelAck"),
+            Opcode::Resumed => f.write_str("Resumed"),
+            Opcode::RequestHeartbeat => f.write_str("RequestHeartbeat"),
+        }
+    }
+}
+
 impl From<Opcode> for u16 {
     fn from(value: Opcode) -> Self {
         value as u16
@@ -273,16 +293,16 @@ impl HasOpcode for Payload {
     fn opcode(&self) -> u16 {
         match self {
             Payload::Heartbeat(_) => Opcode::Heartbeat as u16,
-            Payload::Hello(_) => Opcode::Heartbeat as u16,
-            Payload::Identify(_) => Opcode::Heartbeat as u16,
-            Payload::NewSession(_) => Opcode::Heartbeat as u16,
-            Payload::ActorCertificateInvalidation(_) => Opcode::Heartbeat as u16,
-            Payload::Resume(_) => Opcode::Heartbeat as u16,
-            Payload::ServerCertificateChange(_) => Opcode::Heartbeat as u16,
-            Payload::HeartbeatAck(_) => Opcode::Heartbeat as u16,
-            Payload::ServiceChannel(_) => Opcode::Heartbeat as u16,
-            Payload::ServiceChannelAck(_) => Opcode::Heartbeat as u16,
-            Payload::Resumed(_) => Opcode::Heartbeat as u16,
+            Payload::Hello(_) => Opcode::Hello as u16,
+            Payload::Identify(_) => Opcode::Identify as u16,
+            Payload::NewSession(_) => Opcode::NewSession as u16,
+            Payload::ActorCertificateInvalidation(_) => Opcode::ActorCertificateInvalidation as u16,
+            Payload::Resume(_) => Opcode::Resume as u16,
+            Payload::ServerCertificateChange(_) => Opcode::ServerCertificateChange as u16,
+            Payload::HeartbeatAck(_) => Opcode::HeartbeatAck as u16,
+            Payload::ServiceChannel(_) => Opcode::ServiceChannel as u16,
+            Payload::ServiceChannelAck(_) => Opcode::ServiceChannelAck as u16,
+            Payload::Resumed(_) => Opcode::Resume as u16,
             Payload::RequestHeartbeat => Opcode::RequestHeartbeat as u16,
         }
     }
@@ -385,6 +405,7 @@ impl<'de> Deserialize<'de> for CoreEvent {
                             Err(e) => return Err(A::Error::custom(e)),
                         };
                     let op = Opcode::try_from(integer_maybe_opcode).map_err(A::Error::custom)?;
+                    trace!("Found opcode {op}");
 
                     let s = match maybe_s {
                         Some(s) => Some(
