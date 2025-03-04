@@ -302,7 +302,7 @@ impl HasOpcode for Payload {
             Payload::HeartbeatAck(_) => Opcode::HeartbeatAck as u16,
             Payload::ServiceChannel(_) => Opcode::ServiceChannel as u16,
             Payload::ServiceChannelAck(_) => Opcode::ServiceChannelAck as u16,
-            Payload::Resumed(_) => Opcode::Resume as u16,
+            Payload::Resumed(_) => Opcode::Resumed as u16,
             Payload::RequestHeartbeat => Opcode::RequestHeartbeat as u16,
         }
     }
