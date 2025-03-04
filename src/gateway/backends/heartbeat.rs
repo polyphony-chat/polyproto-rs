@@ -10,7 +10,7 @@ use tokio::select;
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 
-use crate::types::gateway::{CoreEvent, MinifiedNumberRange, Payload};
+use crate::types::gateway::{CoreEvent, Payload};
 
 use super::super::KILL_LOG_MESSAGE;
 use super::{Closed, GatewayMessage};
@@ -97,7 +97,7 @@ impl Heartbeat {
         let message = GatewayMessage::Text(
             json!(CoreEvent::new(
                 Payload::Heartbeat(crate::types::gateway::payload::Heartbeat::from(
-                    MinifiedNumberRange::from(received_sequences)
+                    received_sequences
                 )),
                 None
             ))

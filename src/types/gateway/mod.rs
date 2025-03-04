@@ -2,12 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/// Module defining the [MinifiedNumberRange] type.
-pub mod minified_number_range;
 /// Module defining gateway `d` payloads.
 pub mod payload;
-
-pub use minified_number_range::*;
 
 use log::trace;
 use serde::de::Error;
