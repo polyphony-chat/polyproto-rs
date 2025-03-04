@@ -2,13 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use std::time::Duration;
+
 use log::trace;
-use serde_json::from_str;
+use serde_json::{from_str, json};
 use tokio::select;
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 
-use crate::types::gateway::CoreEvent;
+use crate::types::gateway::{CoreEvent, Payload};
 
 use super::super::KILL_LOG_MESSAGE;
 use super::GatewayMessage;
@@ -25,10 +27,17 @@ impl Heartbeat {
         kill_send: watch::Sender<()>,
         mut message_receiver: watch::Receiver<GatewayMessage>,
         message_sender: watch::Sender<GatewayMessage>,
+        interval: u32,
     ) -> Self {
         let task_handle = tokio::spawn(async move {
+            let mut sleep = Box::pin(tokio::time::sleep(Duration::from_secs(interval as u64)));
+            let mut received_sequences = Vec::<u64>::new();
             loop {
                 select! {
+                    _ = &mut sleep => {
+                        sleep = Box::pin(tokio::time::sleep(Duration::from_secs(interval as u64)));
+                        message_sender.send(GatewayMessage::Text(json!(CoreEvent::new(Payload::Heartbeat(crate::types::gateway::payload::Heartbeat { from: todo!(), to: todo!(), except: todo!() }), None))));
+                    }
                     _ = kill_receive.changed() => {
                         trace!("{KILL_LOG_MESSAGE}");
                         kill_receive.borrow_and_update();
@@ -48,7 +57,7 @@ impl Heartbeat {
                             },
                         };
                         match payload.d() {
-                            crate::types::gateway::Payload::Heartbeat(heartbeat) => todo!(),
+                            crate::types::gateway::Payload::RequestHeartbeat => todo!(),
                             crate::types::gateway::Payload::HeartbeatAck(heartbeat_ack) => todo!(),
                             _ => continue
                         };
