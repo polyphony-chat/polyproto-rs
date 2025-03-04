@@ -6,7 +6,7 @@
 pub mod payload;
 
 use serde::de::Error;
-use serde_json::{from_str, json, Value};
+use serde_json::{from_str, json, Map, Value};
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -35,6 +35,19 @@ pub struct CoreEvent {
 }
 
 impl CoreEvent {
+    /// Construct a new [CoreEvent] where `n` = `"core"`, `d` is a payload from the core namespace,
+    /// `op` corresponds to the type of the `d` payload and an `s` is an optional parameter.
+    pub fn new(payload: Payload, s: Option<u64>) -> Self {
+        let n = "core".to_string();
+        let op = payload.opcode();
+        Self {
+            n,
+            op,
+            d: payload,
+            s,
+        }
+    }
+
     /// Access the `n` field of this object.
     pub fn n(&self) -> &str {
         &self.n
@@ -136,6 +149,8 @@ pub enum Opcode {
     ServiceChannelAck = 9,
     /// Replayed events.
     Resumed = 10,
+    /// The server requests a heartbeat from the client ASAP.
+    RequestHeartbeat = 11,
 }
 
 impl From<Opcode> for u16 {
@@ -161,6 +176,7 @@ impl TryFrom<u16> for Opcode {
             8 => Self::ServiceChannel,
             9 => Self::ServiceChannelAck,
             10 => Self::Resumed,
+            11 => Self::RequestHeartbeat,
             _ => {
                 return Err(crate::errors::InvalidInput::Malformed(format!(
                     "value {value} is not a valid opcode"
@@ -240,6 +256,13 @@ pub enum Payload {
     /// 2. The set must contain the lowest possible amount of events necessary for the client to be
     ///    informed about everything that happened while they were disconnected.
     Resumed(Resumed),
+    /// Heartbeat request events do not carry any data in their `d` payload.
+    ///
+    /// The server may manually request a heartbeat from a client at any time.
+    /// A heartbeat is usually manually requested, if the server has not received a heartbeat from the client
+    /// in due time. Clients should keep their "heartbeat timer" running as is after sending a heartbeat following
+    /// a heartbeat request.
+    RequestHeartbeat,
 }
 
 impl crate::sealer::Glue for Payload {}
@@ -260,6 +283,7 @@ impl HasOpcode for Payload {
             Payload::ServiceChannel(_) => Opcode::Heartbeat as u16,
             Payload::ServiceChannelAck(_) => Opcode::Heartbeat as u16,
             Payload::Resumed(_) => Opcode::Heartbeat as u16,
+            Payload::RequestHeartbeat => Opcode::RequestHeartbeat as u16,
         }
     }
 }
@@ -305,6 +329,9 @@ impl Serialize for Payload {
                 serializer.serialize_newtype_struct("d", service_channel_ack)
             }
             Payload::Resumed(resumed) => serializer.serialize_newtype_struct("d", resumed),
+            Payload::RequestHeartbeat => {
+                serializer.serialize_newtype_struct("d", &Value::Object(Map::new()))
+            }
         }
     }
 }
@@ -409,7 +436,6 @@ impl<'de> Deserialize<'de> for CoreEvent {
                             serde_json::from_value::<ServiceChannel>(d_serde_value.clone())
                                 .map_err(A::Error::custom)?,
                         ),
-
                         Opcode::ServiceChannelAck => Payload::ServiceChannelAck(
                             serde_json::from_value::<ServiceChannelAck>(d_serde_value.clone())
                                 .map_err(A::Error::custom)?,
@@ -418,6 +444,7 @@ impl<'de> Deserialize<'de> for CoreEvent {
                             serde_json::from_value::<Resumed>(d_serde_value.clone())
                                 .map_err(A::Error::custom)?,
                         ),
+                        Opcode::RequestHeartbeat => Payload::RequestHeartbeat,
                     };
 
                     let event = CoreEvent {
