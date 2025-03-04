@@ -14,6 +14,7 @@ use tokio_tungstenite::{connect_async_tls_with_config, connect_async_with_config
 use crate::gateway::KILL_LOG_MESSAGE;
 use crate::sealer::Glue;
 
+use super::heartbeat::Heartbeat;
 use super::*;
 
 #[derive(Copy, Clone, Debug)]
@@ -139,6 +140,13 @@ impl BackendBehavior for TungsteniteBackend {
                 }
             }
         });
+        let heartbeat_task = Heartbeat::spawn(
+            kill_receive.clone(),
+            kill_send.clone(),
+            received_message_receiver.clone(),
+            sent_message_sender.clone(),
+            35000,
+        );
         Ok(Gateway {
             session,
             send_channel: sent_message_sender,
@@ -146,6 +154,7 @@ impl BackendBehavior for TungsteniteBackend {
             kill_send,
             receiver_task: receiver_join_handle,
             sender_task: sender_join_handle,
+            heartbeat_task,
         })
     }
 
