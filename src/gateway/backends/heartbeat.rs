@@ -60,13 +60,14 @@ impl Heartbeat {
                             },
                         };
                         if let Some(s) = any_payload.s { received_sequences.push(s) }
-                        let any_payload_namespace;
-                        if any_payload.n.len() > 64 {
-                            warn!(r#"Received a payload with namespace "{}", which has a namespace of over 64 characters in length! This is technically not polyproto compliant (see section 8.2 of the protocol definition). In the future, such events might not be processed at all, or simply lead to an error."#, any_payload.n);
-                            any_payload_namespace = "very_long_namespace".to_string();
-                        } else {
-                            any_payload_namespace = any_payload.n.clone();
-                        }
+                        let any_payload_namespace = {
+                            if any_payload.n.len() > 64 {
+                                warn!(r#"Received a payload with namespace "{}", which has a namespace of over 64 characters in length! This is technically not polyproto compliant (see section 8.2 of the protocol definition). In the future, such events might not be processed at all, or simply lead to an error."#, any_payload.n);
+                                "very_long_namespace".to_string()
+                            } else {
+                                any_payload.n.clone()
+                            }
+                        };
                         let any_payload_opcode = any_payload.op;
                         let core_payload = match CoreEvent::try_from(any_payload) {
                             Ok(p) => p,
