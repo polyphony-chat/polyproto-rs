@@ -71,7 +71,7 @@ impl CoreEvent {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash, Deserialize)]
 /// A gateway event from any namespace. Can contain arbitrary data as its `d` payload.
 pub struct AnyEvent {
     /// [Namespace](https://docs.polyphony.chat/Protocol%20Specifications/core/#82-namespaces) context for this payload.
