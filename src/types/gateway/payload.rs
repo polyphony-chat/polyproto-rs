@@ -21,6 +21,23 @@ pub struct Heartbeat {
     pub except: Vec<u64>,
 }
 
+impl Heartbeat {
+    /// Create a new [Self] from a slice of sequence numbers.
+    ///
+    /// ## Performance
+    ///
+    /// Since this uses `impl From<&Vec<u64>> for Heartbeat`, this currently performs an allocation.
+    /// Sad, I know, but as of writing this I am busy with getting everything ready for the public beta
+    /// release of polyproto, and I do not have time to spend on premature optimization. Feel free to
+    /// open a pull request, though.
+    ///
+    /// This operation performs best if the slice is ordered. `.sort()` is called on an owned version
+    /// of the slice, which has `O(n*log(n))` performance on an unsorted vec (iirc).
+    pub fn from_sequence_numbers(seq: &[u64]) -> Self {
+        Heartbeat::from(&seq.to_vec())
+    }
+}
+
 impl From<&Vec<u64>> for Heartbeat {
     fn from(value: &Vec<u64>) -> Self {
         if value.is_empty() {
