@@ -4,13 +4,13 @@
 
 use std::time::Duration;
 
-use log::{debug, trace};
+use log::{debug, trace, warn};
 use serde_json::{from_str, json};
 use tokio::select;
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 
-use crate::types::gateway::{CoreEvent, Payload};
+use crate::types::gateway::{AnyEvent, CoreEvent, Payload};
 
 use super::super::KILL_LOG_MESSAGE;
 use super::{Closed, GatewayMessage};
@@ -26,7 +26,6 @@ impl Heartbeat {
         kill_send: watch::Sender<Closed>,
         mut message_receiver: watch::Receiver<GatewayMessage>,
         message_sender: watch::Sender<GatewayMessage>,
-        mut sequence_receiver: watch::Receiver<u64>,
         interval: u32,
     ) -> Self {
         let task_handle = tokio::spawn(async move {
@@ -53,14 +52,30 @@ impl Heartbeat {
                             GatewayMessage::Text(t) => t,
                             _ => continue // Non-text messages cannot be gateway payloads relevant to this code, so we skip
                         };
-                        let payload = match from_str::<CoreEvent>(&message) {
+                        let any_payload = match from_str::<AnyEvent>(&message) {
                             Ok(payload) => payload,
-                            Err(_) => {trace
-                                !("Payload couldn't be decoded as CoreEvent, ignoring it");
+                            Err(_) => {
+                            trace!("This payload is not a valid AnyEvent, ignoring it");
                                 continue
                             },
                         };
-                        match payload.d() {
+                        if let Some(s) = any_payload.s { received_sequences.push(s) }
+                        let any_payload_namespace;
+                        if any_payload.n.len() > 64 {
+                            warn!(r#"Received a payload with namespace "{}", which has a namespace of over 64 characters in length! This is technically not polyproto compliant (see section 8.2 of the protocol definition). In the future, such events might not be processed at all, or simply lead to an error."#, any_payload.n);
+                            any_payload_namespace = "very_long_namespace".to_string();
+                        } else {
+                            any_payload_namespace = any_payload.n.clone();
+                        }
+                        let any_payload_opcode = any_payload.op;
+                        let core_payload = match CoreEvent::try_from(any_payload) {
+                            Ok(p) => p,
+                            Err(_) => {
+                                trace!(r#"Payload with namespace "{}" and opcode {} does not seem to have valid CoreEvent data. Assuming it is not a manual heartbeat request and continuing."#, any_payload_namespace, any_payload_opcode);
+                                continue;
+                            }
+                        };
+                        match core_payload.d() {
                             crate::types::gateway::Payload::RequestHeartbeat => {
                                 trace!("Gateway server requested a manual heartbeat!");
                                 received_sequences.dedup();
@@ -68,9 +83,6 @@ impl Heartbeat {
                             },
                             _ => continue
                         };
-                    }
-                    _ = sequence_receiver.changed() => {
-                        received_sequences.push(*sequence_receiver.borrow_and_update());
                     }
                 }
             }
