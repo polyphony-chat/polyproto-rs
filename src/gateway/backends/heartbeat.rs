@@ -37,6 +37,7 @@ impl Heartbeat {
                     _ = &mut _sleep => {
                         trace!("Time to send another heartbeat!");
                         _sleep = Box::pin(tokio::time::sleep(Duration::from_secs(interval as u64)));
+                        received_sequences.dedup();
                         Self::try_send_heartbeat(message_sender.clone(), &received_sequences, kill_send.clone(), 1).await;
                         received_sequences.shrink_to_fit();
                         continue;
@@ -61,7 +62,8 @@ impl Heartbeat {
                         };
                         match payload.d() {
                             crate::types::gateway::Payload::RequestHeartbeat => {
-                                trace!("Gaetway server requested a manual heartbeat!");
+                                trace!("Gateway server requested a manual heartbeat!");
+                                received_sequences.dedup();
                                 Self::try_send_heartbeat(message_sender.clone(), &received_sequences, kill_send.clone(), 1).await
                             },
                             _ => continue
