@@ -9,7 +9,8 @@ use crate::api::Session;
 use crate::key::PrivateKey;
 use crate::signature::Signature;
 
-mod backends;
+/// Gateway backend code.
+pub mod backends;
 use backends::heartbeat::Heartbeat;
 pub use backends::BackendBehavior;
 use backends::{Closed, GatewayMessage};
