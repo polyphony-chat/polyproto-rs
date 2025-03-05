@@ -235,3 +235,55 @@ fn serde_event_payload_server_request_heartbeat() {
     dbg!(json!(&event_from_json));
     assert_eq!(event, event_from_json);
 }
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn heartbeat_from_sequence_numbers_easy() {
+    let sequence = &[1u64, 2, 3, 4, 5, 6, 7];
+    let heartbeat = Heartbeat::from_sequence_numbers(sequence);
+    assert_eq!(heartbeat.from, 1u64);
+    assert_eq!(heartbeat.to, 7u64);
+    assert!(heartbeat.except == Vec::<u64>::new());
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn heartbeat_from_sequence_numbers_late_min() {
+    let sequence = &[8u64, 2, 3, 4, 5, 6, 7, 1];
+    let heartbeat = Heartbeat::from_sequence_numbers(sequence);
+    assert_eq!(heartbeat.from, 1u64);
+    assert_eq!(heartbeat.to, 8u64);
+    assert!(heartbeat.except == Vec::<u64>::new());
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn heartbeat_from_sequence_numbers_except() {
+    let sequence = &[1u64, 2, 3, 4, 5, 7, 8];
+    let heartbeat = Heartbeat::from_sequence_numbers(sequence);
+    assert_eq!(heartbeat.from, 1u64);
+    assert_eq!(heartbeat.to, 8u64);
+    assert_eq!(heartbeat.except, vec![6]);
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn heartbeat_from_sequence_numbers_very_big_except() {
+    let sequence = &[1u64, 2, 3, 4, 5, 100];
+    let heartbeat = Heartbeat::from_sequence_numbers(sequence);
+    assert_eq!(heartbeat.from, 1u64);
+    assert_eq!(heartbeat.to, 100u64);
+    let missing: Vec<u64> = (6..=99).collect();
+    assert_eq!(heartbeat.except, missing);
+
+    let sequence = &[12u64, 2, 3, 102, 5, 100];
+    let heartbeat = Heartbeat::from_sequence_numbers(sequence);
+    assert_eq!(heartbeat.from, 2u64);
+    assert_eq!(heartbeat.to, 102u64);
+    let mut missing: Vec<u64> = (6..=99).collect();
+    missing.remove(6);
+    missing.push(101);
+    missing.push(4);
+    missing.sort();
+    assert_eq!(heartbeat.except, missing);
+}
