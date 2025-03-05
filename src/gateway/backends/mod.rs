@@ -57,33 +57,45 @@ pub trait BackendBehavior: crate::sealer::Glue {
     /// to pass values to the [GatewayBackend]. As such, take a look at the documentation of [tokio::sync::broadcast::Sender]
     /// to learn more about this function.
     async fn send(&self, value: GatewayMessage) -> Result<(), SendError<GatewayMessage>>;
+    /// Disconnect from the gateway with an optional [CloseMessage] to indicate a reason for the
+    /// disconnect.
     async fn disconnect(
         &self,
         reason: Option<CloseMessage>,
     ) -> Result<(), SendError<GatewayMessage>>;
 }
 
+/// Alias for `Result<T, Error>`, where `Error` = [Error].
 pub type GatewayResult<T> = Result<T, Error>;
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Eq)]
+/// Gateway error type.
 pub enum Error {
     #[error(transparent)]
+    /// [ConnectionError]
     ConnectionError(#[from] ConnectionError),
     #[error("Backend has encountered the following error: {0}")]
+    /// Backend specific error.
     BackendError(String),
 }
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Eq)]
+/// Connection errors.
 pub enum ConnectionError {
     #[error("Unsupported connection scheme: {0}")]
+    /// Thrown, if the connection scheme is unsupported.
     ConnectionScheme(String),
     #[error(transparent)]
+    /// Returned when the gateway connection closes.
     Closed(Closed),
 }
 
 #[derive(thiserror::Error, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+/// Represents different reasons for why the gateway connection has closed.
 pub enum Closed {
+    /// The channel is exhausted, meaning the receiver can no longer receive messages.
     Exhausted,
+    /// A different error has occurred.
     Error(String),
 }
 
@@ -96,11 +108,15 @@ impl std::fmt::Display for Closed {
     }
 }
 
-/// A gateway server payload.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+/// A gateway payload. Currently an abstraction of `ws_stream_wasm`'s and `tungstenite`'s error types,
+/// to fully disconnect the public API from the backend in use.
 pub enum GatewayMessage {
+    /// Text!
     Text(String),
+    /// Binary!
     Binary(Vec<u8>),
+    /// Close!
     Close(Option<CloseMessage>),
 }
 
@@ -113,7 +129,9 @@ impl Hash for GatewayMessage {
 /// A gateway close message, indicating why the connection is closing.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CloseMessage {
+    /// A numeric code, indicating a reason for why the connection was closed.
     pub code: CloseCode,
+    /// An arbitrary reason string. Might further indicate why the connection was closed.
     pub reason: String,
 }
 
@@ -197,10 +215,15 @@ pub enum CloseCode {
     /// to a different IP (when multiple targets exist), or reconnect to the same IP
     /// when a user has performed an action.
     Again,
+    /// TLS related close codes
     Tls,
+    /// Reserved close codes
     Reserved(u16),
+    /// IANA (Internet Assigned Numbers Authority) reserved close codes
     Iana(u16),
+    /// Library specific close codes. This means us!
     Library(u16),
+    /// Bad connection! Bad connection! >:(
     Bad(u16),
 }
 

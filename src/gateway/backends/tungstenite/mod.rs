@@ -18,15 +18,24 @@ use super::heartbeat::Heartbeat;
 use super::*;
 
 #[derive(Clone, Debug)]
+/// A [Gateway] backend implementing [BackendBehavior], based on `tokio-tungstenite`. Works on most
+/// architectures, with a notable exception being the `wasm32-unknown-unknown` target triple.
 pub struct TungsteniteBackend {
     sender: tokio::sync::watch::Sender<GatewayMessage>,
 }
 
 impl TungsteniteBackend {
+    /// Create a new instance of this backend.
     pub fn new() -> Self {
         Self {
             sender: watch::channel(GatewayMessage::Text(String::new())).0,
         }
+    }
+}
+
+impl Default for TungsteniteBackend {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
