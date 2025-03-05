@@ -17,7 +17,7 @@ use super::{Closed, GatewayMessage};
 
 #[derive(Debug)]
 pub(crate) struct Heartbeat {
-    task_handle: JoinHandle<()>,
+    _task_handle: JoinHandle<()>,
 }
 
 impl Heartbeat {
@@ -26,6 +26,7 @@ impl Heartbeat {
         kill_send: watch::Sender<Closed>,
         mut message_receiver: watch::Receiver<GatewayMessage>,
         message_sender: watch::Sender<GatewayMessage>,
+        mut sequence_receiver: watch::Receiver<u64>,
         interval: u32,
     ) -> Self {
         let task_handle = tokio::spawn(async move {
@@ -63,14 +64,18 @@ impl Heartbeat {
                                 trace!("Gaetway server requested a manual heartbeat!");
                                 Self::try_send_heartbeat(message_sender.clone(), &received_sequences, kill_send.clone(), 1).await
                             },
-                            crate::types::gateway::Payload::HeartbeatAck(heartbeat_ack) => todo!(),
                             _ => continue
                         };
+                    }
+                    _ = sequence_receiver.changed() => {
+                        received_sequences.push(*sequence_receiver.borrow_and_update());
                     }
                 }
             }
         });
-        Self { task_handle }
+        Self {
+            _task_handle: task_handle,
+        }
     }
 
     /// Attempts to send a heartbeat to the gateway. Will re-try sending the heartbeat up to 6 more times
@@ -118,6 +123,4 @@ impl Heartbeat {
             }
         };
     }
-
-    fn handle_reqeuest_heartbeat(&self, message_sender: watch::Sender<GatewayMessage>) {}
 }
