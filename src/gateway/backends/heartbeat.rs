@@ -16,6 +16,10 @@ use super::super::KILL_LOG_MESSAGE;
 use super::{Closed, GatewayMessage};
 
 #[derive(Debug)]
+/// Gateway backend agnostic implementation of a heartbeat processing task. Checks all incoming events
+/// for sequence numbers and adds them to its initial state for later processing when sending a heartbeat.
+/// Sends a heartbeat every `interval` millis, automatically responds to manual heartbeat requests and
+/// retries sending heartbeats up to 5 times in case of an unstable connection.
 pub(crate) struct Heartbeat {
     _task_handle: JoinHandle<()>,
 }
