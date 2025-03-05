@@ -77,6 +77,9 @@ pub enum Error {
     #[error("Backend has encountered the following error: {0}")]
     /// Backend specific error.
     BackendError(String),
+    #[error("Expected hello as first message")]
+    /// Server sent a message that wasn't a "Hello" event as its first message.
+    NoHello,
 }
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Eq)]
