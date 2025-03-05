@@ -54,8 +54,8 @@ impl From<&Vec<u64>> for Heartbeat {
                 except: Vec::new(),
             };
         }
-        let mut min = 0;
-        let mut max = 0;
+        let mut min = value[0];
+        let mut max = value[0];
         for item in value.iter() {
             if *item < min {
                 min = *item;
@@ -66,28 +66,30 @@ impl From<&Vec<u64>> for Heartbeat {
         let mut ordered_values = value.clone();
         ordered_values.sort();
 
-        let mut prev = None;
-        let mut next = 0u64;
+        let mut prev;
+        let mut current;
         let mut missing = Vec::<u64>::new();
 
-        for value in ordered_values.iter() {
+        for (index, value) in ordered_values.iter().enumerate() {
+            if index.checked_sub(1).is_none() {
+                continue;
+            }
+            prev = ordered_values.get(index - 1).copied();
+            current = *value;
+
             if prev.is_none() {
-                prev = Some(*value);
-            } else {
-                next = *value;
+                continue;
             }
 
             let some_prev = prev.unwrap();
 
-            if next - some_prev > 1 {
-                let mut difference = next - some_prev;
+            if current - some_prev > 1 {
+                let mut difference = current - some_prev - 1;
                 while difference != 0 {
-                    missing.push(difference);
+                    missing.push(current - difference);
                     difference -= 1;
                 }
             }
-
-            prev = Some(next);
         }
 
         Heartbeat {
