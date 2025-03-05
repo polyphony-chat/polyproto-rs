@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
 
-use tokio::sync::broadcast::error::SendError;
+use tokio::sync::watch::error::SendError;
 use url::Url;
 
 use crate::api::Session;
@@ -31,6 +31,7 @@ pub trait BackendBehavior: crate::sealer::Glue {
     /// The resulting [Gateway] will not yet have any messages sent to the server, meaning you will
     /// still have to authenticate and establish a Heartbeat loop.
     async fn connect<S, T>(
+        &self,
         session: Arc<Session<S, T>>,
         gateway_url: &Url,
     ) -> GatewayResult<Gateway<S, T>>
@@ -46,7 +47,7 @@ pub trait BackendBehavior: crate::sealer::Glue {
     /// Implementees of [BackendBehavior] use a [tokio::sync::broadcast::channel]
     /// to pass values to the [GatewayBackend]. As such, take a look at the documentation of [tokio::sync::broadcast::Receiver]
     /// to learn more about this function.
-    fn subscribe(&self) -> tokio::sync::broadcast::Receiver<GatewayMessage>;
+    fn subscribe(&self) -> tokio::sync::watch::Receiver<GatewayMessage>;
     /// Attempt to send a value to the [GatewayBackend] which will attempt to forward this message to the
     /// gateway server.
     ///
@@ -55,8 +56,11 @@ pub trait BackendBehavior: crate::sealer::Glue {
     /// Implementees of [BackendBehavior] use a [tokio::sync::broadcast::channel]
     /// to pass values to the [GatewayBackend]. As such, take a look at the documentation of [tokio::sync::broadcast::Sender]
     /// to learn more about this function.
-    async fn send(&self, value: GatewayMessage) -> Result<usize, SendError<GatewayMessage>>;
-    async fn disconnect(reason: Option<CloseMessage>) -> Result<(), Error>;
+    async fn send(&self, value: GatewayMessage) -> Result<(), SendError<GatewayMessage>>;
+    async fn disconnect(
+        &self,
+        reason: Option<CloseMessage>,
+    ) -> Result<(), SendError<GatewayMessage>>;
 }
 
 pub type GatewayResult<T> = Result<T, Error>;

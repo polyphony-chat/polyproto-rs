@@ -17,13 +17,24 @@ use crate::sealer::Glue;
 use super::heartbeat::Heartbeat;
 use super::*;
 
-#[derive(Copy, Clone, Debug)]
-pub struct TungsteniteBackend;
+#[derive(Clone, Debug)]
+pub struct TungsteniteBackend {
+    sender: tokio::sync::watch::Sender<GatewayMessage>,
+}
+
+impl TungsteniteBackend {
+    pub fn new() -> Self {
+        Self {
+            sender: watch::channel(GatewayMessage::Text(String::new())).0,
+        }
+    }
+}
 
 impl Glue for TungsteniteBackend {}
 
 impl BackendBehavior for TungsteniteBackend {
     async fn connect<S, T>(
+        &self,
         session: Arc<Session<S, T>>,
         gateway_url: &Url,
     ) -> GatewayResult<Gateway<S, T>>
@@ -113,8 +124,8 @@ impl BackendBehavior for TungsteniteBackend {
         let send_task_kill_send = kill_send.clone();
         // The sent_message_sender send messages from outside the gateway task into the gateway task,
         // where the task then forwards the message to the websocket server.
-        let (sent_message_sender, mut sent_message_receiver) =
-            watch::channel(GatewayMessage::Text(String::new()));
+        let sent_message_sender = self.sender.clone();
+        let mut sent_message_receiver = sent_message_sender.subscribe();
         let sender_join_handle = tokio::spawn(async move {
             loop {
                 select! {
@@ -158,16 +169,19 @@ impl BackendBehavior for TungsteniteBackend {
         })
     }
 
-    fn subscribe(&self) -> tokio::sync::broadcast::Receiver<GatewayMessage> {
-        todo!()
+    fn subscribe(&self) -> tokio::sync::watch::Receiver<GatewayMessage> {
+        self.sender.subscribe()
     }
 
-    async fn send(&self, value: GatewayMessage) -> Result<usize, SendError<GatewayMessage>> {
-        todo!()
+    async fn send(&self, value: GatewayMessage) -> Result<(), SendError<GatewayMessage>> {
+        self.sender.send(value)
     }
 
-    async fn disconnect(reason: Option<CloseMessage>) -> Result<(), Error> {
-        todo!()
+    async fn disconnect(
+        &self,
+        reason: Option<CloseMessage>,
+    ) -> Result<(), SendError<GatewayMessage>> {
+        self.sender.send(GatewayMessage::Close(reason))
     }
 }
 
