@@ -38,11 +38,11 @@ where
     pub send_channel: watch::Sender<GatewayMessage>,
     /// This channel can be used to receive [GatewayMessages](GatewayMessage) from the gateway server.
     pub receive_channel: watch::Receiver<GatewayMessage>,
-    kill_send: watch::Sender<Closed>,
+    _kill_send: watch::Sender<Closed>,
     /// Tokio task running "receiver" logic
-    receiver_task: JoinHandle<()>,
+    _receiver_task: JoinHandle<()>,
     /// Tokio task running "sender" logic
-    sender_task: JoinHandle<()>,
+    _sender_task: JoinHandle<()>,
     /// Tokio task running heartbeat logic
-    heartbeat_task: Heartbeat,
+    _heartbeat_task: Heartbeat,
 }

@@ -162,10 +162,10 @@ impl BackendBehavior for TungsteniteBackend {
             session,
             send_channel: sent_message_sender,
             receive_channel: received_message_receiver,
-            kill_send,
-            receiver_task: receiver_join_handle,
-            sender_task: sender_join_handle,
-            heartbeat_task,
+            _kill_send: kill_send,
+            _receiver_task: receiver_join_handle,
+            _sender_task: sender_join_handle,
+            _heartbeat_task: heartbeat_task,
         })
     }
 
