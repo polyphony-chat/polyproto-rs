@@ -8,11 +8,12 @@ use futures_util::stream::StreamExt;
 use futures_util::SinkExt;
 use log::{debug, trace};
 use tokio::select;
-use tokio::sync::watch;
+use tokio::sync::{watch, Mutex};
 use tokio_tungstenite::{connect_async_tls_with_config, connect_async_with_config};
 
-use crate::gateway::KILL_LOG_MESSAGE;
+use crate::gateway::{kill, KILL_LOG_MESSAGE};
 use crate::sealer::Glue;
+use crate::types::gateway::{CoreEvent, Payload};
 
 use super::heartbeat::Heartbeat;
 use super::*;
@@ -88,6 +89,9 @@ impl BackendBehavior for TungsteniteBackend {
             watch::channel::<GatewayMessage>(GatewayMessage::Text(String::new()));
         let mut receive_task_kill_receive = kill_receive.clone();
         let receive_task_kill_send = kill_send.clone();
+        let mut received_hello = false;
+        let interval = Arc::new(Mutex::new(0u32));
+        let interval_clone = interval.clone();
         let receiver_join_handle = tokio::spawn(async move {
             loop {
                 select! {
@@ -101,30 +105,54 @@ impl BackendBehavior for TungsteniteBackend {
                             Some(message_result) => match message_result  {
                                 Ok(m) => m,
                                 Err(e) => {
-                                    debug!(r#"Received error as next message in receiver stream. Sending kill signal: {e}"#);
-                                    match receive_task_kill_send.send(Closed::Error(e.to_string())) {
-                                        Ok(_) => trace!("Sent kill signal successfully"),
-                                        Err(kill_error) => trace!("Sent kill signal, received error. Shutting down regardless: {kill_error}"),
-                                    };
+                                    kill!(receive_task_kill_send, debug, format!(r#"Received error as next message in receiver stream. Sending kill signal: {e}"#));
                                     break;
                                 },
                             },
                             None => {
-                                trace!(r#"Received "None" as next message in receiver stream. Channel closed; sending kill signal"#);
-                                match receive_task_kill_send.send(Closed::Exhausted) {
-                                    Ok(_) => trace!("Sent kill signal successfully"),
-                                    Err(kill_error) => trace!("Sent kill signal, received error. Shutting down regardless: {kill_error}"),
-                                };
+                                kill!(receive_task_kill_send, trace, r#"Received "None" as next message in receiver stream. Channel closed; sending kill signal"#);
                                 break;
                             },
                         };
-                        trace!("Received gateway message, updating receivers");
                         let message = GatewayMessage::from(tungstenite_message);
-                        trace!("Message: {:?}", message);
-                        match received_message_sender.send(message) {
-                            Ok(_) => trace!("Updated all receivers"),
-                            Err(e) => debug!("Failed to update receivers. Don't care though, we ball (task will not exit) {e}"),
+                        // Expect hello if we haven't received one yet
+                        if !received_hello {
+                            match message {
+                                GatewayMessage::Text(text) => {
+                                    let event = match serde_json::from_str::<CoreEvent>(&text) {
+                                        Ok(e) => e,
+                                        Err(_) => {
+                                            kill!(receive_task_kill_send, info, "Server should have sent HELLO as first message. Cannot continue");
+                                            break;
+                                        }
+                                    };
+                                    match event.d() {
+                                        Payload::Hello(hello) => {
+                                            let mut interval = interval_clone.lock().await;
+                                            *interval = hello.heartbeat_interval;
+                                            drop(interval)
+                                        }
+                                        _ => {
+                                            kill!(receive_task_kill_send, info, "Server should have sent HELLO as first message. Cannot continue");
+                                            break;
+                                        }
+                                    }
+                                },
+                                _ => {
+                                    kill!(receive_task_kill_send, info, "Server should have sent HELLO as first message. Cannot continue");
+                                    break;
+                                },
+                            };
+                            received_hello = true;
+                        } else {
+                            trace!("Received gateway message, updating receivers");
+                            trace!("Message: {:?}", message);
+                            match received_message_sender.send(message) {
+                                Ok(_) => trace!("Updated all receivers"),
+                                Err(e) => debug!("Failed to update receivers. Don't care though, we ball (task will not exit) {e}"),
+                            }
                         }
+
                     }
                 }
             }
@@ -148,11 +176,7 @@ impl BackendBehavior for TungsteniteBackend {
                         match split_sink.send(tokio_tungstenite::tungstenite::Message::from(message)).await {
                             Ok(_) => trace!("Successfully sent message to server"),
                             Err(e) => {
-                                debug!(r#"Received error when sending message to server. Sending kill signal: {e}"#);
-                                match send_task_kill_send.send(Closed::Error(e.to_string())) {
-                                    Ok(_) => trace!("Sent kill signal successfully"),
-                                    Err(kill_error) => trace!("Sent kill signal, received error. Shutting down regardless: {kill_error}"),
-                                };
+                                kill!(send_task_kill_send, debug, format!(r#"Received error when sending message to server. Sending kill signal: {e}"#));
                                 break;
                             },
                         };
@@ -165,7 +189,7 @@ impl BackendBehavior for TungsteniteBackend {
             kill_send.clone(),
             received_message_receiver.clone(),
             sent_message_sender.clone(),
-            35000,
+            *interval.lock().await,
         );
         Ok(Gateway {
             session,
