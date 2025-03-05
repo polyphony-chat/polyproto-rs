@@ -4,9 +4,13 @@
 
 use polyproto::errors::ConversionError;
 
+#[cfg(feature = "reqwest")]
 pub(crate) mod api;
 pub(crate) mod certs;
 pub(crate) mod common;
+#[cfg(feature = "gateway")]
+pub(crate) mod gateway;
+#[cfg(feature = "types")]
 pub(crate) mod types;
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
