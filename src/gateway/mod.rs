@@ -46,3 +46,29 @@ where
     /// Tokio task running heartbeat logic
     _heartbeat_task: Heartbeat,
 }
+
+/// Send a kill signal through a dedicated `watch` sender.
+///
+/// ## Example
+///
+/// ```
+/// # use polyproto::gateway::backends::Closed;
+/// # use polyproto::gateway::kill;
+/// let sender = tokio::sync::watch::channel(Closed::Exhausted).0;
+/// // info is a `log::` loglevel macro, the last argument is the log message.
+/// kill!(sender, info, "We had to do it to 'em.");
+/// ```
+#[macro_export]
+macro_rules! kill {
+    ($kill_send:ident, $log_level:ident, $msg:expr) => {{
+        log::$log_level!("{}", $msg);
+        match $kill_send.send(Closed::Error($msg.to_string())) {
+            Ok(_) => log::trace!("Sent kill signal successfully"),
+            Err(kill_error) => log::trace!(
+                "Sent kill signal, received error. Shutting down regardless: {kill_error}"
+            ),
+        };
+    }};
+}
+
+pub use kill;
