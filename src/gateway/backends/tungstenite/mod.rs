@@ -184,6 +184,9 @@ impl BackendBehavior for TungsteniteBackend {
                 }
             }
         });
+        // BUG This is running in parallel with the receiver join handle task, when i for some reason
+        // expected it to run sequential. If i fix this, heartbeats should only be spawned after we
+        // receive hello
         let heartbeat_task = Heartbeat::spawn(
             kill_receive.clone(),
             kill_send.clone(),
