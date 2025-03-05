@@ -64,6 +64,7 @@ serde_json = { version = "1.0.137" }
 serde_test = "1.0.177"
 polyproto = { path = "./", features = ["types", "reqwest", "serde"] }
 env_logger = "0.11.6"
+ws-mock = "0.3.0"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3.50"
