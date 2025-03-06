@@ -81,7 +81,8 @@ mod test {
 
     use super::backends::Closed;
 
-    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn kill_test() {
         init_logger();
         let (send, receive) = watch::channel(Closed::Exhausted);
@@ -89,7 +90,8 @@ mod test {
         assert!(receive.has_changed().unwrap())
     }
 
-    #[test]
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
     fn kill_test_cant_send() {
         init_logger();
         let (send, receive) = watch::channel(Closed::Exhausted);
