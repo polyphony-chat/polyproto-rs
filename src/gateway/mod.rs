@@ -72,3 +72,28 @@ macro_rules! kill {
 }
 
 pub use kill;
+
+#[cfg(test)]
+mod test {
+    use tokio::sync::watch;
+
+    use crate::testing_utils::init_logger;
+
+    use super::backends::Closed;
+
+    #[test]
+    fn kill_test() {
+        init_logger();
+        let (send, receive) = watch::channel(Closed::Exhausted);
+        kill!(send, info, "this is a test!");
+        assert!(receive.has_changed().unwrap())
+    }
+
+    #[test]
+    fn kill_test_cant_send() {
+        init_logger();
+        let (send, receive) = watch::channel(Closed::Exhausted);
+        drop(receive);
+        kill!(send, info, "this is a test!");
+    }
+}
