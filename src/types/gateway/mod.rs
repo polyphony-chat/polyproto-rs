@@ -385,8 +385,6 @@ impl<'de> Deserialize<'de> for CoreEvent {
                     let mut maybe_s = None;
 
                     while let Some((key, value)) = map.next_entry::<String, serde_json::Value>()? {
-                        dbg!(&key);
-                        dbg!(&value);
                         if key == "d" {
                             maybe_d = Some(value);
                         } else if key == "op" {

@@ -82,6 +82,25 @@ impl BackendBehavior for TungsteniteBackend {
             e => return Err(ConnectionError::ConnectionScheme(e.to_string()).into()),
         };
         let (mut split_sink, mut split_stream) = stream.split();
+        debug!("Waiting on first message...");
+        let maybe_first_message = split_stream
+            .next()
+            .await
+            .map(|o| o.map(GatewayMessage::from));
+        trace!("Received first message: {:?}", maybe_first_message);
+        let message = match maybe_first_message {
+            Some(message) => match message {
+                Ok(message) => message,
+                Err(_) => return Err(Error::NoHello),
+            },
+            None => return Err(Error::NoHello),
+        };
+        let core_event = CoreEvent::try_from(message).map_err(|_| Error::NoHello)?;
+        let hello = match core_event.d() {
+            Payload::Hello(hello) => hello,
+            _ => return Err(Error::NoHello),
+        };
+        trace!("Got hello! {:?}", hello);
         let (kill_send, kill_receive) = watch::channel::<Closed>(Closed::Exhausted);
         // The received_message_sender sends messages received from the WebSocket server from inside
         // the task_handle to all receivers.
@@ -89,9 +108,6 @@ impl BackendBehavior for TungsteniteBackend {
             watch::channel::<GatewayMessage>(GatewayMessage::Text(String::new()));
         let mut receive_task_kill_receive = kill_receive.clone();
         let receive_task_kill_send = kill_send.clone();
-        let mut received_hello = false;
-        let interval = Arc::new(Mutex::new(0u32));
-        let interval_clone = interval.clone();
         let receiver_join_handle = tokio::spawn(async move {
             loop {
                 select! {
@@ -115,44 +131,12 @@ impl BackendBehavior for TungsteniteBackend {
                             },
                         };
                         let message = GatewayMessage::from(tungstenite_message);
-                        // Expect hello if we haven't received one yet
-                        if !received_hello {
-                            match message {
-                                GatewayMessage::Text(text) => {
-                                    let event = match serde_json::from_str::<CoreEvent>(&text) {
-                                        Ok(e) => e,
-                                        Err(_) => {
-                                            kill!(receive_task_kill_send, info, "Server should have sent HELLO as first message. Cannot continue");
-                                            break;
-                                        }
-                                    };
-                                    match event.d() {
-                                        Payload::Hello(hello) => {
-                                            let mut interval = interval_clone.lock().await;
-                                            *interval = hello.heartbeat_interval;
-                                            drop(interval)
-                                        }
-                                        _ => {
-                                            kill!(receive_task_kill_send, info, "Server should have sent HELLO as first message. Cannot continue");
-                                            break;
-                                        }
-                                    }
-                                },
-                                _ => {
-                                    kill!(receive_task_kill_send, info, "Server should have sent HELLO as first message. Cannot continue");
-                                    break;
-                                },
-                            };
-                            received_hello = true;
-                        } else {
-                            trace!("Received gateway message, updating receivers");
-                            trace!("Message: {:?}", message);
-                            match received_message_sender.send(message) {
-                                Ok(_) => trace!("Updated all receivers"),
-                                Err(e) => debug!("Failed to update receivers. Don't care though, we ball (task will not exit) {e}"),
-                            }
+                        trace!("Received gateway message, updating receivers");
+                        trace!("Message: {:?}", message);
+                        match received_message_sender.send(message) {
+                            Ok(_) => trace!("Updated all receivers"),
+                            Err(e) => debug!("Failed to update receivers. Don't care though, we ball (task will not exit) {e}"),
                         }
-
                     }
                 }
             }
@@ -184,15 +168,12 @@ impl BackendBehavior for TungsteniteBackend {
                 }
             }
         });
-        // BUG This is running in parallel with the receiver join handle task, when i for some reason
-        // expected it to run sequential. If i fix this, heartbeats should only be spawned after we
-        // receive hello
         let heartbeat_task = Heartbeat::spawn(
             kill_receive.clone(),
             kill_send.clone(),
             received_message_receiver.clone(),
             sent_message_sender.clone(),
-            *interval.lock().await,
+            hello.heartbeat_interval,
         );
         Ok(Gateway {
             session,

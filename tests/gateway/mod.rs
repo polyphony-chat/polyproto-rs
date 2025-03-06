@@ -6,39 +6,13 @@ use crate::common::{Ed25519PrivateKey, Ed25519Signature};
 
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::test]
-async fn connect_tungstenite_smoke_test() {
-    use std::sync::Arc;
-
-    use polyproto::api::{HttpClient, Session};
-    use polyproto::gateway::{backends, BackendBehavior};
-    use url::Url;
-    use ws_mock::ws_mock_server::WsMockServer;
-
-    let server = WsMockServer::start().await;
-    let tungstenite = backends::tungstenite::TungsteniteBackend::new();
-    let session = Session::<Ed25519Signature, Ed25519PrivateKey>::new(
-        &HttpClient::new().unwrap(),
-        "none",
-        Url::parse("http://127.0.0.1").unwrap(),
-        None,
-    );
-    tungstenite
-        .connect(Arc::new(session), &Url::parse(&server.uri().await).unwrap())
-        .await
-        .unwrap();
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-#[tokio::test]
 async fn connect_tungstenite_hello() {
     use std::sync::Arc;
 
-    use log::trace;
     use polyproto::api::{HttpClient, Session};
-    use polyproto::gateway::backends::GatewayMessage;
     use polyproto::gateway::{backends, BackendBehavior};
     use polyproto::types::gateway::payload::Hello;
-    use polyproto::types::gateway::CoreEvent;
+    use polyproto::types::gateway::{CoreEvent, Payload};
     use serde_json::json;
     use tokio_tungstenite::tungstenite::Message;
     use url::Url;
@@ -61,25 +35,21 @@ async fn connect_tungstenite_hello() {
         Url::parse("http://127.0.0.1").unwrap(),
         None,
     );
+    send.send(Message::Text(
+        json!(CoreEvent::new(
+            Payload::Hello(Hello {
+                heartbeat_interval: 12345
+            }),
+            None
+        ))
+        .to_string()
+        .into(),
+    ))
+    .await
+    .unwrap();
+    println!("sent data");
     tungstenite
         .connect(Arc::new(session), &Url::parse(&server.uri().await).unwrap())
         .await
         .unwrap();
-    let mut tungstenite_rcv = tungstenite.subscribe();
-
-    assert!(tungstenite_rcv.changed().await.is_ok());
-    let msg = tungstenite_rcv.borrow_and_update().clone();
-    trace!("{:?}", msg);
-    assert_eq!(
-        msg,
-        GatewayMessage::Text(
-            json!(CoreEvent::new(
-                polyproto::types::gateway::Payload::Hello(Hello {
-                    heartbeat_interval: 12345
-                }),
-                None
-            ))
-            .to_string()
-        )
-    )
 }

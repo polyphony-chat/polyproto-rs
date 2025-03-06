@@ -8,12 +8,15 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
 
+use serde_json::from_str;
 use tokio::sync::watch::error::SendError;
 use url::Url;
 
 use crate::api::Session;
+use crate::errors::InvalidInput;
 use crate::key::PrivateKey;
 use crate::signature::Signature;
+use crate::types::gateway::CoreEvent;
 
 use super::Gateway;
 
@@ -121,6 +124,37 @@ pub enum GatewayMessage {
     Binary(Vec<u8>),
     /// Close!
     Close(Option<CloseMessage>),
+}
+
+impl TryFrom<GatewayMessage> for CoreEvent {
+    type Error = InvalidInput;
+
+    fn try_from(value: GatewayMessage) -> Result<Self, Self::Error> {
+        let text = match value {
+            GatewayMessage::Text(text) => text,
+            GatewayMessage::Binary(_) => {
+                return Err(InvalidInput::Malformed(
+                    "Found binary message, expected string as HELLO payload".to_string(),
+                ))
+            }
+            GatewayMessage::Close(_) => {
+                return Err(InvalidInput::Malformed(
+                    "Found close message, expected string as HELLO payload".to_string(),
+                ))
+            }
+        };
+        serde_json::from_str::<CoreEvent>(&text).map_err(|e| InvalidInput::Malformed(e.to_string()))
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl TryFrom<tokio_tungstenite::tungstenite::Message> for CoreEvent {
+    type Error = InvalidInput;
+
+    fn try_from(value: tokio_tungstenite::tungstenite::Message) -> Result<Self, Self::Error> {
+        let gw_message = GatewayMessage::from(value);
+        CoreEvent::try_from(gw_message)
+    }
 }
 
 impl Hash for GatewayMessage {
