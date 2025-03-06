@@ -399,3 +399,33 @@ impl From<u16> for CloseCode {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn test_close_code_conversions() {
+        assert_eq!(u16::from(CloseCode::Normal), 1000);
+        assert_eq!(u16::from(CloseCode::Away), 1001);
+        assert_eq!(u16::from(CloseCode::Protocol), 1002);
+        assert_eq!(u16::from(CloseCode::Unsupported), 1003);
+        assert_eq!(u16::from(CloseCode::Status), 1005);
+        assert_eq!(u16::from(CloseCode::Abnormal), 1006);
+        assert_eq!(u16::from(CloseCode::Invalid), 1007);
+        assert_eq!(u16::from(CloseCode::Policy), 1008);
+        assert_eq!(u16::from(CloseCode::Size), 1009);
+        assert_eq!(u16::from(CloseCode::Extension), 1010);
+        assert_eq!(u16::from(CloseCode::Error), 1011);
+        assert_eq!(u16::from(CloseCode::Restart), 1012);
+        assert_eq!(u16::from(CloseCode::Again), 1013);
+        assert_eq!(u16::from(CloseCode::Tls), 1015);
+
+        // Test with reserved, iana, library, and bad codes
+        assert_eq!(u16::from(CloseCode::Reserved(999)), 999);
+        assert_eq!(u16::from(CloseCode::Iana(2000)), 2000);
+        assert_eq!(u16::from(CloseCode::Library(3000)), 3000);
+        assert_eq!(u16::from(CloseCode::Bad(4000)), 4000);
+    }
+}
