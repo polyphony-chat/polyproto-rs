@@ -32,6 +32,7 @@ impl Heartbeat {
         message_sender: watch::Sender<GatewayMessage>,
         interval: u32,
     ) -> Self {
+        trace!("Heartbeat task spawned with interval of {interval}!");
         let task_handle = tokio::spawn(async move {
             let mut _sleep = Box::pin(tokio::time::sleep(Duration::from_secs(interval as u64)));
             let mut received_sequences = Vec::<u64>::new();
@@ -63,6 +64,7 @@ impl Heartbeat {
                                 continue
                             },
                         };
+                        trace!("Received AnyEvent {:?}", any_payload);
                         if let Some(s) = any_payload.s { received_sequences.push(s) }
                         let any_payload_namespace = {
                             if any_payload.n.len() > 64 {
@@ -75,8 +77,9 @@ impl Heartbeat {
                         let any_payload_opcode = any_payload.op;
                         let core_payload = match CoreEvent::try_from(any_payload) {
                             Ok(p) => p,
-                            Err(_) => {
-                                trace!(r#"Payload with namespace "{}" and opcode {} does not seem to have valid CoreEvent data. Assuming it is not a manual heartbeat request and continuing."#, any_payload_namespace, any_payload_opcode);
+                            Err(e) => {
+                                debug!(r#"Payload with namespace "{}" and opcode {} does not seem to have valid CoreEvent data. Assuming it is not a manual heartbeat request and continuing."#, any_payload_namespace, any_payload_opcode);
+                                trace!("Actual error: {e}");
                                 continue;
                             }
                         };
@@ -115,7 +118,8 @@ impl Heartbeat {
             };
             return;
         }
-        if attempt != 0 {
+        if attempt > 1 {
+            trace!("Waiting before next attempt...");
             tokio::time::sleep(Duration::from_millis(1500)).await;
         }
         let message = GatewayMessage::Text(
@@ -128,8 +132,9 @@ impl Heartbeat {
             .to_string(),
         );
         let send_result = message_sender.send(message);
+        trace!("Heartbeat send result: {:?}", send_result);
         match send_result {
-            Ok(_) => (),
+            Ok(_) => trace!("Sent heartbeat!"),
             Err(e) => {
                 debug!("Sending heartbeat to gateway failed, retrying: {e}");
                 Box::pin(Self::try_send_heartbeat(
