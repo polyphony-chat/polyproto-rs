@@ -102,12 +102,7 @@ impl TryFrom<AnyEvent> for CoreEvent {
     type Error = serde_json::Error;
 
     fn try_from(value: AnyEvent) -> Result<Self, Self::Error> {
-        Ok(Self {
-            n: value.n,
-            op: value.op,
-            d: from_str(value.d.to_string().as_str())?,
-            s: value.s,
-        })
+        from_str::<CoreEvent>(&json!(value).to_string())
     }
 }
 
@@ -354,9 +349,7 @@ impl Serialize for Payload {
                 serializer.serialize_newtype_struct("d", service_channel_ack)
             }
             Payload::Resumed(resumed) => serializer.serialize_newtype_struct("d", resumed),
-            Payload::RequestHeartbeat => {
-                serializer.serialize_newtype_struct("d", &Value::Object(Map::new()))
-            }
+            Payload::RequestHeartbeat => serializer.serialize_newtype_struct("d", &json!({})),
         }
     }
 }
@@ -470,7 +463,7 @@ impl<'de> Deserialize<'de> for CoreEvent {
                         ),
                         Opcode::RequestHeartbeat => Payload::RequestHeartbeat,
                     };
-
+                    trace!("d: {:?}", d);
                     let event = CoreEvent {
                         n: "core".to_string(),
                         op: op.into(),
@@ -540,5 +533,235 @@ where
             "Expected String or Integer, found value {:?}",
             other
         ))),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn heartbeat_core_json() {
+        let any_event_json = json!(AnyEvent {
+            n: "core".to_string(),
+            op: Opcode::Heartbeat as u16,
+            d: json!(Heartbeat::from_sequence_numbers(&[])),
+            s: None
+        })
+        .to_string();
+        let core_event = from_str::<CoreEvent>(&any_event_json).unwrap();
+        assert_eq!(json!(&core_event).to_string(), any_event_json);
+        assert_eq!(core_event.op, Opcode::Heartbeat as u16);
+        assert_eq!(core_event.n, "core");
+        assert_eq!(from_str::<CoreEvent>(&any_event_json).unwrap(), core_event);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn hello_core_json() {
+        let any_event_json = json!(AnyEvent {
+            n: "core".to_string(),
+            op: Opcode::Hello as u16,
+            d: json!(Hello {
+                heartbeat_interval: 123
+            }),
+            s: None
+        })
+        .to_string();
+        let core_event = from_str::<CoreEvent>(&any_event_json).unwrap();
+        assert_eq!(json!(&core_event).to_string(), any_event_json);
+        assert_eq!(core_event.op, Opcode::Hello as u16);
+        assert_eq!(core_event.n, "core");
+        assert_eq!(from_str::<CoreEvent>(&any_event_json).unwrap(), core_event);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn identify_core_json() {
+        let any_event_json = json!(AnyEvent {
+            n: "core".to_string(),
+            op: Opcode::Identify as u16,
+            d: json!(Identify {
+                token: "meow".to_string()
+            }),
+            s: None
+        })
+        .to_string();
+        let core_event = from_str::<CoreEvent>(&any_event_json).unwrap();
+        assert_eq!(json!(&core_event).to_string(), any_event_json);
+        assert_eq!(core_event.op, Opcode::Identify as u16);
+        assert_eq!(core_event.n, "core");
+        assert_eq!(from_str::<CoreEvent>(&any_event_json).unwrap(), core_event);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn new_session_core_json() {
+        let any_event_json = json!(AnyEvent {
+            n: "core".to_string(),
+            op: Opcode::NewSession as u16,
+            d: json!(NewSession {
+                cert: "mrrp meow mrrp".to_string()
+            }),
+            s: None
+        })
+        .to_string();
+        let core_event = from_str::<CoreEvent>(&any_event_json).unwrap();
+        assert_eq!(json!(&core_event).to_string(), any_event_json);
+        assert_eq!(core_event.op, Opcode::NewSession as u16);
+        assert_eq!(core_event.n, "core");
+        assert_eq!(from_str::<CoreEvent>(&any_event_json).unwrap(), core_event);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn actor_certificate_invalidation_core_json() {
+        let any_event_json = json!(AnyEvent {
+            n: "core".to_string(),
+            op: Opcode::ActorCertificateInvalidation as u16,
+            d: json!(ActorCertificateInvalidation {
+                serial: 42,
+                invalid_since: 1630728000,
+                signature: "signature".to_string()
+            }),
+            s: None
+        })
+        .to_string();
+        let core_event = from_str::<CoreEvent>(&any_event_json).unwrap();
+        assert_eq!(json!(&core_event).to_string(), any_event_json);
+        assert_eq!(core_event.op, Opcode::ActorCertificateInvalidation as u16);
+        assert_eq!(core_event.n, "core");
+        assert_eq!(from_str::<CoreEvent>(&any_event_json).unwrap(), core_event);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn resume_core_json() {
+        let any_event_json = json!(AnyEvent {
+            n: "core".to_string(),
+            op: Opcode::Resume as u16,
+            d: json!(Resume { s: 43 }),
+            s: None
+        })
+        .to_string();
+        let core_event = from_str::<CoreEvent>(&any_event_json).unwrap();
+        assert_eq!(json!(&core_event).to_string(), any_event_json);
+        assert_eq!(core_event.op, Opcode::Resume as u16);
+        assert_eq!(core_event.n, "core");
+        assert_eq!(from_str::<CoreEvent>(&any_event_json).unwrap(), core_event);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn server_certificate_change_core_json() {
+        let any_event_json = json!(AnyEvent {
+            n: "core".to_string(),
+            op: Opcode::ServerCertificateChange as u16,
+            d: json!(ServerCertificateChange {
+                cert: "meow".to_string(),
+                old_invalid_since: 1234
+            }),
+            s: None
+        })
+        .to_string();
+        let core_event = from_str::<CoreEvent>(&any_event_json).unwrap();
+        assert_eq!(json!(&core_event).to_string(), any_event_json);
+        assert_eq!(core_event.op, Opcode::ServerCertificateChange as u16);
+        assert_eq!(core_event.n, "core");
+        assert_eq!(from_str::<CoreEvent>(&any_event_json).unwrap(), core_event);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn heartbeat_ack_core_json() {
+        let any_event_json = json!(AnyEvent {
+            n: "core".to_string(),
+            op: Opcode::HeartbeatAck as u16,
+            d: json!(HeartbeatAck { inner: Vec::new() }),
+            s: None
+        })
+        .to_string();
+        let core_event = from_str::<CoreEvent>(&any_event_json).unwrap();
+        assert_eq!(json!(&core_event).to_string(), any_event_json);
+        assert_eq!(core_event.op, Opcode::HeartbeatAck as u16);
+        assert_eq!(core_event.n, "core");
+        assert_eq!(from_str::<CoreEvent>(&any_event_json).unwrap(), core_event);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn service_channel_core_json() {
+        let any_event_json = json!(AnyEvent {
+            n: "core".to_string(),
+            op: Opcode::ServiceChannel as u16,
+            d: json!(ServiceChannel {
+                action: ServiceChannelAction::Subscribe,
+                service: "sasdd".to_string()
+            }),
+            s: None
+        })
+        .to_string();
+        let core_event = from_str::<CoreEvent>(&any_event_json).unwrap();
+        assert_eq!(json!(&core_event).to_string(), any_event_json);
+        assert_eq!(core_event.op, Opcode::ServiceChannel as u16);
+        assert_eq!(core_event.n, "core");
+        assert_eq!(from_str::<CoreEvent>(&any_event_json).unwrap(), core_event);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn service_channel_ack_core_json() {
+        let any_event_json = json!(AnyEvent {
+            n: "core".to_string(),
+            op: Opcode::ServiceChannelAck as u16,
+            d: json!(ServiceChannelAck {
+                action: ServiceChannelAction::Subscribe,
+                service: "sasdd".to_string(),
+                success: true,
+                error: None
+            }),
+            s: None
+        })
+        .to_string();
+        let core_event = from_str::<CoreEvent>(&any_event_json).unwrap();
+        assert_eq!(json!(&core_event).to_string(), any_event_json);
+        assert_eq!(core_event.op, Opcode::ServiceChannelAck as u16);
+        assert_eq!(core_event.n, "core");
+        assert_eq!(from_str::<CoreEvent>(&any_event_json).unwrap(), core_event);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn resumed_core_json() {
+        let any_event_json = json!(AnyEvent {
+            n: "core".to_string(),
+            op: Opcode::Resumed as u16,
+            d: json!(Payload::Resumed(Resumed { inner: Vec::new() })),
+            s: None
+        })
+        .to_string();
+        let core_event = from_str::<CoreEvent>(&any_event_json).unwrap();
+        assert_eq!(json!(&core_event).to_string(), any_event_json);
+        assert_eq!(core_event.op, Opcode::Resumed as u16);
+        assert_eq!(core_event.n, "core");
+        assert_eq!(from_str::<CoreEvent>(&any_event_json).unwrap(), core_event);
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn request_heartbeat_core_json() {
+        let any_event_json = json!(AnyEvent {
+            n: "core".to_string(),
+            op: Opcode::RequestHeartbeat as u16,
+            d: json!({}),
+            s: None
+        })
+        .to_string();
+        let core_event = from_str::<CoreEvent>(&any_event_json).unwrap();
+        assert_eq!(json!(&core_event).to_string(), any_event_json);
+        assert_eq!(core_event.op, Opcode::RequestHeartbeat as u16);
+        assert_eq!(core_event.n, "core");
+        assert_eq!(from_str::<CoreEvent>(&any_event_json).unwrap(), core_event);
     }
 }
