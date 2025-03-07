@@ -3,11 +3,13 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use polyproto::api::core::cacheable_cert::CacheableIdCert;
+use polyproto::certs::idcert::IdCert;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use polyproto::types::der::asn1::Uint;
 
-use crate::common::{self, Ed25519Signature};
+use crate::common::{self, init_logger, Ed25519Signature};
+use crate::test_all_platforms;
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
@@ -53,4 +55,199 @@ fn verify_cache_signature() {
     assert!(cert_to_check.verify(public_key).is_ok());
     cert_to_check.invalidated_at = Some(1);
     assert!(cert_to_check.verify(public_key).is_err());
+}
+
+test_all_platforms! {
+    fn verify_successful() {
+        init_logger();
+        let skey = common::Ed25519PrivateKey::gen_keypair(&mut rand::rngs::OsRng);
+        let vkey = skey.public_key.clone();
+        let cert = common::actor_id_cert("skyrina");
+        let serial_number =
+            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
+                polyproto::errors::InvalidCert::InvalidProperties(
+                    polyproto::errors::ConstraintError::Malformed(Some(format!(
+                        "Serial number is not valid: {}",
+                        e
+                    ))),
+                )
+            }).unwrap();
+
+        let cacheable_cert = CacheableIdCert {
+            cert: cert.to_pem(der::pem::LineEnding::LF).unwrap().to_string(),
+            invalidated_at: None,
+            not_valid_before: 1234,
+            not_valid_after: 5678,
+            cache_signature: skey.sign((serial_number.to_string() + &1234.to_string() + &5678.to_string() + "").as_bytes()).as_hex()
+        };
+        dbg!(serial_number.to_string() + &1234.to_string() + &5678.to_string() + "");
+        assert!(vkey.verify_signature(&Ed25519Signature::try_from_hex(&cacheable_cert.cache_signature).unwrap(), (serial_number.to_string() + &1234.to_string() + &5678.to_string() + "").as_bytes()).is_ok());
+        cacheable_cert.verify(&vkey).unwrap();
+    }
+}
+
+test_all_platforms! {
+    #[should_panic]
+    fn verify_unsuccessful() {
+        init_logger();
+        let skey = common::Ed25519PrivateKey::gen_keypair(&mut rand::rngs::OsRng);
+        let vkey = skey.public_key.clone();
+        let cert = common::actor_id_cert("skyrina");
+        let serial_number =
+            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
+                polyproto::errors::InvalidCert::InvalidProperties(
+                    polyproto::errors::ConstraintError::Malformed(Some(format!(
+                        "Serial number is not valid: {}",
+                        e
+                    ))),
+                )
+            }).unwrap();
+
+        let cacheable_cert = CacheableIdCert {
+            cert: cert.to_pem(der::pem::LineEnding::LF).unwrap().to_string(),
+            invalidated_at: None,
+            not_valid_before: 123456,
+            not_valid_after: 5678,
+            cache_signature: skey.sign((serial_number.to_string() + &1234.to_string() + &5678.to_string() + "").as_bytes()).as_hex()
+        };
+        dbg!(serial_number.to_string() + &1234.to_string() + &5678.to_string() + "");
+        assert!(vkey.verify_signature(&Ed25519Signature::try_from_hex(&cacheable_cert.cache_signature).unwrap(), (serial_number.to_string() + &1234.to_string() + &5678.to_string() + "").as_bytes()).is_err());
+        cacheable_cert.verify(&vkey).unwrap();
+    }
+}
+
+test_all_platforms! {
+    #[should_panic]
+    fn verify_unsuccessful_broken_serial_number() {
+        init_logger();
+        let skey = common::Ed25519PrivateKey::gen_keypair(&mut rand::rngs::OsRng);
+        let vkey = skey.public_key.clone();
+        let mut cert = common::actor_id_cert("skyrina");
+        let serial_number =
+            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
+                polyproto::errors::InvalidCert::InvalidProperties(
+                    polyproto::errors::ConstraintError::Malformed(Some(format!(
+                        "Serial number is not valid: {}",
+                        e
+                    ))),
+                )
+            }).unwrap();
+        cert.id_cert_tbs.serial_number = der::asn1::Uint::new(u128::MAX.to_be_bytes().as_slice()).unwrap();
+        let cacheable_cert = CacheableIdCert {
+            cert: cert.to_pem(der::pem::LineEnding::LF).unwrap().to_string(),
+            invalidated_at: None,
+            not_valid_before: 1234,
+            not_valid_after: 5678,
+            cache_signature: skey.sign((serial_number.to_string() + &1234.to_string() + &5678.to_string() + "").as_bytes()).as_hex()
+        };
+        cacheable_cert.verify(&vkey).unwrap();
+    }
+}
+
+test_all_platforms! {
+    #[should_panic]
+    fn verify_unsuccessful_bad_hex_signature() {
+        init_logger();
+        let skey = common::Ed25519PrivateKey::gen_keypair(&mut rand::rngs::OsRng);
+        let vkey = skey.public_key.clone();
+        let cert = common::actor_id_cert("skyrina");
+        let serial_number =
+            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
+                polyproto::errors::InvalidCert::InvalidProperties(
+                    polyproto::errors::ConstraintError::Malformed(Some(format!(
+                        "Serial number is not valid: {}",
+                        e
+                    ))),
+                )
+            }).unwrap();
+        let cacheable_cert = CacheableIdCert {
+            cert: cert.to_pem(der::pem::LineEnding::LF).unwrap().to_string(),
+            invalidated_at: None,
+            not_valid_before: 1234,
+            not_valid_after: 5678,
+            cache_signature: skey.sign((serial_number.to_string() + &1234.to_string() + &5678.to_string() + "").as_bytes()).as_hex() + "6789t5rygc4ghbm"
+        };
+        cacheable_cert.verify(&vkey).unwrap();
+    }
+}
+
+test_all_platforms! {
+    #[should_panic]
+    fn verify_unsuccessful_bad_cert_pem() {
+        init_logger();
+        let skey = common::Ed25519PrivateKey::gen_keypair(&mut rand::rngs::OsRng);
+        let vkey = skey.public_key.clone();
+        let cert = common::actor_id_cert("skyrina");
+        let serial_number =
+            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
+                polyproto::errors::InvalidCert::InvalidProperties(
+                    polyproto::errors::ConstraintError::Malformed(Some(format!(
+                        "Serial number is not valid: {}",
+                        e
+                    ))),
+                )
+            }).unwrap();
+        let cacheable_cert = CacheableIdCert {
+            cert: cert.to_pem(der::pem::LineEnding::LF).unwrap().to_string() + "lalalalalalala:3:3:##:3:3;3::#:3",
+            invalidated_at: None,
+            not_valid_before: common::default_validity().not_before.to_unix_duration().as_secs(),
+            not_valid_after: common::default_validity().not_after.to_unix_duration().as_secs(),
+            cache_signature: skey.sign((serial_number.to_string() + &1234.to_string() + &5678.to_string() + "").as_bytes()).as_hex()
+        };
+        cacheable_cert.verify(&vkey).unwrap();
+    }
+}
+
+test_all_platforms! {
+    fn try_to_idcert() {
+        init_logger();
+        let skey = common::Ed25519PrivateKey::gen_keypair(&mut rand::rngs::OsRng);
+        let vkey = skey.public_key.clone();
+        let csr = common::actor_csr("skyrina", &skey);
+        let cert = IdCert::from_actor_csr(csr, &skey, Uint::from(8).into(), common::home_server_subject(), common::default_validity()).unwrap();
+        let serial_number =
+            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
+                polyproto::errors::InvalidCert::InvalidProperties(
+                    polyproto::errors::ConstraintError::Malformed(Some(format!(
+                        "Serial number is not valid: {}",
+                        e
+                    ))),
+                )
+            }).unwrap();
+        let cacheable_cert = CacheableIdCert {
+            cert: cert.to_pem(der::pem::LineEnding::LF).unwrap().to_string(),
+            invalidated_at: None,
+            not_valid_before: common::default_validity().not_before.to_unix_duration().as_secs(),
+            not_valid_after: common::default_validity().not_after.to_unix_duration().as_secs(),
+            cache_signature: skey.sign((serial_number.to_string() + &common::default_validity().not_before.to_unix_duration().as_secs().to_string() + &common::default_validity().not_after.to_unix_duration().as_secs().to_string() + "").as_bytes()).as_hex() + "6789t5rygc4ghbm"
+        };
+        cacheable_cert.try_to_idcert(polyproto::certs::Target::Actor, common::default_validity().not_before.to_unix_duration().as_secs() + 2, &vkey).unwrap();
+    }
+}
+
+test_all_platforms! {
+    fn algorithm_identifier() {
+        init_logger();
+        let skey = common::Ed25519PrivateKey::gen_keypair(&mut rand::rngs::OsRng);
+        let vkey = skey.public_key.clone();
+        let csr = common::actor_csr("skyrina", &skey);
+        let cert = IdCert::from_actor_csr(csr, &skey, Uint::from(8).into(), common::home_server_subject(), common::default_validity()).unwrap();
+        let serial_number =
+            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
+                polyproto::errors::InvalidCert::InvalidProperties(
+                    polyproto::errors::ConstraintError::Malformed(Some(format!(
+                        "Serial number is not valid: {}",
+                        e
+                    ))),
+                )
+            }).unwrap();
+        let cacheable_cert = CacheableIdCert {
+            cert: cert.clone().to_pem(der::pem::LineEnding::LF).unwrap().to_string(),
+            invalidated_at: None,
+            not_valid_before: common::default_validity().not_before.to_unix_duration().as_secs(),
+            not_valid_after: common::default_validity().not_after.to_unix_duration().as_secs(),
+            cache_signature: skey.sign((serial_number.to_string() + &common::default_validity().not_before.to_unix_duration().as_secs().to_string() + &common::default_validity().not_after.to_unix_duration().as_secs().to_string() + "").as_bytes()).as_hex() + "6789t5rygc4ghbm"
+        };
+        assert_eq!(cert.signature.algorithm, cacheable_cert.algorithm_identifier().unwrap())
+    }
 }
