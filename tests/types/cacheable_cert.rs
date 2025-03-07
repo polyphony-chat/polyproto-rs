@@ -229,7 +229,7 @@ test_all_platforms! {
     fn algorithm_identifier() {
         init_logger();
         let skey = common::Ed25519PrivateKey::gen_keypair(&mut rand::rngs::OsRng);
-        let vkey = skey.public_key.clone();
+        let _vkey = skey.public_key.clone();
         let csr = common::actor_csr("skyrina", &skey);
         let cert = IdCert::from_actor_csr(csr, &skey, Uint::from(8).into(), common::home_server_subject(), common::default_validity()).unwrap();
         let serial_number =

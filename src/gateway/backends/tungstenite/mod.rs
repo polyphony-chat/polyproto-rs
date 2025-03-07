@@ -8,7 +8,7 @@ use futures_util::stream::StreamExt;
 use futures_util::SinkExt;
 use log::{debug, trace};
 use tokio::select;
-use tokio::sync::{watch, Mutex};
+use tokio::sync::watch;
 use tokio_tungstenite::{connect_async_tls_with_config, connect_async_with_config};
 
 use crate::gateway::{kill, KILL_LOG_MESSAGE};

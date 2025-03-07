@@ -8,7 +8,6 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
 
-use serde_json::from_str;
 use tokio::sync::watch::error::SendError;
 use url::Url;
 

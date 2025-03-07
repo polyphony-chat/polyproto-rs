@@ -12,7 +12,7 @@ pub type MinifiedNumberList = payload::Heartbeat;
 
 use log::trace;
 use serde::de::Error;
-use serde_json::{from_str, json, Map, Value};
+use serde_json::{from_str, json, Value};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
