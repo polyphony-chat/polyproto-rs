@@ -153,16 +153,6 @@ impl CacheableIdCert {
                     ))),
                 )
             })?;
-        trace!("Serial number: {}", serial_number);
-        trace!("Not valid before: {}", &self.not_valid_before.to_string());
-        trace!("Not valid after: {}", &self.not_valid_after.to_string());
-        trace!(
-            "Invalidated at: {}",
-            &self
-                .invalidated_at
-                .map(|v| v.to_string())
-                .unwrap_or("".to_string())
-        );
         let string_to_check = serial_number.to_string()
             + &self.not_valid_before.to_string()
             + &self.not_valid_after.to_string()
