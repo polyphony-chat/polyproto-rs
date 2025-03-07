@@ -27,8 +27,7 @@ use x509_cert::request::CertReq;
 use x509_cert::time::{Time, Validity};
 use x509_cert::Certificate;
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
+test_all_platforms! {
 fn csr_from_pem() {
     init_logger();
     let mut csprng = rand::rngs::OsRng;
@@ -59,9 +58,9 @@ fn csr_from_pem() {
     let csr_from_pem = IdCsr::from_pem(&data, Some(polyproto::certs::Target::HomeServer)).unwrap();
     assert_eq!(csr_from_pem, csr);
 }
+}
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
+test_all_platforms! {
 fn test_create_invalid_actor_csr() {
     init_logger();
     let mut csprng = rand::rngs::OsRng;
@@ -88,9 +87,9 @@ fn test_create_invalid_actor_csr() {
     );
     assert!(csr.is_err());
 }
+}
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
+test_all_platforms! {
 fn csr_from_der() {
     init_logger();
     let mut csprng = rand::rngs::OsRng;
@@ -120,4 +119,5 @@ fn csr_from_der() {
     let data = csr.clone().to_der().unwrap();
     let csr_from_der = IdCsr::from_der(&data, Some(polyproto::certs::Target::HomeServer)).unwrap();
     assert_eq!(csr_from_der, csr);
+}
 }

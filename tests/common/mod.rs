@@ -249,3 +249,14 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
         })
     }
 }
+
+#[macro_export]
+macro_rules! test_all_platforms {
+    ($item:item) => {
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+        #[cfg_attr(not(target_arch = "wasm32"), test)]
+        $item
+    };
+}
+
+pub(crate) use test_all_platforms;

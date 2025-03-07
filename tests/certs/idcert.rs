@@ -28,8 +28,7 @@ use x509_cert::Certificate;
 
 use crate::common::{self, *};
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
+test_all_platforms! {
 fn test_create_actor_cert() {
     init_logger();
     let mut csprng = rand::rngs::OsRng;
@@ -82,9 +81,9 @@ fn test_create_actor_cert() {
         )
         .is_err())
 }
+}
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
+test_all_platforms! {
 fn test_create_ca_cert() {
     init_logger();
     let mut csprng = rand::rngs::OsRng;
@@ -130,9 +129,9 @@ fn test_create_ca_cert() {
         )
         .is_ok())
 }
+}
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
+test_all_platforms! {
 fn mismatched_dcs_in_csr_and_cert() {
     init_logger();
     let mut csprng = rand::rngs::OsRng;
@@ -163,9 +162,9 @@ fn mismatched_dcs_in_csr_and_cert() {
     let data = Certificate::try_from(cert).unwrap().to_der().unwrap();
     assert_eq!(cert_data, data);
 }
+}
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
+test_all_platforms! {
 fn cert_from_pem() {
     init_logger();
     let mut csprng = rand::rngs::OsRng;
@@ -234,9 +233,9 @@ fn cert_from_pem() {
     );
     assert_eq!(cert_from_pem, cert);
 }
+}
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
+test_all_platforms! {
 fn cert_from_der() {
     init_logger();
     let mut csprng = rand::rngs::OsRng;
@@ -308,18 +307,18 @@ fn cert_from_der() {
     );
     assert_eq!(cert_from_der, cert);
 }
+}
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
+test_all_platforms! {
 fn issuer_url() {
     init_logger();
     let id_cert_actor = common::actor_id_cert("flori");
     let url = id_cert_actor.issuer_url().unwrap();
     assert_eq!(url, Url::parse("https://polyphony.chat").unwrap())
 }
+}
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-#[cfg_attr(not(target_arch = "wasm32"), test)]
+test_all_platforms! {
 fn invalid_signature() {
     init_logger();
     let mut csprng = rand::rngs::OsRng;
@@ -381,4 +380,5 @@ fn invalid_signature() {
                 .as_secs()
         )
         .is_err());
+}
 }
