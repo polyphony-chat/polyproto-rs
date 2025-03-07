@@ -55,11 +55,7 @@ impl TryFrom<Uint> for u64 {
 
     fn try_from(value: Uint) -> Result<Self, Self::Error> {
         if value.as_bytes().len() > 8 {
-            return Err(crate::errors::InvalidInput::Length {
-                min_length: 0,
-                max_length: 8,
-                actual_length: value.as_bytes().len().to_string(),
-            });
+            return Err(crate::errors::InvalidInput::Malformed(format!("SerialNumber holds {} bytes, but is only allowed to hold a maximum of 8 bytes (64 bit unsigned integer)", value.as_bytes().len())));
         }
         let mut buf = [0u8; 8];
         let mut value = value.as_bytes().to_vec();
