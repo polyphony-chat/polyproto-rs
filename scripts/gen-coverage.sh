@@ -6,4 +6,4 @@
 
 # If you do not tarpaulin installed, you need to do so before running this command. 
 
-cargo tarpaulin --features="types,reqwest,gateway" --avoid-cfg-tarpaulin --tests --verbose --skip-clean -o lcov --output-dir .coverage 
+cargo tarpaulin --avoid-cfg-tarpaulin --features="types,reqwest,gateway" --tests --verbose -o lcov --output-dir .coverage 
