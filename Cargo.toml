@@ -11,8 +11,10 @@ rust-version = "1.85.0"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [features]
-default = ["types", "serde", "gateway"]
-wasm = ["getrandom", "getrandom/js"]
+default = ["types", "serde", "gateway", "rt_multi_thread"]
+wasm = ["getrandom", "getrandom/js", "rt"]
+rt = ["tokio/rt"]
+rt_multi_thread = ["tokio/rt-multi-thread"]
 getrandom = ["dep:getrandom"]
 types = ["dep:http"]
 reqwest = ["dep:reqwest", "types", "serde"]
@@ -43,7 +45,7 @@ url = { version = "2.5.4" }
 http = { version = "1.2.0", optional = true }
 serde_with = { version = "3.12.0", optional = true }
 hex = "0.4.3"
-tokio = { version = "1.43.0", features = ["macros", "sync", "net"] }
+tokio = { version = "1.43.0", features = ["macros", "sync", "net", "time"] }
 webpki-roots = "0.26.8"
 futures-util = "0.3.31"
 
