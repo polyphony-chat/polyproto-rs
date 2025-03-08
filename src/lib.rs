@@ -17,6 +17,7 @@ Crate supplying (generic) Rust types and traits to quickly get a
 running, as well as an HTTP client for the polyproto API.
 
 **[Overview/TL;DR][overview]** • **[crates.io][crates-link]** • **[Protocol Specification][docs]**
+**[Overview/TL;DR][overview]** • **[crates.io][crates-link]** • **[Protocol Specification][docs]**
 
 ## Crate overview
 
@@ -32,10 +33,13 @@ crate.
 ## Implementing polyproto
 
 Start by implementing the trait `[crate::signature::Signature]` for a signature algorithm of your
+Start by implementing the trait `[crate::signature::Signature]` for a signature algorithm of your
 choice. Popular crates for cryptography and signature algorithms supply their own `PublicKey` and
 `PrivateKey` types. You should extend upon these types with your own structs and implement the
 `[crate::key]` traits for these new structs.
+`[crate::key]` traits for these new structs.
 
+You can then use the `[crate::certs]` types to build certificates using your implementations of the
 You can then use the `[crate::certs]` types to build certificates using your implementations of the
 aforementioned traits.
 
@@ -59,6 +63,10 @@ mention the safety guarantees they provide in their respective documentation.
 This crate has not undergone any security audits.
 
 ## WebAssembly
+
+!!! warning
+
+    As of `v0.10`, the `wasm` target is currently untested. Support will be re-added in the future.
 
 !!! warning
 
@@ -107,6 +115,10 @@ The polyproto logos provided in this document are not covered by the MPL-2.0 lic
 of this project.
 
 [dev-status]: https://img.shields.io/static/v1?label=Status&message=Alpha&color=blue
+[build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/polyproto-rs/build_and_test.yml?style=flat
+[build-url]: https://github.com/polyphony-chat/polyproto-rs/blob/main/.github/workflows/build_and_test.yml
+[coverage-shield]: https://coveralls.io/repos/github/polyphony-chat/polyproto-rs/badge.svg?branch=main
+[coverage-url]: https://coveralls.io/github/polyphony-chat/polyproto-rs?branch=main
 [build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/polyproto-rs/build_and_test.yml?style=flat
 [build-url]: https://github.com/polyphony-chat/polyproto-rs/blob/main/.github/workflows/build_and_test.yml
 [coverage-shield]: https://coveralls.io/repos/github/polyphony-chat/polyproto-rs/badge.svg?branch=main
