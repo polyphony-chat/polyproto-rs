@@ -106,7 +106,7 @@ mod serde_support {
 #[cfg(test)]
 mod test {
     use super::*;
-    use serde_test::{assert_de_tokens, assert_tokens, Token};
+    use serde_test::{Token, assert_de_tokens, assert_tokens};
 
     #[test]
     fn ia5string_ser() {

@@ -20,11 +20,11 @@ use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 use thiserror::Error;
 use url::Url;
+use x509_cert::Certificate;
 use x509_cert::attr::Attributes;
 use x509_cert::name::RdnSequence;
 use x509_cert::request::CertReq;
 use x509_cert::time::{Time, Validity};
-use x509_cert::Certificate;
 
 use crate::common::{self, *};
 

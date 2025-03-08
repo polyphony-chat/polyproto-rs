@@ -12,14 +12,14 @@ pub type MinifiedNumberList = payload::Heartbeat;
 
 use log::trace;
 use serde::de::Error;
-use serde_json::{from_str, json, Value};
+use serde_json::{Value, from_str, json};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
 use payload::*;
 use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 
 #[serde_as]
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -200,7 +200,7 @@ impl TryFrom<u16> for Opcode {
             _ => {
                 return Err(crate::errors::InvalidInput::Malformed(format!(
                     "value {value} is not a valid opcode"
-                )))
+                )));
             }
         })
     }
@@ -506,7 +506,7 @@ where
                 None => {
                     return Err(crate::errors::InvalidInput::Malformed(
                         "Integer is larger than 64 bits".to_string(),
-                    ))
+                    ));
                 }
             };
             match T::try_from(num_u64) {

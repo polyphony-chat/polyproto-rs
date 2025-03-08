@@ -6,19 +6,19 @@ use der::asn1::Uint;
 use der::{Decode, Encode};
 use log::trace;
 use spki::AlgorithmIdentifierOwned;
+use x509_cert::TbsCertificate;
 use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
 use x509_cert::name::{Name, RdnSequence};
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
-use x509_cert::TbsCertificate;
 
+use crate::Constrained;
 #[cfg(feature = "reqwest")]
-use crate::api::{core::WellKnown, HttpClient};
+use crate::api::{HttpClient, core::WellKnown};
 use crate::errors::ConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
-use crate::Constrained;
 
 use super::capabilities::Capabilities;
 use super::idcsr::IdCsr;
@@ -271,7 +271,7 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<IdCertTbs<S, Q>>
                         "Could not convert serial number: {}",
                         e
                     )),
-                ))
+                ));
             }
         };
 

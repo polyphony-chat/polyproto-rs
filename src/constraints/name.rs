@@ -205,7 +205,7 @@ fn validate_dc_matches_dc_in_uid(
             None => {
                 return Err(ConstraintError::Malformed(Some(
                     ERR_MSG_DC_UID_MISMATCH.to_string(),
-                )))
+                )));
             }
         };
         trace!("Found an equivalent domain component: {}", equivalent_dc);
@@ -220,7 +220,7 @@ fn validate_dc_matches_dc_in_uid(
             None => {
                 return Err(ConstraintError::Malformed(Some(
                     "More than 255 Domain Components found".to_string(),
-                )))
+                )));
             }
         };
     }

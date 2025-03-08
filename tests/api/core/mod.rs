@@ -9,11 +9,11 @@ use httptest::matchers::request::method_path;
 use httptest::matchers::{eq, json_decoded, matches, request};
 use httptest::responders::{json_encoded, status_code};
 use httptest::*;
-use polyproto::api::core::{current_unix_time, ServiceDeleteResponse, WellKnown};
+use polyproto::api::core::{ServiceDeleteResponse, WellKnown, current_unix_time};
+use polyproto::certs::SessionId;
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
-use polyproto::certs::SessionId;
 use polyproto::types::routes::core::v1::{
     CREATE_DISCOVERABLE, DELETE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_SESSION,
     DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS, GET_ENCRYPTED_PKM,
@@ -29,8 +29,8 @@ use url::Url;
 use x509_cert::time::Validity;
 
 use crate::common::{
-    self, actor_id_cert, gen_priv_key, home_server_id_cert, home_server_subject, init_logger,
-    Ed25519PublicKey, Ed25519Signature,
+    self, Ed25519PublicKey, Ed25519Signature, actor_id_cert, gen_priv_key, home_server_id_cert,
+    home_server_subject, init_logger,
 };
 
 /// Correctly format the server URL for the test.

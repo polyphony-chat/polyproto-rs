@@ -10,7 +10,7 @@ async fn connect_tungstenite_hello() {
     use std::sync::Arc;
 
     use polyproto::api::{HttpClient, Session};
-    use polyproto::gateway::{backends, BackendBehavior};
+    use polyproto::gateway::{BackendBehavior, backends};
     use polyproto::types::gateway::payload::Hello;
     use polyproto::types::gateway::{CoreEvent, Payload};
     use serde_json::json;
@@ -61,7 +61,7 @@ async fn respond_to_manual_heartbeat() {
     use std::time::Duration;
 
     use polyproto::api::{HttpClient, Session};
-    use polyproto::gateway::{backends, BackendBehavior};
+    use polyproto::gateway::{BackendBehavior, backends};
     use polyproto::types::gateway::payload::{Heartbeat, Hello};
     use polyproto::types::gateway::{CoreEvent, Payload};
     use serde_json::json;

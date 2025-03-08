@@ -5,8 +5,8 @@
 use std::str::FromStr;
 use std::time::Duration;
 
-use der::asn1::{BitString, Uint, UtcTime};
 use der::Encode;
+use der::asn1::{BitString, Uint, UtcTime};
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
@@ -15,9 +15,9 @@ use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
+use x509_cert::Certificate;
 use x509_cert::name::RdnSequence;
 use x509_cert::time::{Time, Validity};
-use x509_cert::Certificate;
 
 /// The following example uses the same setup as in ed25519_basic.rs, but in its main method, it
 /// creates a certificate signing request (CSR) and writes it to a file. The CSR is created from a

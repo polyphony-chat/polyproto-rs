@@ -134,12 +134,12 @@ impl TryFrom<GatewayMessage> for CoreEvent {
             GatewayMessage::Binary(_) => {
                 return Err(InvalidInput::Malformed(
                     "Found binary message, expected string as HELLO payload".to_string(),
-                ))
+                ));
             }
             GatewayMessage::Close(_) => {
                 return Err(InvalidInput::Malformed(
                     "Found close message, expected string as HELLO payload".to_string(),
-                ))
+                ));
             }
         };
         serde_json::from_str::<CoreEvent>(&text).map_err(|e| InvalidInput::Malformed(e.to_string()))

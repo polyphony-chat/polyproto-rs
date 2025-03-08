@@ -10,8 +10,8 @@ use ed25519_dalek::{Signature as Ed25519DalekSignature, SigningKey, VerifyingKey
 use httptest::matchers::request;
 use httptest::responders::json_encoded;
 use httptest::{Expectation, Server};
-use polyproto::api::core::current_unix_time;
 use polyproto::api::HttpClient;
+use polyproto::api::core::current_unix_time;
 use polyproto::certs::PublicKeyInfo;
 use polyproto::errors::composite::ConversionError;
 use polyproto::key::{PrivateKey, PublicKey};

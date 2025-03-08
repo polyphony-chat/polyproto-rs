@@ -11,10 +11,10 @@ use x509_cert::attr::Attributes;
 use x509_cert::name::Name;
 use x509_cert::request::{CertReq, CertReqInfo};
 
+use crate::Constrained;
 use crate::errors::ConversionError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
-use crate::Constrained;
 
 use super::capabilities::Capabilities;
 use super::{PkcsVersion, PublicKeyInfo, Target};

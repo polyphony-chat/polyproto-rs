@@ -11,8 +11,8 @@ use crate::signature::Signature;
 
 /// Gateway backend code.
 pub mod backends;
-use backends::heartbeat::Heartbeat;
 pub use backends::BackendBehavior;
+use backends::heartbeat::Heartbeat;
 use backends::{Closed, GatewayMessage};
 use tokio::sync::watch;
 use tokio::task::JoinHandle;

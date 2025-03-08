@@ -75,9 +75,11 @@ fn main() {
     assert_eq!(cert_from_der, cert);
     // ...so technically, we don't need to verify the signature again. This is just for demonstration
     // of how you would manually verify a certificate.
-    assert!(cert_from_der
-        .full_verify_actor(15, &priv_key_home_server.public_key)
-        .is_ok())
+    assert!(
+        cert_from_der
+            .full_verify_actor(15, &priv_key_home_server.public_key)
+            .is_ok()
+    )
 }
 
 // As mentioned in the README, we start by implementing the signature trait.

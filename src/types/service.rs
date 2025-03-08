@@ -7,8 +7,8 @@ type Url = url::Url;
 #[cfg(not(feature = "reqwest"))]
 type Url = String;
 
-use crate::errors::ConstraintError;
 use crate::Constrained;
+use crate::errors::ConstraintError;
 
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

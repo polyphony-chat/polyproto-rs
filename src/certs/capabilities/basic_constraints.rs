@@ -85,7 +85,9 @@ impl TryFrom<Attribute> for BasicConstraints {
                         num_ca += 1;
                         ca = any_to_bool(value.clone())?;
                     } else {
-                        return Err(ConversionError::InvalidInput(InvalidInput::Malformed("Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string())));
+                        return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                            "Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string(),
+                        )));
                     }
                 }
                 Tag::Integer => {
@@ -94,10 +96,20 @@ impl TryFrom<Attribute> for BasicConstraints {
                         num_path_length += 1;
                         path_length = Some(any_to_u64(value.clone())?);
                     } else {
-                        return Err(ConversionError::InvalidInput(InvalidInput::Malformed("Encountered > 1 Integer tags. Expected 0 or 1 Integer tags.".to_string())));
+                        return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                            "Encountered > 1 Integer tags. Expected 0 or 1 Integer tags."
+                                .to_string(),
+                        )));
                     }
                 }
-                _ => return Err(ConversionError::InvalidInput(InvalidInput::Malformed(format!("Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer", value.tag())))),
+                _ => {
+                    return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                        format!(
+                            "Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer",
+                            value.tag()
+                        ),
+                    )));
+                }
             }
         }
         if num_ca == 0 {
@@ -143,7 +155,7 @@ impl TryFrom<BasicConstraints> for Extension {
             None => {
                 return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
                     "SetOfVec has no elements".to_string(),
-                )))
+                )));
             }
         };
         let sequence = SequenceOf::<Any, 2>::from_der(&element.to_der()?)?;
@@ -182,7 +194,10 @@ impl TryFrom<Extension> for BasicConstraints {
                 sequence.len()
             );
             return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                format!("This x509_cert::Extension has {} values stored. Expected a maximum of 2 values", sequence.len()),
+                format!(
+                    "This x509_cert::Extension has {} values stored. Expected a maximum of 2 values",
+                    sequence.len()
+                ),
             )));
         }
         let mut bool_encounters = 0u8;
@@ -206,11 +221,19 @@ impl TryFrom<Extension> for BasicConstraints {
                 }
                 _ => {
                     warn!("Encountered unexpected tag: {:?}", item.tag());
-                    return Err(ConversionError::InvalidInput(InvalidInput::Malformed(format!("Encountered unexpected tag {:?}, when tag should have been either Boolean, Integer or Null", item.tag()))));
+                    return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                        format!(
+                            "Encountered unexpected tag {:?}, when tag should have been either Boolean, Integer or Null",
+                            item.tag()
+                        ),
+                    )));
                 }
             }
             if bool_encounters > 1 || int_encounters > 1 || null_encounters > 1 {
-                warn!("Encountered too many values in BasicConstraints. BasicConstraints are likely malformed. BasicConstraints: {:#?}", value);
+                warn!(
+                    "Encountered too many values in BasicConstraints. BasicConstraints are likely malformed. BasicConstraints: {:#?}",
+                    value
+                );
                 return Err(ConversionError::InvalidInput(InvalidInput::Length {
                     min_length: 0,
                     max_length: 1,
@@ -240,7 +263,10 @@ fn any_to_bool(value: Any) -> Result<bool, ConstraintError> {
         },
         _ => {
             warn!("Encountered unexpected tag: {:?}", value.tag());
-            Err(ConstraintError::Malformed(Some(format!("Found {:?} in value, which does not match expected [Tag::Boolean, Tag::Integer, Tag::Null]", value.tag().to_string()))))
+            Err(ConstraintError::Malformed(Some(format!(
+                "Found {:?} in value, which does not match expected [Tag::Boolean, Tag::Integer, Tag::Null]",
+                value.tag().to_string()
+            ))))
         }
     }
 }
@@ -258,7 +284,10 @@ fn any_to_u64(value: Any) -> Result<u64, ConstraintError> {
         }
         _ => {
             warn!("Encountered unexpected tag: {:?}", value.tag());
-            Err(ConstraintError::Malformed(Some(format!("Found {:?} in value, which does not match expected [Tag::Boolean, Tag::Integer, Tag::Null]", value.tag().to_string()))))
+            Err(ConstraintError::Malformed(Some(format!(
+                "Found {:?} in value, which does not match expected [Tag::Boolean, Tag::Integer, Tag::Null]",
+                value.tag().to_string()
+            ))))
         }
     }
 }

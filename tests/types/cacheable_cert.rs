@@ -8,7 +8,7 @@ use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use polyproto::types::der::asn1::Uint;
 
-use crate::common::{self, init_logger, Ed25519Signature};
+use crate::common::{self, Ed25519Signature, init_logger};
 use crate::test_all_platforms;
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]

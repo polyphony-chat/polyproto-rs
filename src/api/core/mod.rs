@@ -12,8 +12,8 @@ use log::trace;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::certs::idcert::IdCert;
 use crate::certs::SessionId;
+use crate::certs::idcert::IdCert;
 use crate::errors::RequestError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;

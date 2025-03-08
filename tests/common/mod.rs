@@ -9,22 +9,19 @@ use der::asn1::{BitString, Uint, UtcTime};
 use ed25519_dalek::ed25519::signature::Signer;
 use ed25519_dalek::{Signature as Ed25519DalekSignature, SigningKey, VerifyingKey};
 use log::debug;
+use polyproto::Name;
+use polyproto::certs::PublicKeyInfo;
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
-use polyproto::certs::PublicKeyInfo;
 use polyproto::errors::composite::ConversionError;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
-use polyproto::Name;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 use x509_cert::time::{Time, Validity};
 
 pub(crate) fn init_logger() {
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "trace");
-    }
     env_logger::builder()
         .filter_module("crate", log::LevelFilter::Trace)
         .filter_module("polyproto", log::LevelFilter::Trace)

@@ -31,7 +31,9 @@ pub enum InvalidInput {
     #[error("The value is malformed and cannot be used as input: {0}")]
     /// The value is malformed and cannot be used as input
     Malformed(String),
-    #[error("The value was expected to be between {min_length:?} and {max_length:?} but was {actual_length:?}")]
+    #[error(
+        "The value was expected to be between {min_length:?} and {max_length:?} but was {actual_length:?}"
+    )]
     /// A value is out of bounds
     Length {
         /// The minimum length of the value

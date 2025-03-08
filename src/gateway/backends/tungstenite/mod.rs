@@ -4,14 +4,14 @@
 
 use std::sync::Arc;
 
-use futures_util::stream::StreamExt;
 use futures_util::SinkExt;
+use futures_util::stream::StreamExt;
 use log::{debug, trace};
 use tokio::select;
 use tokio::sync::watch;
 use tokio_tungstenite::{connect_async_tls_with_config, connect_async_with_config};
 
-use crate::gateway::{kill, KILL_LOG_MESSAGE};
+use crate::gateway::{KILL_LOG_MESSAGE, kill};
 use crate::sealer::Glue;
 use crate::types::gateway::{CoreEvent, Payload};
 

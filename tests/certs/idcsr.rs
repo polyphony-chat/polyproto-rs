@@ -21,11 +21,11 @@ use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 use thiserror::Error;
+use x509_cert::Certificate;
 use x509_cert::attr::Attributes;
 use x509_cert::name::RdnSequence;
 use x509_cert::request::CertReq;
 use x509_cert::time::{Time, Validity};
-use x509_cert::Certificate;
 
 test_all_platforms! {
 fn csr_from_pem() {

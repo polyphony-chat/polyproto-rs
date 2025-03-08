@@ -219,9 +219,6 @@ pub trait Constrained {
 pub(crate) mod testing_utils {
 
     pub(crate) fn init_logger() {
-        if std::env::var("RUST_LOG").is_err() {
-            std::env::set_var("RUST_LOG", "trace");
-        }
         env_logger::builder()
             .filter_module("crate", log::LevelFilter::Trace)
             .try_init()

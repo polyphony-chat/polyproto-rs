@@ -16,8 +16,8 @@ use x509_cert::attr::{Attribute, Attributes};
 use x509_cert::ext::{Extension, Extensions};
 
 use crate::{
-    errors::{ConversionError, InvalidInput},
     Constrained,
+    errors::{ConversionError, InvalidInput},
 };
 
 /// Object Identifier for the KeyUsage::DigitalSignature variant.
@@ -185,10 +185,15 @@ impl TryFrom<Extensions> for Capabilities {
                 OID_BASIC_CONSTRAINTS => {
                     basic_constraints = BasicConstraints::try_from(item.clone())?
                 }
-                OID_KEY_USAGE => {
-                    key_usage = KeyUsages::try_from(item.clone())?
-                },
-                _ => return Err(ConversionError::InvalidInput(InvalidInput::Malformed(format!("Invalid OID found for converting this set of Extensions to Capabilities: {} is not a valid OID for BasicConstraints or KeyUsages", item.extn_id))))
+                OID_KEY_USAGE => key_usage = KeyUsages::try_from(item.clone())?,
+                _ => {
+                    return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                        format!(
+                            "Invalid OID found for converting this set of Extensions to Capabilities: {} is not a valid OID for BasicConstraints or KeyUsages",
+                            item.extn_id
+                        ),
+                    )));
+                }
             };
         }
         Ok(Capabilities {

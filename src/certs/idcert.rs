@@ -5,20 +5,20 @@
 use der::asn1::Uint;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
+use x509_cert::Certificate;
 use x509_cert::name::Name;
 use x509_cert::time::Validity;
-use x509_cert::Certificate;
 
+use crate::Constrained;
 #[cfg(feature = "reqwest")]
 use crate::api::HttpClient;
-use crate::errors::{ConstraintError, ConversionError, InvalidCert, ERR_CERTIFICATE_TO_DER_ERROR};
+use crate::errors::{ConstraintError, ConversionError, ERR_CERTIFICATE_TO_DER_ERROR, InvalidCert};
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
-use crate::Constrained;
 
+use super::Target;
 use super::idcerttbs::IdCertTbs;
 use super::idcsr::IdCsr;
-use super::Target;
 
 /// A signed polyproto ID-Cert, consisting of the actual certificate, the CA-generated signature and
 /// metadata about that signature.
@@ -172,7 +172,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             Err(e) => {
                 return Err(InvalidCert::InvalidProperties(ConstraintError::Malformed(
                     Some(e.to_string()),
-                )))
+                )));
             }
         };
         match target {
@@ -217,7 +217,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             Err(e) => {
                 return Err(InvalidCert::InvalidProperties(ConstraintError::Malformed(
                     Some(e.to_string()),
-                )))
+                )));
             }
         };
         match target {

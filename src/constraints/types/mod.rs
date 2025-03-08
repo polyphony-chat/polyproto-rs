@@ -5,6 +5,6 @@
 mod federation_id;
 mod service;
 
+use crate::Constrained;
 use crate::certs::Target;
 use crate::errors::ConstraintError;
-use crate::Constrained;

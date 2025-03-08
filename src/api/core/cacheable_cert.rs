@@ -7,8 +7,8 @@ use log::{debug, trace};
 use serde::{Deserialize, Serialize};
 use spki::AlgorithmIdentifier;
 
-use crate::certs::idcert::IdCert;
 use crate::certs::Target;
+use crate::certs::idcert::IdCert;
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::types::der::asn1::Uint;

@@ -53,7 +53,7 @@ impl SessionId {
             Err(_) => {
                 return Err(ConstraintError::Malformed(Some(
                     "Invalid Ia5String passed as SessionId".to_string(),
-                )))
+                )));
             }
         };
 
