@@ -79,6 +79,28 @@ the `types` and `serde` features. Using these features, you can implement your o
 the polyproto crate acting as a single source of truth for request and response types, as well as
 request routes and methods through the exported `static` `Route`s.
 
+## WebSocket Gateway client
+
+Since `v0.10`, this crate ships polyproto WebSocket Gateway client functionality, gated behind the `gateway` feature.
+The implementation of this feature is super backend-agnostic—though, for now, we have sealed the needed traits, and are only shipping a `tokio-tungstenite` backend for testing.
+
+The gateway handles establishing a connection to the server, sending regular heartbeats at the specified interval and responding to Opcode 11—the manual heartbeat request.
+
+Apart from the Hello payload, library consumers can easily get access to all messages received from the gateway by calling `subscribe()` on the internal `tokio::sync::watch::Sender<GatewayMessage>`. This means that this crate handles only the bare necessities of connecting to the gateway, and that you are free to handle incoming messages however you would like to. Our `GatewayMessage` type is `.into()` and `From::<>`-compatible with `tokio_tungstenite::tungstenite::Message`, so that you are not locked into using our message types, should you not want that.
+
+## Versioning and MSRV
+
+Semver v2.0 is used for the versioning scheme for this crate.
+
+The default feature set of this crate is used to determine, verify and update the MSRV and semver version
+of this crate.
+
+## Logo
+
+The polyproto logo was designed by the wonderful [antidoxi](https://antidoxi.carrd.co/).
+The polyproto logos provided in this document are not covered by the MPL-2.0 license covering the rest
+of this project.
+
 [dev-status]: https://img.shields.io/static/v1?label=Status&message=Alpha&color=blue
 [build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/polyproto-rs/build_and_test.yml?style=flat
 [build-url]: https://github.com/polyphony-chat/polyproto-rs/blob/main/.github/workflows/build_and_test.yml
@@ -89,9 +111,3 @@ request routes and methods through the exported `static` `Route`s.
 [crates-link]: https://crates.io/crates/polyproto
 [docs]: https://docs.polyphony.chat/Protocol%20Specifications/core/
 [overview]: https://docs.polyphony.chat/Overviews/core/
-
-## Logo
-
-The polyproto logo was designed by the wonderful [antidoxi](https://antidoxi.carrd.co/).
-The polyproto logos provided in this document are not covered by the MPL-2.0 license covering the rest
-of this project.
