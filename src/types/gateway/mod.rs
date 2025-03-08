@@ -641,7 +641,10 @@ mod test {
         let any_event_json = json!(AnyEvent {
             n: "core".to_string(),
             op: Opcode::Resume as u16,
-            d: json!(Resume { s: 43 }),
+            d: json!(Resume {
+                s: 43,
+                token: "sdjkfsdfhjkhjksdf".to_string()
+            }),
             s: None
         })
         .to_string();

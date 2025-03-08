@@ -161,7 +161,7 @@ pub struct ActorCertificateInvalidation {
 }
 
 #[serde_as]
-#[derive(Debug, Copy, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "camelCase")]
 /// When a client re-connects to a polyproto WebSocket gateway server, the client may send a resume
 /// event to the server instead of identifying. The resumed event sent by the server informs the
@@ -170,6 +170,8 @@ pub struct Resume {
     #[serde_as(as = "DisplayFromStr")]
     /// Sequence number of the last event received by the client; aka. "Where to receive from".
     pub s: u64,
+    /// A session token issued by the server, identifying the session the client wants to connect with.
+    pub token: String,
 }
 
 #[serde_as]

@@ -162,7 +162,13 @@ fn serde_event_payload_actor_certificate_invalidation() {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
 #[cfg_attr(not(target_arch = "wasm32"), test)]
 fn serde_event_payload_resume() {
-    let resume = CoreEvent::new(Payload::Resume(Resume { s: 12 }), None);
+    let resume = CoreEvent::new(
+        Payload::Resume(Resume {
+            s: 12,
+            token: "sdyhjkfhjbasd".to_string(),
+        }),
+        None,
+    );
     let resume_json = serde_json::to_string(&resume).unwrap();
     let resume_from_json = serde_json::from_str::<CoreEvent>(&resume_json).unwrap();
     assert_eq!(resume, resume_from_json);
