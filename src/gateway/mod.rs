@@ -10,10 +10,12 @@ use crate::key::PrivateKey;
 use crate::signature::Signature;
 
 /// Gateway backend code.
+#[cfg(feature = "gateway")]
 pub mod backends;
+#[cfg(feature = "gateway")]
 pub use backends::BackendBehavior;
-use backends::heartbeat::Heartbeat;
-use backends::{Closed, GatewayMessage};
+#[cfg(feature = "gateway")]
+use backends::{Closed, GatewayMessage, heartbeat::Heartbeat};
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 

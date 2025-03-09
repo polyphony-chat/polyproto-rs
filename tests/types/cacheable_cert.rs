@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use polyproto::api::core::cacheable_cert::CacheableIdCert;
+use polyproto::api::cacheable_cert::CacheableIdCert;
 use polyproto::certs::idcert::IdCert;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;

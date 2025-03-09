@@ -151,7 +151,7 @@ pub const OID_RDN_UID: &str = "0.9.2342.19200300.100.1.1";
 use certs::Target;
 use errors::base::ConstraintError;
 
-#[cfg(feature = "reqwest")]
+#[cfg(any(feature = "reqwest", feature = "types"))]
 /// Ready-to-use API routes, implemented using `reqwest`
 pub mod api;
 /// Generic polyproto certificate types and traits.
@@ -159,13 +159,12 @@ pub mod certs;
 /// Error types used in this crate
 pub mod errors;
 /// polyproto gateway server connection
-#[cfg(feature = "gateway")]
+#[cfg(all(feature = "gateway", feature = "reqwest"))]
 pub mod gateway;
 /// Generic polyproto public- and private key traits.
 pub mod key;
 /// Generic polyproto signature traits.
 pub mod signature;
-#[cfg(any(feature = "types", feature = "gateway"))]
 /// Types used in polyproto and the polyproto HTTP/REST APIs
 pub mod types;
 
@@ -176,6 +175,7 @@ pub use spki;
 pub use url;
 pub use x509_cert::name::*;
 
+#[cfg(feature = "types")]
 pub(crate) mod sealer {
     /// > Ferri-Stik: An adhesive as strong as `rustc`!
     ///

@@ -7,11 +7,14 @@
 /// the `serde` crate, if the `serde` feature is enabled.
 pub mod der;
 /// Module defining the [EncryptedPkm] type, as well as related subtypes.
+#[cfg(feature = "types")]
 pub mod encrypted_pkm;
 /// Module defining the [FederationId] type.
+#[cfg(feature = "types")]
 pub mod federation_id;
 
 /// Module defining the [Service] type.
+#[cfg(feature = "types")]
 pub mod service;
 /// This module contains wrappers for types from the `spki` crate which interface directly with the
 /// HTTP API of polyproto. These wrappers enable the types to be serialized and deserialized using
@@ -26,13 +29,17 @@ pub mod x509_cert;
 /// Module defining types associated with the polyproto WebSocket gateway.
 pub mod gateway;
 
+#[cfg(feature = "types")]
 pub use encrypted_pkm::*;
+#[cfg(feature = "types")]
 pub use federation_id::*;
+#[cfg(feature = "types")]
 pub use service::*;
 
 /// Module defining the [Route] type, as well as `static` endpoints and their associated HTTP methods
 /// for the polyproto API. These `static`s can be used as a single source of truth for the API endpoints
 /// and what methods to submit to them.
+#[cfg(feature = "types")]
 pub mod routes {
 
     use http::Method;

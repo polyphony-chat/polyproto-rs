@@ -30,8 +30,7 @@ pub mod wasm;
 #[allow(async_fn_in_trait)] // We don't care about a `Send` bound here.
 pub trait BackendBehavior: crate::sealer::Glue {
     /// Try and establish a WebSocket connection to a [Gateway] server under a certain [Url].
-    /// The resulting [Gateway] will not yet have any messages sent to the server, meaning you will
-    /// still have to authenticate and establish a Heartbeat loop.
+    /// The resulting [Gateway] will not yet have authenticated to the server as any specific actor.
     async fn connect<S, T>(
         &self,
         session: Arc<Session<S, T>>,
@@ -51,7 +50,8 @@ pub trait BackendBehavior: crate::sealer::Glue {
     /// to learn more about this function.
     fn subscribe(&self) -> tokio::sync::watch::Receiver<GatewayMessage>;
     /// Attempt to send a value to the [GatewayBackend] which will attempt to forward this message to the
-    /// gateway server.
+    /// gateway server. Returns an error, if there was an issue with forwarding this message to the gateway
+    /// server.
     ///
     /// ## Additional documentation
     ///
@@ -60,7 +60,12 @@ pub trait BackendBehavior: crate::sealer::Glue {
     /// to learn more about this function.
     async fn send(&self, value: GatewayMessage) -> Result<(), SendError<GatewayMessage>>;
     /// Disconnect from the gateway with an optional [CloseMessage] to indicate a reason for the
-    /// disconnect.
+    /// disconnect. The gateway and all associated [tokio::task]s will shut down either way.
+    ///
+    /// ## Errors
+    ///
+    /// This method will yield an error variant if there was an error with sending the disconnect to
+    /// the server.
     async fn disconnect(
         &self,
         reason: Option<CloseMessage>,
