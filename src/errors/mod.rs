@@ -10,8 +10,7 @@ pub static ERR_MSG_ACTOR_CANNOT_BE_CA: &str =
     "Actor CSRs and Certificates must not have \"CA\" capabilities!";
 pub static ERR_MSG_SIGNATURE_MISMATCH: &str =
     "Provided signature does not match computed signature!";
-pub static ERR_MSG_ACTOR_MISSING_SIGNING_CAPS: &str =
-    "Actors require one of the following capabilities: \"DigitalSignature\", \"ContentCommitment\". None provided.";
+pub static ERR_MSG_ACTOR_MISSING_SIGNING_CAPS: &str = "Actors require one of the following capabilities: \"DigitalSignature\", \"ContentCommitment\". None provided.";
 pub static ERR_MSG_DC_UID_MISMATCH: &str =
     "The domain components found in the DC and UID fields of the Name object do not match!";
 pub static ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT: &str =

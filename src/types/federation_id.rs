@@ -4,8 +4,8 @@
 
 use regex::Regex;
 
-use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX};
 use crate::Constrained;
+use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX};
 
 /// The regular expression for a valid `FederationId`.
 pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)$";
