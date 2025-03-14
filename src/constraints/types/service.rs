@@ -27,7 +27,10 @@ impl Constrained for ServiceName {
         let regex =
             regex::Regex::new(r"[^[:lower:][:digit:]\-_]").expect("Failed to compile regex!");
         if regex.is_match(&stringified) {
-            return Err(ConstraintError::Malformed(Some(format!("The ServiceName contains invalid characters: \"{}\" contains characters that are not lowercase letters, digits, hyphens, or underscores", stringified))));
+            return Err(ConstraintError::Malformed(Some(format!(
+                "The ServiceName contains invalid characters: \"{}\" contains characters that are not lowercase letters, digits, hyphens, or underscores",
+                stringified
+            ))));
         }
         Ok(())
     }
@@ -82,13 +85,13 @@ mod test {
 
     #[test]
     fn service_name_too_long() {
-        assert!(ServiceName::new(
-            "12345678123456781234567812345678123456781234567812345678123456789"
-        )
-        .is_err());
-        assert!(ServiceName::new(
-            "1234567812345678123456781234567812345678123456781234567812345678"
-        )
-        .is_ok());
+        assert!(
+            ServiceName::new("12345678123456781234567812345678123456781234567812345678123456789")
+                .is_err()
+        );
+        assert!(
+            ServiceName::new("1234567812345678123456781234567812345678123456781234567812345678")
+                .is_ok()
+        );
     }
 }
