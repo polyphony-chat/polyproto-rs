@@ -38,7 +38,8 @@ async fn connect_tungstenite_hello() {
     send.send(Message::Text(
         json!(CoreEvent::new(
             Payload::Hello(Hello {
-                heartbeat_interval: 12345
+                heartbeat_interval: 12345,
+                active_migration: None
             }),
             None
         ))
@@ -89,14 +90,16 @@ async fn respond_to_manual_heartbeat() {
     );
     dbg!(json!(CoreEvent::new(
         Payload::Hello(Hello {
-            heartbeat_interval: 12345
+            heartbeat_interval: 12345,
+            active_migration: None
         }),
         None
     )));
     send.send(Message::Text(
         json!(CoreEvent::new(
             Payload::Hello(Hello {
-                heartbeat_interval: 12345
+                heartbeat_interval: 12345,
+                active_migration: None
             }),
             None
         ))

@@ -12,7 +12,9 @@ use x509_cert::time::Validity;
 use crate::Constrained;
 #[cfg(feature = "reqwest")]
 use crate::api::HttpClient;
-use crate::errors::{ConstraintError, ConversionError, ERR_CERTIFICATE_TO_DER_ERROR, InvalidCert};
+use crate::errors::{
+    CertificateConversionError, ConstraintError, ERR_CERTIFICATE_TO_DER_ERROR, InvalidCert,
+};
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 

@@ -14,7 +14,7 @@ use polyproto::certs::PublicKeyInfo;
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
-use polyproto::errors::composite::ConversionError;
+use polyproto::errors::composite::CertificateConversionError;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use rand::rngs::OsRng;

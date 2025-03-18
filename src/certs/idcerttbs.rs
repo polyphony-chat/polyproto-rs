@@ -16,7 +16,7 @@ use x509_cert::time::Validity;
 use crate::Constrained;
 #[cfg(feature = "reqwest")]
 use crate::api::{HttpClient, core::WellKnown};
-use crate::errors::ConversionError;
+use crate::errors::CertificateConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
 

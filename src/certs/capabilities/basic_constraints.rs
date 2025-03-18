@@ -90,9 +90,11 @@ impl TryFrom<Attribute> for BasicConstraints {
                         num_ca += 1;
                         ca = any_to_bool(value.clone())?;
                     } else {
-                        return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                            "Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string(),
-                        )));
+                        return Err(CertificateConversionError::InvalidInput(
+                            InvalidInput::Malformed(
+                                "Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string(),
+                            ),
+                        ));
                     }
                 }
                 Tag::Integer => {
@@ -101,19 +103,21 @@ impl TryFrom<Attribute> for BasicConstraints {
                         num_path_length += 1;
                         path_length = Some(any_to_u64(value.clone())?);
                     } else {
-                        return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                            "Encountered > 1 Integer tags. Expected 0 or 1 Integer tags."
-                                .to_string(),
-                        )));
+                        return Err(CertificateConversionError::InvalidInput(
+                            InvalidInput::Malformed(
+                                "Encountered > 1 Integer tags. Expected 0 or 1 Integer tags."
+                                    .to_string(),
+                            ),
+                        ));
                     }
                 }
                 _ => {
-                    return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                        format!(
+                    return Err(CertificateConversionError::InvalidInput(
+                        InvalidInput::Malformed(format!(
                             "Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer",
                             value.tag()
-                        ),
-                    )));
+                        )),
+                    ));
                 }
             }
         }
@@ -200,12 +204,12 @@ impl TryFrom<Extension> for BasicConstraints {
                 "Encountered too many values in BasicConstraints. Found {} values",
                 sequence.len()
             );
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                format!(
+            return Err(CertificateConversionError::InvalidInput(
+                InvalidInput::Malformed(format!(
                     "This x509_cert::Extension has {} values stored. Expected a maximum of 2 values",
                     sequence.len()
-                ),
-            )));
+                )),
+            ));
         }
         let mut bool_encounters = 0u8;
         let mut int_encounters = 0u8;
@@ -228,12 +232,12 @@ impl TryFrom<Extension> for BasicConstraints {
                 }
                 _ => {
                     warn!("Encountered unexpected tag: {:?}", item.tag());
-                    return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                        format!(
+                    return Err(CertificateConversionError::InvalidInput(
+                        InvalidInput::Malformed(format!(
                             "Encountered unexpected tag {:?}, when tag should have been either Boolean, Integer or Null",
                             item.tag()
-                        ),
-                    )));
+                        )),
+                    ));
                 }
             }
             if bool_encounters > 1 || int_encounters > 1 || null_encounters > 1 {
@@ -241,11 +245,13 @@ impl TryFrom<Extension> for BasicConstraints {
                     "Encountered too many values in BasicConstraints. BasicConstraints are likely malformed. BasicConstraints: {:#?}",
                     value
                 );
-                return Err(ConversionError::InvalidInput(InvalidInput::Length {
-                    min_length: 0,
-                    max_length: 1,
-                    actual_length: 2.to_string(),
-                }));
+                return Err(CertificateConversionError::InvalidInput(
+                    InvalidInput::Length {
+                        min_length: 0,
+                        max_length: 1,
+                        actual_length: 2.to_string(),
+                    },
+                ));
             }
         }
         Ok(BasicConstraints { ca, path_length })

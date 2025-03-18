@@ -61,7 +61,7 @@ impl CacheableIdCert {
         target: Target,
         time: u64,
         home_server_public_key: &P,
-    ) -> Result<IdCert<S, P>, crate::errors::ConversionError> {
+    ) -> Result<IdCert<S, P>, crate::errors::CertificateConversionError> {
         Ok(IdCert::from_pem(
             &self.cert,
             target,
@@ -78,7 +78,7 @@ impl CacheableIdCert {
     /// This method will error if `self.cert` is an invalid X.509 v3 certificate.
     pub fn algorithm_identifier(
         &self,
-    ) -> Result<AlgorithmIdentifier<Any>, crate::errors::ConversionError> {
+    ) -> Result<AlgorithmIdentifier<Any>, crate::errors::CertificateConversionError> {
         let certificate = x509_cert::Certificate::from_pem(&self.cert)?;
         Ok(certificate.signature_algorithm)
     }

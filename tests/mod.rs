@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use polyproto::errors::ConversionError;
+use polyproto::errors::CertificateConversionError;
 
 #[cfg(feature = "reqwest")]
 pub(crate) mod api;
@@ -19,9 +19,9 @@ fn conversion_error_from_oid_error() {
     let oid_error =
         der::oid::ObjectIdentifier::new("this isn't valid in any sense of the imagination")
             .unwrap_err();
-    let our_error = ConversionError::from(oid_error);
+    let our_error = CertificateConversionError::from(oid_error);
     let inner_error = match our_error {
-        ConversionError::ConstOidError(error) => error,
+        CertificateConversionError::ConstOidError(error) => error,
         _ => panic!(),
     };
     assert_eq!(inner_error, oid_error)

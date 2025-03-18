@@ -136,6 +136,16 @@ pub struct Hello {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "camelCase")]
+/// Describes an unfinished, resumeable migration process.
+pub struct ActiveMigration {
+    /// [FederationId] of the source actor.
+    pub from: FederationId,
+    /// [FederationId] of the target actor.
+    pub to: FederationId,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[serde(rename_all = "camelCase")]
 /// The "identify" event is sent by the client to the server to let the server know which actor the client is.
 pub struct Identify {
     /// A session token issued by the server, identifying the session the client wants to connect with.

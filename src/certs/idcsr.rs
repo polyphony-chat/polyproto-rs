@@ -12,7 +12,7 @@ use x509_cert::name::Name;
 use x509_cert::request::{CertReq, CertReqInfo};
 
 use crate::Constrained;
-use crate::errors::ConversionError;
+use crate::errors::CertificateConversionError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 

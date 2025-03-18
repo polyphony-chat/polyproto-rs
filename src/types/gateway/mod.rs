@@ -564,7 +564,8 @@ mod test {
             n: "core".to_string(),
             op: Opcode::Hello as u16,
             d: json!(Hello {
-                heartbeat_interval: 123
+                heartbeat_interval: 123,
+                active_migration: None
             }),
             s: None
         })
