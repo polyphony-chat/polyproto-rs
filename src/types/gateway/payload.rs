@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
 
+use crate::api::cacheable_cert::CacheableIdCert;
 use crate::types::FederationId;
 
 use super::Payload;
@@ -170,16 +171,9 @@ pub struct NewSession {
 /// outdated ID-Certs. This event is only sent by servers if an [early revocation of an actor
 /// ID-Cert](https://docs.polyphony.chat/Protocol%20Specifications/core/#614-early-revocation-of-id-certs) occurs.
 pub struct ActorCertificateInvalidation {
-    #[serde_as(as = "DisplayFromStr")]
-    /// The serial number of the invalidated ID-Cert
-    pub serial: u64,
-    #[serde_as(as = "DisplayFromStr")]
-    /// UNIX timestamp of the point in time where this ID-Cert became invalid on
-    pub invalid_since: u64,
-    /// Signature of a string concatenation of the `invalidSince` timestamp and the serial number,
-    /// in that order. Clients must verify this signature, verifying that the signature was generated
-    /// by the private key of the revoked certificate.
-    pub signature: String,
+    #[serde(flatten)]
+    /// Signed, up-to date certificate, confirming the invalidation.
+    pub certificate: CacheableIdCert,
 }
 
 #[serde_as]
