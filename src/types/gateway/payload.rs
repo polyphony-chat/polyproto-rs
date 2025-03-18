@@ -18,11 +18,20 @@ pub struct Heartbeat {
 }
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Hello {
     #[serde_as(as = "DisplayFromStr")]
     pub heartbeat_interval: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_migration: Option<ActiveMigration>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveMigration {
+    pub from: String,
+    pub to: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

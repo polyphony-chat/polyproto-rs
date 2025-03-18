@@ -13,6 +13,7 @@ fn serde_event() {
         op: 3_u16,
         d: Payload::Hello(Hello {
             heartbeat_interval: 0,
+            active_migration: None,
         }),
         s: Some(12),
     };
@@ -31,6 +32,7 @@ fn serde_event_payload_hello() {
         op: Opcode::Hello as u16,
         d: Payload::Hello(Hello {
             heartbeat_interval: 30000,
+            active_migration: None,
         }),
         s: Some(1),
     };
