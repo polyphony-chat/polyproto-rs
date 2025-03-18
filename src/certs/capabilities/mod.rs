@@ -16,10 +16,7 @@ use x509_cert::attr::{Attribute, Attributes};
 use x509_cert::ext::{Extension, Extensions};
 
 use crate::errors::CertificateConversionError;
-use crate::{
-    Constrained,
-    errors::{ConversionError, InvalidInput},
-};
+use crate::{Constrained, errors::InvalidInput};
 
 /// Object Identifier for the KeyUsage::DigitalSignature variant.
 pub const OID_KEY_USAGE_DIGITAL_SIGNATURE: &str = "1.3.6.1.5.5.7.3.3";
