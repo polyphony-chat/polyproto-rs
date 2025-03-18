@@ -11,7 +11,7 @@ use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
 
-use crate::errors::{ConstraintError, ConversionError, InvalidInput};
+use crate::errors::{CertificateConversionError, ConstraintError, InvalidInput};
 
 use super::OID_BASIC_CONSTRAINTS;
 
@@ -37,7 +37,7 @@ impl From<BasicConstraints> for ObjectIdentifier {
 }
 
 impl TryFrom<Attribute> for BasicConstraints {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
     /// Performs the conversion.
     ///
     /// Fails, if the input attribute
@@ -60,17 +60,22 @@ impl TryFrom<Attribute> for BasicConstraints {
         }
         let values = value.values;
         if values.len() != 1usize {
-            return Err(ConversionError::InvalidInput(InvalidInput::Length {
-                min_length: 1,
-                max_length: 1,
-                actual_length: values.len().to_string(),
-            }));
+            return Err(CertificateConversionError::InvalidInput(
+                InvalidInput::Length {
+                    min_length: 1,
+                    max_length: 1,
+                    actual_length: values.len().to_string(),
+                },
+            ));
         }
         let element = values.get(0).expect("This should be infallible. Report this issue at https://github.com/polyphony-chat/polyproto");
         if element.tag() != Tag::Sequence {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                format!("Expected a Sequence tag, found {}", element.tag()),
-            )));
+            return Err(CertificateConversionError::InvalidInput(
+                InvalidInput::Malformed(format!(
+                    "Expected a Sequence tag, found {}",
+                    element.tag()
+                )),
+            ));
         }
         let sequence = SequenceOf::<Any, 2>::from_der(&element.to_der()?)?;
         let mut num_ca = 0u8;
@@ -113,16 +118,16 @@ impl TryFrom<Attribute> for BasicConstraints {
             }
         }
         if num_ca == 0 {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                "Expected 1 Boolean tag, found 0".to_string(),
-            )));
+            return Err(CertificateConversionError::InvalidInput(
+                InvalidInput::Malformed("Expected 1 Boolean tag, found 0".to_string()),
+            ));
         }
         Ok(BasicConstraints { ca, path_length })
     }
 }
 
 impl TryFrom<BasicConstraints> for Attribute {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
     fn try_from(value: BasicConstraints) -> Result<Self, Self::Error> {
         let mut sequence = SequenceOf::<Any, 2>::new();
         sequence.add(Any::new(
@@ -146,16 +151,16 @@ impl TryFrom<BasicConstraints> for Attribute {
 }
 
 impl TryFrom<BasicConstraints> for Extension {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
     fn try_from(value: BasicConstraints) -> Result<Self, Self::Error> {
         let attribute = Attribute::try_from(value)?;
         let set = SetOfVec::<Any>::from_der(&attribute.values.to_der()?)?;
         let element = match set.get(0) {
             Some(element) => element,
             None => {
-                return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
-                    "SetOfVec has no elements".to_string(),
-                )));
+                return Err(CertificateConversionError::InvalidInput(
+                    InvalidInput::Malformed("SetOfVec has no elements".to_string()),
+                ));
             }
         };
         let sequence = SequenceOf::<Any, 2>::from_der(&element.to_der()?)?;
@@ -168,7 +173,7 @@ impl TryFrom<BasicConstraints> for Extension {
 }
 
 impl TryFrom<Extension> for BasicConstraints {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     /// Performs the conversion. Assumes, that the order of the bool value and the
     /// `int`/`none` value is **not** important.
@@ -183,7 +188,9 @@ impl TryFrom<Extension> for BasicConstraints {
         if value.critical && !matches!(value.extn_id.to_string().as_str(), OID_BASIC_CONSTRAINTS) {
             // Error if we encounter a "critical" X.509 extension which we do not know of
             warn!("Unknown critical extension: {:#?}", value.extn_id);
-            return Err(ConversionError::UnknownCriticalExtension { oid: value.extn_id });
+            return Err(CertificateConversionError::UnknownCriticalExtension {
+                oid: value.extn_id,
+            });
         }
         // If the Extension is a valid BasicConstraint, the octet string will contain DER ANY values
         // in a DER SET OF type

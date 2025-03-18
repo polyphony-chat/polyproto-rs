@@ -5,6 +5,8 @@
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
 
+use crate::types::FederationId;
+
 use super::Payload;
 
 #[serde_as]
@@ -111,15 +113,25 @@ impl From<&Vec<u64>> for Heartbeat {
 }
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "camelCase")]
 /// The "Hello" event is sent by the server to the client upon establishing a connection. The
 /// payload for a "Hello" event is an object containing a `heartbeat_interval` field, which specifies
 /// the interval in milliseconds at which the client should send heartbeat events to the server.
 pub struct Hello {
+    /// Heartbeat interval, in milliseconds
     #[serde_as(as = "DisplayFromStr")]
     /// The interval in milliseconds at which the client should send heartbeat events to the server.
     pub heartbeat_interval: u32,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Whether there is an unfinished migration which can be resumed.
+    ///
+    /// ## Warning
+    ///
+    /// Read [security information regarding this object](https://docs.polyphony.chat/Protocol%20Specifications/core/#:~:text=of%20the%20migration.-,danger,-User-operated%20clients)
+    /// before working with it.
+    pub active_migration: Option<ActiveMigration>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

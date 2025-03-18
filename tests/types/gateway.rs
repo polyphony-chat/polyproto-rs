@@ -18,6 +18,7 @@ fn serde_event() {
     let event = CoreEvent::new(
         Payload::Hello(Hello {
             heartbeat_interval: 0,
+            active_migration: None,
         }),
         Some(12),
     );
@@ -34,6 +35,7 @@ fn serde_event_payload_hello() {
     let hello = CoreEvent::new(
         Payload::Hello(Hello {
             heartbeat_interval: 30000,
+            active_migration: None,
         }),
         Some(1),
     );

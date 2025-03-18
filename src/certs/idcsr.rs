@@ -69,7 +69,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
         signing_key: &impl PrivateKey<S, PublicKey = P>,
         capabilities: &Capabilities,
         target: Option<Target>,
-    ) -> Result<IdCsr<S, P>, ConversionError> {
+    ) -> Result<IdCsr<S, P>, CertificateConversionError> {
         let inner_csr = IdCsrInner::<S, P> {
             version: PkcsVersion::V1,
             subject: subject.clone(),
@@ -92,7 +92,10 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// Create an [IdCsr] from a byte slice containing a DER encoded PKCS #10 CSR.
     /// The resulting `IdCsr` is guaranteed to be well-formed and up to polyproto specification,
     /// if the correct [Target] for the CSRs intended usage context is provided.
-    pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
+    pub fn from_der(
+        bytes: &[u8],
+        target: Option<Target>,
+    ) -> Result<Self, CertificateConversionError> {
         let csr = IdCsr::from_der_unchecked(bytes)?;
         csr.validate(target)?;
         Ok(csr)
@@ -101,20 +104,20 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// Create an unchecked [IdCsr] from a byte slice containing a DER encoded PKCS #10 CSR.
     /// The caller is responsible for verifying the correctness of this `IdCsr` using
     /// the [Constrained] trait before using it.
-    pub fn from_der_unchecked(bytes: &[u8]) -> Result<Self, ConversionError> {
+    pub fn from_der_unchecked(bytes: &[u8]) -> Result<Self, CertificateConversionError> {
         let csr = IdCsr::try_from(CertReq::from_der(bytes)?)?;
         Ok(csr)
     }
 
     /// Encode this type as DER, returning a byte vector.
-    pub fn to_der(self) -> Result<Vec<u8>, ConversionError> {
+    pub fn to_der(self) -> Result<Vec<u8>, CertificateConversionError> {
         Ok(CertReq::try_from(self)?.to_der()?)
     }
 
     /// Create an [IdCsr] from a string containing a PEM encoded PKCS #10 CSR.
     /// The resulting `IdCsr` is guaranteed to be well-formed and up to polyproto specification,
     /// if the correct [Target] for the CSRs intended usage context is provided.
-    pub fn from_pem(pem: &str, target: Option<Target>) -> Result<Self, ConversionError> {
+    pub fn from_pem(pem: &str, target: Option<Target>) -> Result<Self, CertificateConversionError> {
         let csr = IdCsr::from_pem_unchecked(pem)?;
         csr.validate(target)?;
         Ok(csr)
@@ -123,13 +126,13 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// Create an unchecked [IdCsr] from a string containing a PEM encoded PKCS #10 CSR.
     /// The caller is responsible for verifying the correctness of this `IdCsr` using
     /// the [Constrained] trait before using it.
-    pub fn from_pem_unchecked(pem: &str) -> Result<Self, ConversionError> {
+    pub fn from_pem_unchecked(pem: &str) -> Result<Self, CertificateConversionError> {
         let csr = IdCsr::try_from(CertReq::from_pem(pem)?)?;
         Ok(csr)
     }
 
     /// Encode this type as PEM, returning a string.
-    pub fn to_pem(self, line_ending: LineEnding) -> Result<String, ConversionError> {
+    pub fn to_pem(self, line_ending: LineEnding) -> Result<String, CertificateConversionError> {
         Ok(CertReq::try_from(self)?.to_pem(line_ending)?)
     }
 
@@ -139,7 +142,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
     /// This is a shorthand for `self.inner_csr.clone().to_der()`, since intuitively, one might
     /// try to verify the signature of the CSR by using `self.to_der()`, which will result
     /// in an error.
-    pub fn signature_data(&self) -> Result<Vec<u8>, ConversionError> {
+    pub fn signature_data(&self) -> Result<Vec<u8>, CertificateConversionError> {
         self.inner_csr.clone().to_der()
     }
 }
@@ -182,7 +185,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
         public_key: &P,
         capabilities: &Capabilities,
         target: Option<Target>,
-    ) -> Result<IdCsrInner<S, P>, ConversionError> {
+    ) -> Result<IdCsrInner<S, P>, CertificateConversionError> {
         let subject = subject.clone();
         let subject_public_key_info = public_key.clone();
         let id_csr_inner = IdCsrInner {
@@ -199,7 +202,10 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
     /// Create an [IdCsrInner] from a byte slice containing a DER encoded PKCS #10 CSR.
     /// The resulting `IdCsrInner` is guaranteed to be well-formed and up to polyproto specification,
     /// if the correct [Target] for the CSRs intended usage context is provided.
-    pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
+    pub fn from_der(
+        bytes: &[u8],
+        target: Option<Target>,
+    ) -> Result<Self, CertificateConversionError> {
         let csr_inner = IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)?;
         csr_inner.validate(target)?;
         Ok(csr_inner)
@@ -208,19 +214,19 @@ impl<S: Signature, P: PublicKey<S>> IdCsrInner<S, P> {
     /// Create an unchecked [IdCsrInner] from a byte slice containing a DER encoded PKCS #10 CSR.
     /// The caller is responsible for verifying the correctness of this `IdCsrInner` using
     /// the [Constrained] trait before using it.
-    pub fn from_der_unchecked(bytes: &[u8]) -> Result<Self, ConversionError> {
+    pub fn from_der_unchecked(bytes: &[u8]) -> Result<Self, CertificateConversionError> {
         let csr_inner = IdCsrInner::try_from(CertReqInfo::from_der(bytes)?)?;
         Ok(csr_inner)
     }
 
     /// Encode this type as DER, returning a byte vector.
-    pub fn to_der(self) -> Result<Vec<u8>, ConversionError> {
+    pub fn to_der(self) -> Result<Vec<u8>, CertificateConversionError> {
         Ok(CertReqInfo::try_from(self)?.to_der()?)
     }
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<CertReq> for IdCsr<S, P> {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     /// Tries to convert a `CertReq` into an `IdCsr`. The Ok() variant of this Result is an
     /// unverified `IdCsr`. If this conversion is called manually, the caller is responsible for
@@ -235,7 +241,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<CertReq> for IdCsr<S, P> {
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<CertReqInfo> for IdCsrInner<S, P> {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     /// Tries to convert a `CertReqInfo` into an `IdCsrInner`. The Ok() variant of this Result is
     /// an unverified `IdCsrInner`. If this conversion is called manually, the caller is responsible
@@ -258,7 +264,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<CertReqInfo> for IdCsrInner<S, P> {
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<IdCsr<S, P>> for CertReq {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     fn try_from(value: IdCsr<S, P>) -> Result<Self, Self::Error> {
         Ok(CertReq {
@@ -270,7 +276,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<IdCsr<S, P>> for CertReq {
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<IdCsrInner<S, P>> for CertReqInfo {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
     fn try_from(value: IdCsrInner<S, P>) -> Result<Self, Self::Error> {
         Ok(CertReqInfo {
             version: x509_cert::request::Version::V1,

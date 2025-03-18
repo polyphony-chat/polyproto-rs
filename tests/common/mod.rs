@@ -233,7 +233,9 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
         }
     }
 
-    fn try_from_public_key_info(public_key_info: PublicKeyInfo) -> Result<Self, ConversionError> {
+    fn try_from_public_key_info(
+        public_key_info: PublicKeyInfo,
+    ) -> Result<Self, CertificateConversionError> {
         let mut key_vec = public_key_info.public_key_bitstring.raw_bytes().to_vec();
         key_vec.resize(32, 0);
         let signature_array: [u8; 32] = {

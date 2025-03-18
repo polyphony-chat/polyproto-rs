@@ -200,7 +200,7 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
     #[cfg(not(tarpaulin_include))]
     fn try_from_public_key_info(
         public_key_info: PublicKeyInfo,
-    ) -> Result<Self, polyproto::errors::composite::ConversionError> {
+    ) -> Result<Self, polyproto::errors::composite::CertificateConversionError> {
         let mut key_vec = public_key_info.public_key_bitstring.raw_bytes().to_vec();
         key_vec.resize(32, 0);
         let signature_array: [u8; 32] = {

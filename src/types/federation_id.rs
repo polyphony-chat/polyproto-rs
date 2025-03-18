@@ -11,6 +11,7 @@ use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX};
 pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)$";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 /// A `FederationId` is a globally unique identifier for an actor in the context of polyproto.
 pub struct FederationId {
     /// Must be unique on each instance.
@@ -49,8 +50,52 @@ impl FederationId {
     }
 }
 
+impl TryFrom<&str> for FederationId {
+    type Error = ConstraintError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        FederationId::new(value)
+    }
+}
+
 impl std::fmt::Display for FederationId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}@{}", self.local_name, self.domain_name)
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serde {
+    use serde::de::Visitor;
+    use serde::Deserialize;
+
+    use crate::errors::ERR_MSG_FEDERATION_ID_REGEX;
+
+    use super::FederationId;
+
+    struct FidVisitor;
+
+    impl Visitor<'_> for FidVisitor {
+        type Value = FederationId;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a valid polyproto federation ID")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            FederationId::new(v).map_err(|_| E::custom(ERR_MSG_FEDERATION_ID_REGEX.to_string()))
+        }
+    }
+
+    impl<'de> Deserialize<'de> for FederationId {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_str(FidVisitor)
+        }
     }
 }

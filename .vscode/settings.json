@@ -1,4 +1,4 @@
 {
 	"markiscodecoverage.searchCriteria": ".coverage/lcov*.info",
-	"rust-analyzer.cargo.features": ["types", "reqwest", "gateway"]
+	"rust-analyzer.cargo.features": ["types", "reqwest", "gateway", "serde"]
 }
