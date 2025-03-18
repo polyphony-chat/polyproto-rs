@@ -10,7 +10,7 @@ use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
 
-use crate::errors::{ConversionError, InvalidInput};
+use crate::errors::{CertificateConversionError, InvalidInput};
 
 use super::*;
 
@@ -88,7 +88,7 @@ impl KeyUsages {
     ///     encipherOnly            (7),
     ///     decipherOnly            (8) }
     /// ```
-    pub fn from_bitstring(bitstring: BitString) -> Result<Self, ConversionError> {
+    pub fn from_bitstring(bitstring: BitString) -> Result<Self, CertificateConversionError> {
         let mut byte_array = bitstring.raw_bytes().to_vec();
         log::trace!("[from_bitstring] BitString raw bytes: {:?}", byte_array);
         let mut key_usages = Vec::new();
@@ -131,7 +131,7 @@ impl KeyUsages {
             }
         }
         if byte_array[0] != 0 {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+            return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(
                 "Could not properly convert this BitString to KeyUsages. The BitString contains a value not representable by KeyUsages".to_string(),
             )));
         }
@@ -203,11 +203,11 @@ impl From<KeyUsages> for BitString {
 }
 
 impl TryFrom<Attribute> for KeyUsages {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     fn try_from(value: Attribute) -> Result<Self, Self::Error> {
         if value.tag() != Tag::Sequence {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+            return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(
                 format!("Expected Sequence, found {}", value.tag(),),
             )));
         }
@@ -215,7 +215,7 @@ impl TryFrom<Attribute> for KeyUsages {
             0 => return Ok(KeyUsages::new(&[])),
             1 => (),
             _ => {
-                return Err(ConversionError::InvalidInput(InvalidInput::Length {
+                return Err(CertificateConversionError::InvalidInput(InvalidInput::Length {
                     min_length: 0,
                     max_length: 1,
                     actual_length: value.values.len().to_string(),
@@ -229,11 +229,11 @@ impl TryFrom<Attribute> for KeyUsages {
 }
 
 impl TryFrom<Extension> for KeyUsages {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     fn try_from(value: Extension) -> Result<Self, Self::Error> {
         if value.extn_id.to_string().as_str() != OID_KEY_USAGE {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+            return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(
                 format!(
                     "Expected OID {} for KeyUsages, found OID {}",
                     OID_KEY_USAGE, value.extn_id
@@ -246,7 +246,7 @@ impl TryFrom<Extension> for KeyUsages {
 }
 
 impl TryFrom<KeyUsages> for Attribute {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     fn try_from(value: KeyUsages) -> Result<Self, Self::Error> {
         let mut sov = SetOfVec::new();
@@ -261,7 +261,7 @@ impl TryFrom<KeyUsages> for Attribute {
 }
 
 impl TryFrom<KeyUsages> for Extension {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
     fn try_from(value: KeyUsages) -> Result<Self, Self::Error> {
         let bitstring = value.to_bitstring();
         let any = Any::from_der(&bitstring.to_der()?)?;

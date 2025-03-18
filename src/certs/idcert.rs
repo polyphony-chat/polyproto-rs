@@ -9,7 +9,7 @@ use x509_cert::name::Name;
 use x509_cert::time::Validity;
 use x509_cert::Certificate;
 
-use crate::errors::{ConstraintError, ConversionError, InvalidCert, ERR_CERTIFICATE_TO_DER_ERROR};
+use crate::errors::{ConstraintError, CertificateConversionError, InvalidCert, ERR_CERTIFICATE_TO_DER_ERROR};
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
 use crate::Constrained;
@@ -73,7 +73,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         serial_number: Uint,
         issuer: Name,
         validity: Validity,
-    ) -> Result<Self, ConversionError> {
+    ) -> Result<Self, CertificateConversionError> {
         let signature_algorithm = signing_key.algorithm_identifier();
         let id_cert_tbs = IdCertTbs::<S, P> {
             serial_number,
@@ -120,7 +120,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         serial_number: Uint,
         issuer: Name,
         validity: Validity,
-    ) -> Result<Self, ConversionError> {
+    ) -> Result<Self, CertificateConversionError> {
         log::trace!("[IdCert::from_actor_csr()] creating actor certificate");
         let signature_algorithm = signing_key.algorithm_identifier();
         log::trace!("[IdCert::from_actor_csr()] creating IdCertTbs");
@@ -184,13 +184,13 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// Create an unchecked [IdCert] from a byte slice containing a DER encoded X.509 Certificate.
     /// The caller is responsible for verifying the correctness of this `IdCert` using
     /// the [Constrained] trait before using it.
-    pub fn from_der_unchecked(value: &[u8]) -> Result<Self, ConversionError> {
+    pub fn from_der_unchecked(value: &[u8]) -> Result<Self, CertificateConversionError> {
         let cert = IdCert::try_from(Certificate::from_der(value)?)?;
         Ok(cert)
     }
 
     /// Encode this type as DER, returning a byte vector.
-    pub fn to_der(self) -> Result<Vec<u8>, ConversionError> {
+    pub fn to_der(self) -> Result<Vec<u8>, CertificateConversionError> {
         Ok(Certificate::try_from(self)?.to_der()?)
     }
 
@@ -225,13 +225,13 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// Create an unchecked [IdCert] from a byte slice containing a PEM encoded X.509 Certificate.
     /// The caller is responsible for verifying the correctness of this `IdCert` using
     /// either [IdCert::full_verify_actor()] or [IdCert::full_verify_home_server()] before using it.
-    pub fn from_pem_unchecked(pem: &str) -> Result<Self, ConversionError> {
+    pub fn from_pem_unchecked(pem: &str) -> Result<Self, CertificateConversionError> {
         let cert = IdCert::try_from(Certificate::from_pem(pem)?)?;
         Ok(cert)
     }
 
     /// Encode this type as PEM, returning a string.
-    pub fn to_pem(self, line_ending: LineEnding) -> Result<String, ConversionError> {
+    pub fn to_pem(self, line_ending: LineEnding) -> Result<String, CertificateConversionError> {
         Ok(Certificate::try_from(self)?.to_pem(line_ending)?)
     }
 
@@ -241,7 +241,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// This is a shorthand for `self.id_cert_tbs.clone().to_der()`, since intuitively, one might
     /// try to verify the signature of the certificate by using `self.to_der()`, which will result
     /// in an error.
-    pub fn signature_data(&self) -> Result<Vec<u8>, ConversionError> {
+    pub fn signature_data(&self) -> Result<Vec<u8>, CertificateConversionError> {
         self.id_cert_tbs.clone().to_der()
     }
 
@@ -316,7 +316,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<IdCert<S, P>> for Certificate {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
     fn try_from(value: IdCert<S, P>) -> Result<Self, Self::Error> {
         Ok(Self {
             tbs_certificate: value.id_cert_tbs.clone().try_into()?,
@@ -327,7 +327,7 @@ impl<S: Signature, P: PublicKey<S>> TryFrom<IdCert<S, P>> for Certificate {
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<Certificate> for IdCert<S, P> {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
     /// Tries to convert a [Certificate] into an [IdCert]. The Ok() variant of this method
     /// contains the `IdCert` if the conversion was successful. If this conversion is called
     /// manually, the caller is responsible for verifying the correctness of this `IdCert` using

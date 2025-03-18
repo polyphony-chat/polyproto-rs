@@ -12,7 +12,7 @@ use serde_json::json;
 use crate::certs::idcert::IdCert;
 use crate::certs::idcsr::IdCsr;
 use crate::certs::SessionId;
-use crate::errors::{ConversionError, RequestError};
+use crate::errors::{CertificateConversionError, RequestError};
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::types::routes::core::v1::*;
@@ -446,7 +446,7 @@ impl<S: Signature, P: PublicKey<S>> From<IdCertExt<S, P>> for IdCertExtJson {
 }
 
 impl<S: Signature, P: PublicKey<S>> TryFrom<IdCertExtJson> for IdCertExt<S, P> {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     fn try_from(id_cert: IdCertExtJson) -> Result<Self, Self::Error> {
         Ok(Self {

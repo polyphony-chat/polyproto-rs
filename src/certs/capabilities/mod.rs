@@ -16,7 +16,7 @@ use x509_cert::attr::{Attribute, Attributes};
 use x509_cert::ext::{Extension, Extensions};
 
 use crate::{
-    errors::{ConversionError, InvalidInput},
+    errors::{CertificateConversionError, InvalidInput},
     Constrained,
 };
 
@@ -98,7 +98,7 @@ impl Capabilities {
 }
 
 impl TryFrom<Attributes> for Capabilities {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     /// Performs the conversion.
     ///
@@ -119,7 +119,7 @@ impl TryFrom<Attributes> for Capabilities {
                 OID_BASIC_CONSTRAINTS => {
                     num_basic_constraints += 1;
                     if num_basic_constraints > 1 {
-                        return Err(ConversionError::InvalidInput(InvalidInput::Malformed("Tried inserting > 1 BasicConstraints into Capabilities. Expected 1 BasicConstraints".to_string())));
+                        return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed("Tried inserting > 1 BasicConstraints into Capabilities. Expected 1 BasicConstraints".to_string())));
                     } else {
                         basic_constraints = BasicConstraints::try_from(item.clone())?;
                     }
@@ -135,7 +135,7 @@ impl TryFrom<Attributes> for Capabilities {
 }
 
 impl TryFrom<Capabilities> for Attributes {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     /// Performs the conversion.
     ///
@@ -145,18 +145,18 @@ impl TryFrom<Capabilities> for Attributes {
         let mut sov = SetOfVec::new();
         let insertion = sov.insert(Attribute::try_from(value.key_usage)?);
         if insertion.is_err() {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed("Tried inserting non-unique element into SetOfVec. You likely have a duplicate value in your Capabilities".to_string())));
+            return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed("Tried inserting non-unique element into SetOfVec. You likely have a duplicate value in your Capabilities".to_string())));
         }
         let insertion = sov.insert(Attribute::try_from(value.basic_constraints)?);
         if insertion.is_err() {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed("Tried inserting non-unique element into SetOfVec. You likely have a duplicate value in your Capabilities".to_string())));
+            return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed("Tried inserting non-unique element into SetOfVec. You likely have a duplicate value in your Capabilities".to_string())));
         }
         Ok(sov)
     }
 }
 
 impl TryFrom<Capabilities> for Extensions {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
     /// Performs the conversion.
     ///
     /// try_from does **not** check whether the resulting [Extensions] are well-formed.
@@ -169,7 +169,7 @@ impl TryFrom<Capabilities> for Extensions {
 }
 
 impl TryFrom<Extensions> for Capabilities {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     /// Performs the conversion.
     ///
@@ -188,7 +188,7 @@ impl TryFrom<Extensions> for Capabilities {
                 OID_KEY_USAGE => {
                     key_usage = KeyUsages::try_from(item.clone())?
                 },
-                _ => return Err(ConversionError::InvalidInput(InvalidInput::Malformed(format!("Invalid OID found for converting this set of Extensions to Capabilities: {} is not a valid OID for BasicConstraints or KeyUsages", item.extn_id))))
+                _ => return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(format!("Invalid OID found for converting this set of Extensions to Capabilities: {} is not a valid OID for BasicConstraints or KeyUsages", item.extn_id))))
             };
         }
         Ok(Capabilities {

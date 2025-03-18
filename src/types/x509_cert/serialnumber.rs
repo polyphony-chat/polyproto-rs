@@ -6,7 +6,7 @@ use std::ops::{Deref, DerefMut};
 
 use log::trace;
 
-use crate::errors::{ConversionError, InvalidInput};
+use crate::errors::{CertificateConversionError, InvalidInput};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Wrapper type around [x509_cert::serial_number::SerialNumber], providing serde support, if the
@@ -81,7 +81,7 @@ impl SerialNumber {
     /// Returns an error if the byte slice is empty,
     /// or if the byte slice is longer than 16 bytes. Leading zeros of byte slices are stripped, so
     /// 17 bytes are allowed, if the first byte is zero.
-    pub fn try_as_u128(&self) -> Result<u128, ConversionError> {
+    pub fn try_as_u128(&self) -> Result<u128, CertificateConversionError> {
         let mut bytes = self.as_bytes().to_vec();
         if bytes.is_empty() {
             return Err(InvalidInput::Length {
@@ -110,7 +110,7 @@ impl SerialNumber {
 }
 
 impl TryFrom<SerialNumber> for u128 {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     fn try_from(value: SerialNumber) -> Result<Self, Self::Error> {
         value.try_as_u128()

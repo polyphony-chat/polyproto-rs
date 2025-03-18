@@ -12,7 +12,7 @@ use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 use x509_cert::TbsCertificate;
 
-use crate::errors::ConversionError;
+use crate::errors::CertificateConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
 use crate::Constrained;
@@ -77,7 +77,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         signature_algorithm: AlgorithmIdentifierOwned,
         issuer: Name,
         validity: Validity,
-    ) -> Result<Self, ConversionError> {
+    ) -> Result<Self, CertificateConversionError> {
         id_csr.validate(Some(Target::Actor))?;
         let cert_tbs = IdCertTbs {
             serial_number,
@@ -108,7 +108,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         signature_algorithm: AlgorithmIdentifierOwned,
         issuer: Name,
         validity: Validity,
-    ) -> Result<Self, ConversionError> {
+    ) -> Result<Self, CertificateConversionError> {
         id_csr.validate(Some(Target::HomeServer))?;
         let cert_tbs = IdCertTbs {
             serial_number,
@@ -125,14 +125,17 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     }
 
     /// Encode this type as DER, returning a byte vector.
-    pub fn to_der(self) -> Result<Vec<u8>, ConversionError> {
+    pub fn to_der(self) -> Result<Vec<u8>, CertificateConversionError> {
         Ok(TbsCertificate::try_from(self)?.to_der()?)
     }
 
     /// Create an [IdCertTbs] from a byte slice containing a DER encoded PKCS #10 CSR. The resulting
     /// `IdCertTbs` is guaranteed to be well-formed and up to polyproto specification,
     /// if the correct [Target] for the certificates' intended usage context is provided.
-    pub fn from_der(bytes: &[u8], target: Option<Target>) -> Result<Self, ConversionError> {
+    pub fn from_der(
+        bytes: &[u8],
+        target: Option<Target>,
+    ) -> Result<Self, CertificateConversionError> {
         let cert = IdCertTbs::from_der_unchecked(bytes)?;
         cert.validate(target)?;
         Ok(cert)
@@ -141,7 +144,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     /// Create an unchecked [IdCertTbs] from a byte slice containing a DER encoded PKCS #10 CSR. The caller is
     /// responsible for verifying the correctness of this `IdCertTbs` using
     /// the [Constrained] trait before using it.
-    pub fn from_der_unchecked(bytes: &[u8]) -> Result<Self, ConversionError> {
+    pub fn from_der_unchecked(bytes: &[u8]) -> Result<Self, CertificateConversionError> {
         let cert = IdCertTbs::try_from(TbsCertificate::from_der(bytes)?)?;
         Ok(cert)
     }
@@ -157,7 +160,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
 impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
     for IdCertTbs<S, Q>
 {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     /// Tries to convert a [TbsCertificateInner] into an [IdCertTbs]. The Ok() variant of this Result
     /// is an unverified `IdCertTbs`. If this conversion is called manually, the caller is responsible
@@ -168,7 +171,7 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
         let capabilities =
             match value.extensions {
                 Some(ext) => Capabilities::try_from(ext)?,
-                None => return Err(ConversionError::InvalidInput(
+                None => return Err(CertificateConversionError::InvalidInput(
                     crate::errors::base::InvalidInput::Malformed(
                         "field 'extensions' was None. Expected: Some(x509_cert::ext::Extensions)"
                             .to_string(),
@@ -197,13 +200,13 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
 impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<IdCertTbs<S, Q>>
     for TbsCertificateInner<P>
 {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     fn try_from(value: IdCertTbs<S, Q>) -> Result<Self, Self::Error> {
         let serial_number = match SerialNumber::<P>::new(value.serial_number.as_bytes()) {
             Ok(sernum) => sernum,
             Err(e) => {
-                return Err(ConversionError::InvalidInput(
+                return Err(CertificateConversionError::InvalidInput(
                     crate::errors::base::InvalidInput::Malformed(format!(
                         "Could not convert serial number: {}",
                         e

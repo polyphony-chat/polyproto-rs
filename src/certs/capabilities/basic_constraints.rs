@@ -11,7 +11,7 @@ use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
 
-use crate::errors::{ConstraintError, ConversionError, InvalidInput};
+use crate::errors::{ConstraintError, CertificateConversionError, InvalidInput};
 
 use super::OID_BASIC_CONSTRAINTS;
 
@@ -37,7 +37,7 @@ impl From<BasicConstraints> for ObjectIdentifier {
 }
 
 impl TryFrom<Attribute> for BasicConstraints {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
     /// Performs the conversion.
     ///
     /// Fails, if the input attribute
@@ -60,7 +60,7 @@ impl TryFrom<Attribute> for BasicConstraints {
         }
         let values = value.values;
         if values.len() != 1usize {
-            return Err(ConversionError::InvalidInput(InvalidInput::Length {
+            return Err(CertificateConversionError::InvalidInput(InvalidInput::Length {
                 min_length: 1,
                 max_length: 1,
                 actual_length: values.len().to_string(),
@@ -68,7 +68,7 @@ impl TryFrom<Attribute> for BasicConstraints {
         }
         let element = values.get(0).expect("This should be infallible. Report this issue at https://github.com/polyphony-chat/polyproto");
         if element.tag() != Tag::Sequence {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+            return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(
                 format!("Expected a Sequence tag, found {}", element.tag()),
             )));
         }
@@ -85,7 +85,7 @@ impl TryFrom<Attribute> for BasicConstraints {
                         num_ca += 1;
                         ca = any_to_bool(value.clone())?;
                     } else {
-                        return Err(ConversionError::InvalidInput(InvalidInput::Malformed("Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string())));
+                        return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed("Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string())));
                     }
                 }
                 Tag::Integer => {
@@ -94,14 +94,14 @@ impl TryFrom<Attribute> for BasicConstraints {
                         num_path_length += 1;
                         path_length = Some(any_to_u64(value.clone())?);
                     } else {
-                        return Err(ConversionError::InvalidInput(InvalidInput::Malformed("Encountered > 1 Integer tags. Expected 0 or 1 Integer tags.".to_string())));
+                        return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed("Encountered > 1 Integer tags. Expected 0 or 1 Integer tags.".to_string())));
                     }
                 }
-                _ => return Err(ConversionError::InvalidInput(InvalidInput::Malformed(format!("Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer", value.tag())))),
+                _ => return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(format!("Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer", value.tag())))),
             }
         }
         if num_ca == 0 {
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+            return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(
                 "Expected 1 Boolean tag, found 0".to_string(),
             )));
         }
@@ -110,7 +110,7 @@ impl TryFrom<Attribute> for BasicConstraints {
 }
 
 impl TryFrom<BasicConstraints> for Attribute {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
     fn try_from(value: BasicConstraints) -> Result<Self, Self::Error> {
         let mut sequence = SequenceOf::<Any, 2>::new();
         sequence.add(Any::new(
@@ -134,14 +134,14 @@ impl TryFrom<BasicConstraints> for Attribute {
 }
 
 impl TryFrom<BasicConstraints> for Extension {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
     fn try_from(value: BasicConstraints) -> Result<Self, Self::Error> {
         let attribute = Attribute::try_from(value)?;
         let set = SetOfVec::<Any>::from_der(&attribute.values.to_der()?)?;
         let element = match set.get(0) {
             Some(element) => element,
             None => {
-                return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+                return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(
                     "SetOfVec has no elements".to_string(),
                 )))
             }
@@ -156,7 +156,7 @@ impl TryFrom<BasicConstraints> for Extension {
 }
 
 impl TryFrom<Extension> for BasicConstraints {
-    type Error = ConversionError;
+    type Error = CertificateConversionError;
 
     /// Performs the conversion. Assumes, that the order of the bool value and the
     /// `int`/`none` value is **not** important.
@@ -171,7 +171,7 @@ impl TryFrom<Extension> for BasicConstraints {
         if value.critical && !matches!(value.extn_id.to_string().as_str(), OID_BASIC_CONSTRAINTS) {
             // Error if we encounter a "critical" X.509 extension which we do not know of
             warn!("Unknown critical extension: {:#?}", value.extn_id);
-            return Err(ConversionError::UnknownCriticalExtension { oid: value.extn_id });
+            return Err(CertificateConversionError::UnknownCriticalExtension { oid: value.extn_id });
         }
         // If the Extension is a valid BasicConstraint, the octet string will contain DER ANY values
         // in a DER SET OF type
@@ -181,7 +181,7 @@ impl TryFrom<Extension> for BasicConstraints {
                 "Encountered too many values in BasicConstraints. Found {} values",
                 sequence.len()
             );
-            return Err(ConversionError::InvalidInput(InvalidInput::Malformed(
+            return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(
                 format!("This x509_cert::Extension has {} values stored. Expected a maximum of 2 values", sequence.len()),
             )));
         }
@@ -206,12 +206,12 @@ impl TryFrom<Extension> for BasicConstraints {
                 }
                 _ => {
                     warn!("Encountered unexpected tag: {:?}", item.tag());
-                    return Err(ConversionError::InvalidInput(InvalidInput::Malformed(format!("Encountered unexpected tag {:?}, when tag should have been either Boolean, Integer or Null", item.tag()))));
+                    return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(format!("Encountered unexpected tag {:?}, when tag should have been either Boolean, Integer or Null", item.tag()))));
                 }
             }
             if bool_encounters > 1 || int_encounters > 1 || null_encounters > 1 {
                 warn!("Encountered too many values in BasicConstraints. BasicConstraints are likely malformed. BasicConstraints: {:#?}", value);
-                return Err(ConversionError::InvalidInput(InvalidInput::Length {
+                return Err(CertificateConversionError::InvalidInput(InvalidInput::Length {
                     min_length: 0,
                     max_length: 1,
                     actual_length: 2.to_string(),

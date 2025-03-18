@@ -33,8 +33,8 @@ pub enum PublicKeyError {
 }
 
 #[derive(Error, Debug, PartialEq, Clone)]
-/// Errors that can occur when converting between types
-pub enum ConversionError {
+/// Errors that can occur when converting between certificate types
+pub enum CertificateConversionError {
     #[error(transparent)]
     /// The constraints of the source or target types were met
     ConstraintError(#[from] ConstraintError),
@@ -69,19 +69,19 @@ pub enum RequestError {
     DeserializationError(#[from] serde_json::Error),
     #[error("Failed to convert response into expected type")]
     /// The response could not be converted into the expected type
-    ConversionError(#[from] ConversionError),
+    ConversionError(#[from] CertificateConversionError),
     #[error(transparent)]
     /// The URL could not be parsed
     UrlError(#[from] url::ParseError),
 }
 
-impl From<der::Error> for ConversionError {
+impl From<der::Error> for CertificateConversionError {
     fn from(value: der::Error) -> Self {
         Self::DerError(value)
     }
 }
 
-impl From<der::oid::Error> for ConversionError {
+impl From<der::oid::Error> for CertificateConversionError {
     fn from(value: der::oid::Error) -> Self {
         Self::ConstOidError(value)
     }
