@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use log::info;
+use polyproto::api::cacheable_cert::CacheableIdCert;
 use polyproto::types::gateway::payload::{
     ActorCertificateInvalidation, Heartbeat, HeartbeatAck, Hello, Identify, NewSession, Resume,
     Resumed, ServerCertificateChange, ServiceChannel, ServiceChannelAck, ServiceChannelAction,
@@ -145,9 +146,13 @@ fn serde_event_payload_new_session() {
 fn serde_event_payload_actor_certificate_invalidation() {
     let actor_certificate_invalidation = CoreEvent::new(
         Payload::ActorCertificateInvalidation(ActorCertificateInvalidation {
-            serial: 234789,
-            invalid_since: 8923404,
-            signature: "signature".to_string(),
+            certificate: CacheableIdCert {
+                cert: "bbb".to_string(),
+                invalidated_at: None,
+                not_valid_before: 12,
+                not_valid_after: 24,
+                cache_signature: "sig".to_string(),
+            },
         }),
         Some(1),
     );

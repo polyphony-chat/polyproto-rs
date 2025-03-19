@@ -538,6 +538,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::api::cacheable_cert::CacheableIdCert;
+
     use super::*;
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
@@ -622,9 +624,13 @@ mod test {
             n: "core".to_string(),
             op: Opcode::ActorCertificateInvalidation as u16,
             d: json!(ActorCertificateInvalidation {
-                serial: 42,
-                invalid_since: 1630728000,
-                signature: "signature".to_string()
+                certificate: CacheableIdCert {
+                    cert: "bbb".to_string(),
+                    invalidated_at: None,
+                    not_valid_before: 12,
+                    not_valid_after: 24,
+                    cache_signature: "sig".to_string()
+                }
             }),
             s: None
         })
