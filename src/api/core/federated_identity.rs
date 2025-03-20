@@ -129,6 +129,18 @@ mod registration_required {
 mod registration_not_required {
     use super::*;
 
+    impl HttpClient {
+        /// Retrieve the maximum upload size for encrypted private key material, in bytes.
+        pub async fn get_pkm_upload_size_limit(&self, instance_url: &Url) -> HttpResult<u64> {
+            let request = self.client.request(
+                GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT.method.clone(),
+                instance_url.join(GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT.path)?,
+            );
+            let response = request.send().await;
+            HttpClient::handle_response::<u64>(response).await
+        }
+    }
+
     impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
         /// Inform a foreign server about a new [IdCert] for a session.
         pub async fn update_session_id_cert(
