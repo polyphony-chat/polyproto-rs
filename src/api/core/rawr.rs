@@ -4,6 +4,9 @@
 
 use super::*;
 mod registration_required {
+    use http::StatusCode;
+
+    use crate::api::matches_status_code;
     use crate::types::{Resource, ResourceInformation};
 
     use super::*;
@@ -21,8 +24,18 @@ mod registration_required {
             todo!()
         }
 
-        pub async fn delete_rawr_resource(rid: &str) -> HttpResult<()> {
-            todo!()
+        /// Delete a resource by its resource id (rid).
+        pub async fn delete_rawr_resource(&self, rid: &str) -> HttpResult<()> {
+            let request = self
+                .client
+                .client
+                .request(
+                    DELETE_RESOURCE.method,
+                    self.instance_url.join(DELETE_RESOURCE.path)?.join(rid)?,
+                )
+                .bearer_auth(&self.token);
+            let response = request.send().await?;
+            matches_status_code(&[StatusCode::NO_CONTENT, StatusCode::OK], response.status())
         }
 
         pub async fn get_own_rawr_resource_info_by_id() -> HttpResult<ResourceInformation> {

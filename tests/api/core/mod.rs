@@ -15,10 +15,11 @@ use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
 use polyproto::types::routes::core::v1::{
-    CREATE_DISCOVERABLE, DELETE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_SESSION,
-    DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS, GET_ENCRYPTED_PKM,
-    GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_IDCERT, ROTATE_SERVER_IDENTITY_KEY,
-    SET_PRIMARY_DISCOVERABLE, UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM, WELL_KNOWN,
+    CREATE_DISCOVERABLE, DELETE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_RESOURCE,
+    DELETE_SESSION, DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS,
+    GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_IDCERT,
+    ROTATE_SERVER_IDENTITY_KEY, SET_PRIMARY_DISCOVERABLE, UPDATE_SESSION_IDCERT,
+    UPLOAD_ENCRYPTED_PKM, WELL_KNOWN,
 };
 use polyproto::types::spki::AlgorithmIdentifierOwned;
 use polyproto::types::x509_cert::SerialNumber;
@@ -644,4 +645,25 @@ fn well_known_matches_certificate() {
     let well_known = WellKnown::from_url(&Url::parse("https://polyphony.chat/.p2/core").unwrap());
     let cert = common::actor_id_cert("flori");
     assert!(well_known.matches_certificate(&cert.id_cert_tbs))
+}
+#[tokio::test]
+async fn delete_rawr_resource() {
+    init_logger();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new().unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+
+    // Assuming DELETE_RESOURCE is a constant with the appropriate method and path
+    let rid = "resource-id-to-delete";
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(DELETE_RESOURCE.method.to_string()),
+            request::path(format!("{}{}", DELETE_RESOURCE.path, rid)),
+        ])
+        .respond_with(status_code(204)),
+    );
+
+    session.delete_rawr_resource(rid).await.unwrap();
 }
