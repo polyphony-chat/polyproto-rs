@@ -10,13 +10,29 @@ use crate::url::Url;
 use crate::key::PublicKey;
 use crate::signature::Signature;
 
+use super::cacheable_cert::CacheableIdCert;
+use crate::types::x509_cert::SerialNumber;
+use log::trace;
+use serde_json::json;
+
+use crate::certs::SessionId;
+use crate::certs::idcert::IdCert;
+use crate::errors::RequestError;
+use crate::key::PrivateKey;
+use crate::types::routes::core::v1::*;
+use crate::types::{EncryptedPkm, FederationId, Service, ServiceName};
+
 #[cfg(feature = "reqwest")]
 use super::{HttpClient, HttpResult, Session};
 
-/// Module containing an implementation of a reqwest-based HTTP client with polyproto routes
-/// implemented on it.
 #[cfg(feature = "reqwest")]
-pub mod routes;
+mod federated_identity;
+#[cfg(feature = "reqwest")]
+mod migration;
+#[cfg(feature = "reqwest")]
+mod rawr;
+#[cfg(feature = "reqwest")]
+mod services;
 
 #[cfg(feature = "reqwest")]
 pub use routes::*;
@@ -142,5 +158,57 @@ impl From<WellKnown> for Url {
 impl From<WellKnown> for String {
     fn from(value: WellKnown) -> Self {
         value.api.to_string()
+    }
+}
+
+#[cfg(feature = "reqwest")]
+/// Module containing an implementation of a reqwest-based HTTP client with polyproto routes
+/// implemented on it.
+pub mod routes {
+    use serde::{Deserialize, Serialize};
+    use url::Url;
+
+    use crate::api::{HttpClient, HttpResult};
+    use crate::types::Service;
+
+    use super::WellKnown;
+
+    // Core Routes: No registration needed
+    impl HttpClient {
+        /// Request the contents of the polyproto `.well-known` endpoint from a base url.
+        ///
+        /// This is a shorthand for
+        /// ```rs
+        /// self.request_as::<WellKnown>(http::Method::GET, url, None).await
+        /// ```
+        ///
+        /// ## Errors
+        ///
+        /// This method will error if the server is unreachable or if the resource is malformed.
+        pub async fn get_well_known(&self, url: &Url) -> HttpResult<WellKnown> {
+            let url = url.join(".well-known/polyproto-core")?;
+            self.request_as(http::Method::GET, url.as_str(), None).await
+        }
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+    /// Represents a pair of an [IdCert] and a token, used in the API as a response when an [IdCsr] has
+    /// been accepted by the server.
+    pub struct IdCertToken {
+        /// The [IdCert] as a PEM encoded string
+        pub id_cert: String,
+        /// The token as a string
+        pub token: String,
+    }
+
+    #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    /// Represents a response to a service discovery deletion request. Contains the deleted service
+    /// and, if applicable, the new primary service provider for the service.
+    pub struct ServiceDeleteResponse {
+        /// The service that was deleted.
+        pub deleted: Service,
+        /// The new primary service provider for the service, if applicable.
+        pub new_primary: Option<Service>,
     }
 }
