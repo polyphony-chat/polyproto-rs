@@ -17,6 +17,7 @@ pub use http_client::*;
 pub(crate) mod http_client {
     use std::sync::Arc;
 
+    use http::StatusCode;
     use serde::Deserialize;
     use serde_json::from_str;
     use url::Url;
@@ -144,6 +145,22 @@ pub(crate) mod http_client {
         }
     }
 
+    /// Returns `Ok(())` if `expected` contains `actual`, or an appropriate `RequestError::StatusCode`
+    /// otherwise.
+    pub(crate) fn matches_status_code(
+        expected: &[StatusCode],
+        actual: StatusCode,
+    ) -> HttpResult<()> {
+        if expected.contains(&actual) {
+            Ok(())
+        } else {
+            Err(RequestError::StatusCode {
+                received: actual,
+                expected: expected.into(),
+            })
+        }
+    }
+
     // i would like to move all routes requiring auth to the Session struct. all other routes can stay
     // at HttpClient.
 
@@ -152,7 +169,8 @@ pub(crate) mod http_client {
     /// and [PrivateKey] for easy access to APIs requiring these parameters. Also gives access to
     /// unauthenticated APIs by exposing the inner [HttpClient].
     pub struct Session<S: Signature, T: PrivateKey<S>> {
-        pub(crate) token: String,
+        /// The authentication token of this session.
+        pub token: String,
         /// A reference to the underlying [HttpClient].
         pub client: Arc<HttpClient>,
         /// The URL of the instance this session belongs to.
