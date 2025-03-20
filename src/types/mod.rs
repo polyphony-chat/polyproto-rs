@@ -25,6 +25,15 @@ pub mod spki;
 /// the `serde` crate, if the `serde` feature is enabled.
 pub mod x509_cert;
 
+/// Module defining the [P2Export] type.
+pub mod p2_export;
+
+/// Module defining the `KeyTrial` type family, including [KeyTrial] and [KeyTrialResponse].
+pub mod keytrial;
+
+/// Module defining the "Resource adressing with relative roots" (`RawR`) types.
+pub mod rawr;
+
 #[cfg(feature = "gateway")]
 /// Module defining types associated with the polyproto WebSocket gateway.
 pub mod gateway;
@@ -33,6 +42,10 @@ pub mod gateway;
 pub use encrypted_pkm::*;
 #[cfg(feature = "types")]
 pub use federation_id::*;
+#[cfg(feature = "types")]
+pub use p2_export::*;
+#[cfg(feature = "types")]
+pub use rawr::*;
 #[cfg(feature = "types")]
 pub use service::*;
 
