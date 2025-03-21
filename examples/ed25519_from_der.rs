@@ -1,6 +1,6 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use std::str::FromStr;
 use std::time::Duration;
@@ -75,9 +75,11 @@ fn main() {
     assert_eq!(cert_from_der, cert);
     // ...so technically, we don't need to verify the signature again. This is just for demonstration
     // of how you would manually verify a certificate.
-    assert!(cert_from_der
-        .full_verify_actor(15, &priv_key_home_server.public_key)
-        .is_ok())
+    assert!(
+        cert_from_der
+            .full_verify_actor(15, &priv_key_home_server.public_key)
+            .is_ok()
+    )
 }
 
 // As mentioned in the README, we start by implementing the signature trait.
@@ -100,6 +102,10 @@ impl std::fmt::Display for Ed25519Signature {
 impl Signature for Ed25519Signature {
     // We define the signature type from the ed25519-dalek crate as the associated type.
     type Signature = Ed25519DalekSignature;
+
+    fn as_bytes(&self) -> Vec<u8> {
+        self.as_signature().to_vec()
+    }
 
     // This is straightforward: we return a reference to the signature.
     fn as_signature(&self) -> &Self::Signature {

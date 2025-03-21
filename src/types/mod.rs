@@ -2,18 +2,19 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/// Module defining the [ChallengeString] type.
-pub mod challenge_string;
 /// This module contains wrappers for types from the `der` crate which interface directly with the
 /// HTTP API of polyproto. These wrappers enable the types to be serialized and deserialized using
 /// the `serde` crate, if the `serde` feature is enabled.
 pub mod der;
 /// Module defining the [EncryptedPkm] type, as well as related subtypes.
+#[cfg(feature = "types")]
 pub mod encrypted_pkm;
 /// Module defining the [FederationId] type.
+#[cfg(feature = "types")]
 pub mod federation_id;
 
 /// Module defining the [Service] type.
+#[cfg(feature = "types")]
 pub mod service;
 /// This module contains wrappers for types from the `spki` crate which interface directly with the
 /// HTTP API of polyproto. These wrappers enable the types to be serialized and deserialized using
@@ -24,18 +25,34 @@ pub mod spki;
 /// the `serde` crate, if the `serde` feature is enabled.
 pub mod x509_cert;
 
+/// Module defining the [P2Export] type.
+pub mod p2_export;
+
+/// Module defining the `KeyTrial` type family, including [KeyTrial] and [KeyTrialResponse].
+pub mod keytrial;
+
+/// Module defining the "Resource adressing with relative roots" (`RawR`) types.
+pub mod rawr;
+
 #[cfg(feature = "gateway")]
 /// Module defining types associated with the polyproto WebSocket gateway.
 pub mod gateway;
 
-pub use challenge_string::*;
+#[cfg(feature = "types")]
 pub use encrypted_pkm::*;
+#[cfg(feature = "types")]
 pub use federation_id::*;
+#[cfg(feature = "types")]
+pub use p2_export::*;
+#[cfg(feature = "types")]
+pub use rawr::*;
+#[cfg(feature = "types")]
 pub use service::*;
 
 /// Module defining the [Route] type, as well as `static` endpoints and their associated HTTP methods
 /// for the polyproto API. These `static`s can be used as a single source of truth for the API endpoints
 /// and what methods to submit to them.
+#[cfg(feature = "types")]
 pub mod routes {
 
     use http::Method;
@@ -58,6 +75,11 @@ pub mod routes {
             use http::Method;
 
             use super::super::Route;
+
+            pub const WELL_KNOWN: Route = Route {
+                method: Method::GET,
+                path: "/.well-known/polyproto-core",
+            };
 
             pub const GET_CHALLENGE_STRING: Route = Route {
                 method: Method::GET,
@@ -209,7 +231,7 @@ pub mod routes {
                 path: "/.p2/core/v1/resource/",
             };
 
-            pub const LIST_UPDATED_RESOURCES: Route = Route {
+            pub const LIST_UPLOADED_RESOURCES: Route = Route {
                 method: Method::GET,
                 path: "/.p2/core/v1/resource/resources/",
             };

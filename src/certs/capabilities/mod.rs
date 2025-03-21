@@ -1,6 +1,6 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 /// "basicConstraints" IdCert/Csr capabilities
 pub mod basic_constraints;
@@ -15,10 +15,8 @@ use der::asn1::SetOfVec;
 use x509_cert::attr::{Attribute, Attributes};
 use x509_cert::ext::{Extension, Extensions};
 
-use crate::{
-    errors::{CertificateConversionError, InvalidInput},
-    Constrained,
-};
+use crate::errors::CertificateConversionError;
+use crate::{Constrained, errors::InvalidInput};
 
 /// Object Identifier for the KeyUsage::DigitalSignature variant.
 pub const OID_KEY_USAGE_DIGITAL_SIGNATURE: &str = "1.3.6.1.5.5.7.3.3";
@@ -185,10 +183,15 @@ impl TryFrom<Extensions> for Capabilities {
                 OID_BASIC_CONSTRAINTS => {
                     basic_constraints = BasicConstraints::try_from(item.clone())?
                 }
-                OID_KEY_USAGE => {
-                    key_usage = KeyUsages::try_from(item.clone())?
-                },
-                _ => return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(format!("Invalid OID found for converting this set of Extensions to Capabilities: {} is not a valid OID for BasicConstraints or KeyUsages", item.extn_id))))
+                OID_KEY_USAGE => key_usage = KeyUsages::try_from(item.clone())?,
+                _ => {
+                    return Err(CertificateConversionError::InvalidInput(
+                        InvalidInput::Malformed(format!(
+                            "Invalid OID found for converting this set of Extensions to Capabilities: {} is not a valid OID for BasicConstraints or KeyUsages",
+                            item.extn_id
+                        )),
+                    ));
+                }
             };
         }
         Ok(Capabilities {
