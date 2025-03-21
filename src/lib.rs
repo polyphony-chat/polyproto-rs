@@ -209,6 +209,9 @@ pub(crate) mod sealer {
 /// The password "123" might be well-formed, as in, it meets the validation criteria specified by
 /// the system. However, this makes no implications about "123" being the correct password for a
 /// given user account.
+// FIXME: Hi! If you are reading this: Yes, I am aware that this is not optimal. I am currently
+// in the prototyping phase of the project and this works well enough. It will be made more sophisticated
+// in the future - perhaps, it starts with you reading this message?
 pub trait Constrained {
     /// Perform validation on the type, returning an error if the type is not well-formed.
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError>;
