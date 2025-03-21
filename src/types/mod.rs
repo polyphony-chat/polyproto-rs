@@ -231,7 +231,7 @@ pub mod routes {
                 path: "/.p2/core/v1/resource/",
             };
 
-            pub const LIST_UPDATED_RESOURCES: Route = Route {
+            pub const LIST_UPLOADED_RESOURCES: Route = Route {
                 method: Method::GET,
                 path: "/.p2/core/v1/resource/resources/",
             };
