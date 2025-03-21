@@ -17,6 +17,7 @@ use serde_json::json;
 
 use crate::certs::SessionId;
 use crate::certs::idcert::IdCert;
+#[cfg(feature = "reqwest")]
 use crate::errors::RequestError;
 use crate::key::PrivateKey;
 use crate::types::routes::core::v1::*;
