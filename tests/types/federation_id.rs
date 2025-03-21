@@ -78,3 +78,53 @@ fn test_domain_name_serde_deserialize() {
     let domain_name: DomainName = from_value(json_value).unwrap();
     assert_eq!(domain_name.to_string().as_str(), NAME);
 }
+
+#[cfg(feature = "serde")]
+#[cfg(feature = "types")]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn test_serde_serialize_identifier() {
+    use polyproto::types::Identifer;
+
+    const DOMAIN_NAME: &str = "example.com";
+    const FEDERATION_ID: &str = "user@example.com";
+
+    let instance_id = Identifer::Instance(DomainName::new(DOMAIN_NAME).unwrap());
+    let federation_id = Identifer::FederationId(FederationId::new(FEDERATION_ID).unwrap());
+
+    let instance_json = to_value(instance_id).unwrap();
+    let federation_json = to_value(federation_id).unwrap();
+
+    assert!(instance_json.is_string());
+    assert_eq!(instance_json, Value::String(DOMAIN_NAME.to_string()));
+
+    assert!(federation_json.is_string());
+    assert_eq!(federation_json, Value::String(FEDERATION_ID.to_string()));
+}
+
+#[cfg(feature = "serde")]
+#[cfg(feature = "types")]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+#[cfg_attr(not(target_arch = "wasm32"), test)]
+fn test_serde_deserialize_identifier() {
+    use polyproto::types::Identifer;
+
+    const DOMAIN_NAME: &str = "example.com";
+    const FEDERATION_ID: &str = "user@example.com";
+
+    let instance_json_value = Value::String(DOMAIN_NAME.to_string());
+    let federation_json_value = Value::String(FEDERATION_ID.to_string());
+
+    let instance_id: Identifer = from_value(instance_json_value).unwrap();
+    let federation_id: Identifer = from_value(federation_json_value).unwrap();
+
+    match instance_id {
+        Identifer::Instance(dn) => assert_eq!(dn.to_string().as_str(), DOMAIN_NAME),
+        _ => panic!("Expected an Instance variant"),
+    }
+
+    match federation_id {
+        Identifer::FederationId(fid) => assert_eq!(fid.to_string().as_str(), FEDERATION_ID),
+        _ => panic!("Expected a FederationId variant"),
+    }
+}
