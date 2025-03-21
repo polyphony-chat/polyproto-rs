@@ -51,7 +51,6 @@ impl std::fmt::Display for DomainName {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))] // TODO: i doubt this is right
 /// A `FederationId` is a globally unique identifier for an actor in the context of polyproto.
 pub struct FederationId {
     /// Must be unique on each instance.
@@ -106,8 +105,8 @@ impl std::fmt::Display for FederationId {
 
 #[cfg(feature = "serde")]
 mod serde {
-    use serde::Deserialize;
     use serde::de::Visitor;
+    use serde::{Deserialize, Serialize};
 
     use crate::errors::ERR_MSG_FEDERATION_ID_REGEX;
 
@@ -136,6 +135,15 @@ mod serde {
             D: serde::Deserializer<'de>,
         {
             deserializer.deserialize_str(FidVisitor)
+        }
+    }
+
+    impl Serialize for FederationId {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            serializer.serialize_str(&self.to_string())
         }
     }
 }
