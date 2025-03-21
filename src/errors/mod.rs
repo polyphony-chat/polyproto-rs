@@ -23,6 +23,9 @@ pub static ERR_MSG_CHALLENGE_STRING_LENGTH: &str =
 #[cfg(feature = "types")]
 pub static ERR_MSG_FEDERATION_ID_REGEX: &str =
     "Federation IDs must match the regex: \\b([a-z0-9._%+-]+)@([a-z0-9-]+(\\.[a-z0-9-]+)*)";
+#[cfg(feature = "types")]
+pub static ERR_MSG_DOMAIN_NAME_REGEX: &str =
+    "DomainNames must match the regex: \\b([a-z0-9._%+-]+)@([a-z0-9-]+(\\.[a-z0-9-]+)*)$";
 /// "Base" error types which can be combined into "composite" error types
 pub mod base;
 /// "Composite" error types which consist of one or more "base" error types
