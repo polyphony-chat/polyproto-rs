@@ -80,6 +80,8 @@ pub enum RequestError {
         received: StatusCode,
         expected: Vec<StatusCode>,
     },
+    #[error("{reason}")]
+    Custom { reason: String },
 }
 
 impl From<der::Error> for CertificateConversionError {

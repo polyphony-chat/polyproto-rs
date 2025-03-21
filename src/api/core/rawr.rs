@@ -7,7 +7,7 @@ mod registration_required {
     use http::StatusCode;
 
     use crate::api::matches_status_code;
-    use crate::types::{Resource, ResourceInformation};
+    use crate::types::{Resource, ResourceAccessProperties, ResourceInformation};
 
     use super::*;
 
@@ -49,12 +49,66 @@ mod registration_required {
             HttpClient::handle_response(response).await
         }
 
-        pub async fn update_rawr_resource_access() -> HttpResult<()> {
-            todo!()
+        /// Replace the access properties of a `RawR` resource with updated access properties.
+        pub async fn update_rawr_resource_access(
+            &self,
+            rid: &str,
+            new_access_properties: ResourceAccessProperties,
+        ) -> HttpResult<()> {
+            let request = self
+                .client
+                .client
+                .request(
+                    UPDATE_RESOURCE_ACCESS.method,
+                    self.instance_url
+                        .join(UPDATE_RESOURCE_ACCESS.path)?
+                        .join(rid)?,
+                )
+                .body(json!(new_access_properties).to_string())
+                .bearer_auth(&self.token);
+            let response = request.send().await?;
+            matches_status_code(&[StatusCode::NO_CONTENT, StatusCode::OK], response.status())
         }
 
-        pub async fn upload_rawr_resource(resource: &Resource, rid: &str) -> HttpResult<()> {
-            todo!()
+        /// Upload a `RawR` resource to your home server.
+        pub async fn upload_rawr_resource(
+            &self,
+            resource: Resource,
+            rid: &str,
+            resource_access_properties: ResourceAccessProperties,
+        ) -> HttpResult<()> {
+            let request = self
+                .client
+                .client
+                .request(
+                    UPDATE_RESOURCE_ACCESS.method,
+                    self.instance_url
+                        .join(UPDATE_RESOURCE_ACCESS.path)?
+                        .join(rid)?,
+                )
+                .query(&(
+                    "resourceAccessProperties",
+                    urlencoding::encode(&json!(resource_access_properties).to_string()),
+                ))
+                .bearer_auth(&self.token)
+                .header("Content-Length", resource.contents.len())
+                .multipart(
+                    resource
+                        .into_multipart()
+                        .map_err(|e| RequestError::Custom {
+                            reason: e.to_string(),
+                        })?,
+                );
+            let response = request.send().await?;
+            matches_status_code(
+                &[
+                    StatusCode::NO_CONTENT,
+                    StatusCode::OK,
+                    StatusCode::ACCEPTED,
+                    StatusCode::CREATED,
+                ],
+                response.status(),
+            )
         }
 
         /// Delete a resource by its resource id (rid).
@@ -70,14 +124,12 @@ mod registration_required {
             let response = request.send().await?;
             matches_status_code(&[StatusCode::NO_CONTENT, StatusCode::OK], response.status())
         }
-
-        pub async fn get_own_rawr_resource_info_by_id() -> HttpResult<ResourceInformation> {
-            todo!()
-        }
     }
 }
 
 mod registration_not_required {
+    use crate::types::ResourceInformation;
+
     use super::*;
 
     impl<S: Signature, T: PrivateKey<S>> Session<S, T> {}
@@ -85,6 +137,25 @@ mod registration_not_required {
     impl HttpClient {
         pub async fn get_rawr_resource_by_id() -> HttpResult<Vec<u8>> {
             todo!()
+        }
+
+        pub async fn get_rawr_resource_info_by_id(
+            &self,
+            host: &Url,
+            rid: &str,
+            token: Option<String>,
+        ) -> HttpResult<ResourceInformation> {
+            let mut request = self.client.request(
+                GET_RESOURCE_INFO_BY_ID.method,
+                host.join(&GET_RESOURCE_INFO_BY_ID.path.replace(r#"{rid}"#, rid))?
+                    .join(rid)?,
+            );
+            if let Some(token) = token {
+                request = request.bearer_auth(token);
+            }
+            let response = request.send().await;
+            // TODO: Might error if the list is empty/204 is received. Test it.
+            HttpClient::handle_response(response).await
         }
     }
 }

@@ -46,6 +46,8 @@ pub struct ResourceInformation {
 pub struct ResourceAccessProperties {
     /// Whether the resource should be private by default. Private resources can only be accessed by the uploader and by instances and actors declared in the `allowlist`.
     pub private: bool,
+    /// Whether the resource should be publicly retrievable, i.e. without requiring authentication. If this is `true`, the allow- and denylists are ignored.
+    pub public: bool,
     /// A list of actors and/or instances allowed to access this resource.
     pub allowlist: Vec<Identifer>,
     /// A list of actors and/or instances who cannot have access to this resource.
