@@ -10,7 +10,7 @@ use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX};
 /// The regular expression for a valid `FederationId`.
 pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)$";
 /// The regular expression for a valid domain name.
-pub static REGEX_DOMAIN_NAME: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)$";
+pub static REGEX_DOMAIN_NAME: &str = r"\b([a-z0-9-]+(\.[a-z0-9-]+)*)$";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// Common types of federation identifiers.
@@ -22,7 +22,6 @@ pub enum Identifer {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-// TODO: Serde Serialize, Deserialize impl.
 /// Domain names are what identify an instance.
 pub struct DomainName {
     pub(crate) value: String,
@@ -110,7 +109,7 @@ mod serde {
 
     use crate::errors::{ERR_MSG_DOMAIN_NAME_REGEX, ERR_MSG_FEDERATION_ID_REGEX};
 
-    use super::{DomainName, FederationId};
+    use super::{DomainName, FederationId, Identifer};
 
     struct FidVisitor;
 
@@ -179,6 +178,52 @@ mod serde {
             S: serde::Serializer,
         {
             serializer.serialize_str(&self.to_string())
+        }
+    }
+
+    struct IdVisitor;
+
+    impl Visitor<'_> for IdVisitor {
+        type Value = Identifer;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a valid DomainName or FederationId")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            if let Ok(fid) = FederationId::new(v) {
+                Ok(Identifer::FederationId(fid) as Self::Value)
+            } else if let Ok(dn) = DomainName::new(v) {
+                Ok(Identifer::Instance(dn) as Self::Value)
+            } else {
+                Err(E::custom(
+                    "passed string is neither a valid DomainName nor a valid FederationId",
+                ))
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Identifer {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_str(IdVisitor)
+        }
+    }
+
+    impl Serialize for Identifer {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            match self {
+                Identifer::Instance(domain_name) => domain_name.serialize(serializer),
+                Identifer::FederationId(federation_id) => federation_id.serialize(serializer),
+            }
         }
     }
 }
