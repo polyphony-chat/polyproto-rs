@@ -11,9 +11,42 @@ mod registration_required {
 
     use super::*;
 
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+    #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+    /// Whether the list of [Resources] should be sorted in a specific way. Specific to the
+    /// "List uploaded RawR resources"-route.
+    pub enum Ordering {
+        /// Smallest first
+        SizeAsc,
+        /// Largest first
+        SizeDesc,
+        /// Newest first
+        NewestFirst,
+        /// Oldest first
+        OldestFirst,
+    }
+
     impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
-        pub async fn list_uploaded_rawr_resources() -> HttpResult<Vec<Resource>> {
-            todo!()
+        /// Query the server for a list of resources you've uploaded.
+        ///
+        /// ## Parameters
+        ///
+        /// - `limit`: How many results you'd like to retrieve at maximum. Usually defaults to 50.
+        /// - `sort`: Whether the list should be sorted in a specific way.
+        pub async fn list_uploaded_rawr_resources(
+            &self,
+            limit: Option<u32>,
+            sort: Option<Ordering>,
+        ) -> HttpResult<Vec<ResourceInformation>> {
+            let request = self
+                .client
+                .request_route(&self.instance_url, LIST_UPLOADED_RESOURCES)?
+                .bearer_auth(&self.token)
+                .query(&limit)
+                .query(&sort);
+            let response = request.send().await;
+            // TODO: Might error if the list is empty/204 is received. Test it.
+            HttpClient::handle_response(response).await
         }
 
         pub async fn update_rawr_resource_access() -> HttpResult<()> {
