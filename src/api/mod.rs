@@ -18,6 +18,7 @@ pub(crate) mod http_client {
     use std::sync::Arc;
 
     use http::StatusCode;
+    use reqwest::RequestBuilder;
     use serde::Deserialize;
     use serde_json::from_str;
     use url::Url;
@@ -26,6 +27,7 @@ pub(crate) mod http_client {
     use crate::errors::RequestError;
     use crate::key::PrivateKey;
     use crate::signature::Signature;
+    use crate::types::routes::Route;
 
     #[derive(Debug, Clone)]
     /// A client for making HTTP requests to a polyproto home server. Stores headers such as the
@@ -98,6 +100,17 @@ pub(crate) mod http_client {
         /// Sets the headers for the client.
         pub fn headers(&mut self, headers: reqwest::header::HeaderMap) {
             self.headers = headers;
+        }
+
+        /// Boilerplate reducing request builder when using [Route]s to make basic requests.
+        pub(crate) fn request_route(
+            &self,
+            instance_url: &Url,
+            route: Route,
+        ) -> Result<RequestBuilder, url::ParseError> {
+            Ok(self
+                .client
+                .request(route.method, instance_url.join(route.path)?))
         }
 
         /// Sends a request and returns a [HttpResult].
