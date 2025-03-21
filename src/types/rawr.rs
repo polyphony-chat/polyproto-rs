@@ -7,7 +7,8 @@ use super::Identifer;
 pub struct Resource;
 pub struct ResourceInformation;
 
-// TODO: Derives, including Serde derives
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AccessControl {
     pub private: bool,
     pub allowlist: Vec<Identifer>,
