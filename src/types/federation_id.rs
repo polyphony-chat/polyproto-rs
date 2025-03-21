@@ -108,9 +108,9 @@ mod serde {
     use serde::de::Visitor;
     use serde::{Deserialize, Serialize};
 
-    use crate::errors::ERR_MSG_FEDERATION_ID_REGEX;
+    use crate::errors::{ERR_MSG_DOMAIN_NAME_REGEX, ERR_MSG_FEDERATION_ID_REGEX};
 
-    use super::FederationId;
+    use super::{DomainName, FederationId};
 
     struct FidVisitor;
 
@@ -139,6 +139,41 @@ mod serde {
     }
 
     impl Serialize for FederationId {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            serializer.serialize_str(&self.to_string())
+        }
+    }
+
+    struct DnVisitor;
+
+    impl Visitor<'_> for DnVisitor {
+        type Value = DomainName;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a valid domain name (please open a bug report if your domain name is valid and still caused this error)")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            DomainName::new(v).map_err(|_| E::custom(ERR_MSG_DOMAIN_NAME_REGEX.to_string()))
+        }
+    }
+
+    impl<'de> Deserialize<'de> for DomainName {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_str(DnVisitor)
+        }
+    }
+
+    impl Serialize for DomainName {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer,
