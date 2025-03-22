@@ -135,10 +135,32 @@ mod registration_not_required {
     impl<S: Signature, T: PrivateKey<S>> Session<S, T> {}
 
     impl HttpClient {
-        pub async fn get_rawr_resource_by_id() -> HttpResult<Vec<u8>> {
-            todo!()
+        /// Retrieve a `RawR` resource by specifying the ID (`rid`) of the resource.
+        ///
+        /// ## Parameters
+        ///
+        /// - `host`: The URL of the polyproto instance to query
+        pub async fn get_rawr_resource_by_id(
+            &self,
+            rid: &str,
+            token: Option<String>,
+            host: &Url,
+        ) -> HttpResult<Vec<u8>> {
+            let mut request = self.client.request(
+                GET_RESOURCE_BY_ID.method,
+                host.join(GET_RESOURCE_BY_ID.path)?.join(rid)?,
+            );
+            if let Some(token) = token {
+                request = request.bearer_auth(token);
+            }
+            let response = request.send().await;
+            HttpClient::handle_response(response).await
         }
 
+        /// Retrieve [ResourceInformation] about a `RawR` resource.
+        /// ## Parameters
+        ///
+        /// - `host`: The URL of the polyproto instance to query
         pub async fn get_rawr_resource_info_by_id(
             &self,
             host: &Url,
