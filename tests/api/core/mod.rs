@@ -5,8 +5,9 @@
 use std::str::FromStr;
 
 use der::asn1::{BitString, GeneralizedTime, Uint};
+use http::response;
 use httptest::matchers::request::method_path;
-use httptest::matchers::{contains, eq, json_decoded, matches, request, url_decoded};
+use httptest::matchers::{any, contains, eq, json_decoded, matches, request, url_decoded};
 use httptest::responders::{json_encoded, status_code};
 use httptest::*;
 use polyproto::api::core::{ServiceDeleteResponse, WellKnown, current_unix_time};
@@ -17,13 +18,17 @@ use polyproto::certs::idcsr::IdCsr;
 use polyproto::types::routes::core::v1::{
     CREATE_DISCOVERABLE, DELETE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_RESOURCE,
     DELETE_SESSION, DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS,
-    GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_IDCERT,
+    GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_RESOURCE_BY_ID, GET_SERVER_IDCERT,
     LIST_UPLOADED_RESOURCES, ROTATE_SERVER_IDENTITY_KEY, SET_PRIMARY_DISCOVERABLE,
-    UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM, WELL_KNOWN,
+    UPDATE_RESOURCE_ACCESS, UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM, UPLOAD_RESOURCE,
+    WELL_KNOWN,
 };
 use polyproto::types::spki::AlgorithmIdentifierOwned;
 use polyproto::types::x509_cert::SerialNumber;
-use polyproto::types::{EncryptedPkm, FederationId, PrivateKeyInfo, Service, ServiceName};
+use polyproto::types::{
+    DomainName, EncryptedPkm, FederationId, Identifer, PrivateKeyInfo, Resource,
+    ResourceAccessProperties, Service, ServiceName,
+};
 use serde_json::{from_str, json};
 use spki::ObjectIdentifier;
 use url::Url;
@@ -713,16 +718,37 @@ async fn update_rawr_resource_access() {
     let client = polyproto::api::HttpClient::new().unwrap();
     let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
         polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
-}
 
-#[tokio::test]
-async fn upload_rawr_resource() {
-    init_logger();
-    let server = Server::run();
-    let url = server_url(&server);
-    let client = polyproto::api::HttpClient::new().unwrap();
-    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
-        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+    // Define the new access properties
+    let new_access_properties = ResourceAccessProperties {
+        private: true,
+        public: false,
+        allowlist: vec![
+            Identifer::Instance(DomainName::new("example.com").unwrap()),
+            Identifer::FederationId(FederationId::new("user@example.com").unwrap()),
+        ],
+        denylist: vec![Identifer::Instance(
+            DomainName::new("deny.example.com").unwrap(),
+        )],
+    };
+
+    // Set up the server expectation
+    let rid = "resource-id-to-update";
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(UPDATE_RESOURCE_ACCESS.method.to_string()),
+            request::path(format!("{}{}", UPDATE_RESOURCE_ACCESS.path, rid)),
+            request::headers(contains(("authorization", any()))),
+            request::body(json_decoded(eq(json!(new_access_properties.clone())))),
+        ])
+        .respond_with(status_code(204)),
+    );
+
+    // Call the update_rawr_resource_access method
+    session
+        .update_rawr_resource_access(rid, new_access_properties)
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -731,8 +757,29 @@ async fn get_rawr_resource_by_id() {
     let server = Server::run();
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
-    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
-        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+
+    // Define the expected response data
+    let expected_data: Vec<u8> = vec![0, 1, 2, 3]; // Example binary data
+
+    // Set up the server expectation
+    let rid = "resource-id-to-get";
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(GET_RESOURCE_BY_ID.method.to_string()),
+            request::path(format!("{}{}", GET_RESOURCE_BY_ID.path, rid)),
+            request::headers(contains(("authorization", any()))),
+        ])
+        .respond_with(status_code(200).body(expected_data.clone())),
+    );
+
+    // Call the get_rawr_resource_by_id method
+    let response = client
+        .get_rawr_resource_by_id(rid, Some("token".to_string()), &Url::parse(&url).unwrap())
+        .await
+        .unwrap();
+
+    // Verify the response data
+    assert_eq!(response, expected_data);
 }
 
 #[tokio::test]

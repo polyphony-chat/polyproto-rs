@@ -109,10 +109,10 @@ mod registration_required {
                         .join(UPDATE_RESOURCE_ACCESS.path)?
                         .join(rid)?,
                 )
-                .query(&(
+                .query(&[(
                     "resourceAccessProperties",
                     urlencoding::encode(&json!(resource_access_properties).to_string()),
-                ))
+                )])
                 .bearer_auth(&self.token)
                 .header("Content-Length", resource.contents.len())
                 .multipart(
@@ -176,8 +176,8 @@ mod registration_not_required {
             if let Some(token) = token {
                 request = request.bearer_auth(token);
             }
-            let response = request.send().await;
-            HttpClient::handle_response(response).await
+            let response = request.send().await?;
+            Ok(response.bytes().await?.to_vec())
         }
 
         /// Retrieve [ResourceInformation] about a `RawR` resource.
