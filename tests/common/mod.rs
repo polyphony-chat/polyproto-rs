@@ -17,6 +17,9 @@ use polyproto::certs::idcsr::IdCsr;
 use polyproto::errors::composite::CertificateConversionError;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
+use polyproto::types::{
+    DomainName, FederationId, Identifer, ResourceAccessProperties, ResourceInformation,
+};
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 use x509_cert::time::{Time, Validity};
@@ -247,6 +250,39 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
             key: VerifyingKey::from_bytes(&signature_array).unwrap(),
         })
     }
+}
+
+/// Retrieve some example [ResourceInformation].
+pub(crate) fn example_resource_information() -> [ResourceInformation; 2] {
+    [
+        ResourceInformation {
+            resource_id: "1".to_string(),
+            size: 342567,
+            access: ResourceAccessProperties {
+                private: false,
+                public: true,
+                allowlist: Vec::new(),
+                denylist: Vec::new(),
+            },
+        },
+        ResourceInformation {
+            resource_id: "2".to_string(),
+            size: 432712,
+            access: ResourceAccessProperties {
+                private: false,
+                public: false,
+                allowlist: [
+                    Identifer::FederationId(FederationId::new("xenia@example.com").unwrap()),
+                    Identifer::Instance(DomainName::new("other.example.com").unwrap()),
+                ]
+                .to_vec(),
+                denylist: [Identifer::FederationId(
+                    FederationId::new("stupiduser@example.com").unwrap(),
+                )]
+                .to_vec(),
+            },
+        },
+    ]
 }
 
 #[macro_export]
