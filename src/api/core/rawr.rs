@@ -61,9 +61,15 @@ mod registration_required {
             if let Some(sort) = sort {
                 request = request.query(&[("sort", &sort.to_string())]);
             }
-            let response = request.send().await;
-            // TODO: Might error if the list is empty/204 is received. Test it.
-            HttpClient::handle_response(response).await
+            let response = request.send().await?;
+            let status = response.status();
+            let response_text = response.text().await?;
+            if status == StatusCode::NO_CONTENT || response_text.is_empty() {
+                Ok(Vec::new())
+            } else {
+                serde_json::from_str::<Vec<ResourceInformation>>(&response_text)
+                    .map_err(RequestError::from)
+            }
         }
 
         /// Replace the access properties of a `RawR` resource with updated access properties.
