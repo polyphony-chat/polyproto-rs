@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use der::asn1::{BitString, GeneralizedTime, Uint};
 use httptest::matchers::request::method_path;
-use httptest::matchers::{eq, json_decoded, matches, request};
+use httptest::matchers::{contains, eq, json_decoded, matches, request, url_decoded};
 use httptest::responders::{json_encoded, status_code};
 use httptest::*;
 use polyproto::api::core::{ServiceDeleteResponse, WellKnown, current_unix_time};
@@ -18,8 +18,8 @@ use polyproto::types::routes::core::v1::{
     CREATE_DISCOVERABLE, DELETE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_RESOURCE,
     DELETE_SESSION, DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS,
     GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_SERVER_IDCERT,
-    ROTATE_SERVER_IDENTITY_KEY, SET_PRIMARY_DISCOVERABLE, UPDATE_SESSION_IDCERT,
-    UPLOAD_ENCRYPTED_PKM, WELL_KNOWN,
+    LIST_UPLOADED_RESOURCES, ROTATE_SERVER_IDENTITY_KEY, SET_PRIMARY_DISCOVERABLE,
+    UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM, WELL_KNOWN,
 };
 use polyproto::types::spki::AlgorithmIdentifierOwned;
 use polyproto::types::x509_cert::SerialNumber;
@@ -30,8 +30,8 @@ use url::Url;
 use x509_cert::time::Validity;
 
 use crate::common::{
-    self, Ed25519PublicKey, Ed25519Signature, actor_id_cert, gen_priv_key, home_server_id_cert,
-    home_server_subject, init_logger,
+    self, Ed25519PublicKey, Ed25519Signature, actor_id_cert, example_resource_information,
+    gen_priv_key, home_server_id_cert, home_server_subject, init_logger,
 };
 
 /// Correctly format the server URL for the test.
@@ -666,4 +666,68 @@ async fn delete_rawr_resource() {
     );
 
     session.delete_rawr_resource(rid).await.unwrap();
+}
+
+#[tokio::test]
+async fn list_uploaded_rawr_resources() {
+    init_logger();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new().unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+    let uploaded_rawr_resources = example_resource_information();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(LIST_UPLOADED_RESOURCES.method.to_string()),
+            request::path(LIST_UPLOADED_RESOURCES.path),
+            request::query(url_decoded(contains(("limit", "50")))),
+        ])
+        .respond_with(json_encoded(&uploaded_rawr_resources)),
+    );
+    let response = session
+        .list_uploaded_rawr_resources(Some(50), None)
+        .await
+        .unwrap();
+    assert_eq!(response, uploaded_rawr_resources.to_vec());
+}
+
+#[tokio::test]
+async fn update_rawr_resource_access() {
+    init_logger();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new().unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+}
+
+#[tokio::test]
+async fn upload_rawr_resource() {
+    init_logger();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new().unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+}
+
+#[tokio::test]
+async fn get_rawr_resource_by_id() {
+    init_logger();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new().unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+}
+
+#[tokio::test]
+async fn get_rawr_resource_info_by_id() {
+    init_logger();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new().unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
 }
