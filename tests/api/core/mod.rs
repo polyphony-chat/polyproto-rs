@@ -690,6 +690,19 @@ async fn list_uploaded_rawr_resources() {
         .await
         .unwrap();
     assert_eq!(response, uploaded_rawr_resources.to_vec());
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(LIST_UPLOADED_RESOURCES.method.to_string()),
+            request::path(LIST_UPLOADED_RESOURCES.path),
+            request::query(url_decoded(contains(("limit", "50")))),
+        ])
+        .respond_with(status_code(204)),
+    );
+    let response = session
+        .list_uploaded_rawr_resources(Some(50), None)
+        .await
+        .unwrap();
+    assert_eq!(response, Vec::new());
 }
 
 #[tokio::test]
