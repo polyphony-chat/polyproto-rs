@@ -4,6 +4,8 @@
 
 use super::*;
 mod registration_required {
+    use std::fmt::Display;
+
     use http::StatusCode;
 
     use crate::api::matches_status_code;
@@ -26,6 +28,17 @@ mod registration_required {
         OldestFirst,
     }
 
+    impl Display for Ordering {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Ordering::SizeAsc => f.write_str("SizeAsc"),
+                Ordering::SizeDesc => f.write_str("SizeDesc"),
+                Ordering::NewestFirst => f.write_str("NewestFirst"),
+                Ordering::OldestFirst => f.write_str("OldestFirst"),
+            }
+        }
+    }
+
     impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
         /// Query the server for a list of resources you've uploaded.
         ///
@@ -38,12 +51,16 @@ mod registration_required {
             limit: Option<u32>,
             sort: Option<Ordering>,
         ) -> HttpResult<Vec<ResourceInformation>> {
-            let request = self
+            let mut request = self
                 .client
                 .request_route(&self.instance_url, LIST_UPLOADED_RESOURCES)?
-                .bearer_auth(&self.token)
-                .query(&limit)
-                .query(&sort);
+                .bearer_auth(&self.token);
+            if let Some(limit) = limit {
+                request = request.query(&[("limit", &limit.to_string())]);
+            }
+            if let Some(sort) = sort {
+                request = request.query(&[("sort", &sort.to_string())]);
+            }
             let response = request.send().await;
             // TODO: Might error if the list is empty/204 is received. Test it.
             HttpClient::handle_response(response).await
