@@ -2,4 +2,19 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-pub struct P2Export {}
+pub struct P2Export {} // TODO
+
+#[cfg(feature = "reqwest")]
+mod reqwest {
+    use crate::errors::InvalidInput;
+
+    use super::P2Export;
+
+    impl TryFrom<P2Export> for reqwest::multipart::Form {
+        type Error = InvalidInput;
+        // TODO
+        fn try_from(value: P2Export) -> Result<Self, Self::Error> {
+            todo!()
+        }
+    }
+}
