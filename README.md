@@ -55,10 +55,6 @@ This crate has not undergone any security audits.
 
 ## WebAssembly
 
-!!! warning
-
-    As of `v0.10`, the `wasm` target is currently untested. Support will be re-added in the future.
-
 This crate is designed to work with the `wasm32-unknown-unknown` target. To compile for `wasm`, you
 will have to use the `wasm` feature:
 
@@ -66,6 +62,10 @@ will have to use the `wasm` feature:
 [dependencies]
 polyproto = { version = "0", features = ["wasm"] }
 ```
+
+Additionally, you will have to compile the project using the `--no-default-features` flag, to ensure
+that `tokio/net` is not pulled in as a feature dependency. The `types`, `serde`, `reqwest` and `gateway`
+features all work with WASM.
 
 ## HTTP API client through `reqwest`
 
