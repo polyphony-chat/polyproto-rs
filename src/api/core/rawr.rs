@@ -193,8 +193,7 @@ mod registration_not_required {
         ) -> HttpResult<ResourceInformation> {
             let mut request = self.client.request(
                 GET_RESOURCE_INFO_BY_ID.method,
-                host.join(&GET_RESOURCE_INFO_BY_ID.path.replace(r#"{rid}"#, rid))?
-                    .join(rid)?,
+                host.join(&GET_RESOURCE_INFO_BY_ID.path.replace(r#"{rid}"#, rid))?,
             );
             if let Some(token) = token {
                 request = request.bearer_auth(token);
