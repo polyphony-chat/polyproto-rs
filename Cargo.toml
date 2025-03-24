@@ -11,22 +11,21 @@ rust-version = "1.85.0"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [features]
-default = ["types", "serde", "gateway", "tokio_net"]
-wasm = ["getrandom", "getrandom/js"]
+default = ["types", "serde", "gateway", "tokio/net"]
+wasm = ["getrandom", "getrandom/js", "dep:ws_stream_wasm"]
 getrandom = ["dep:getrandom"]
 types = ["dep:http"]
 reqwest = ["dep:reqwest", "types", "serde"]
 serde = ["dep:serde", "serde_json", "serde_with", "url/serde"]
 serde_with = ["dep:serde_with"]
 serde_json = ["dep:serde_json"]
-tokio_net = ["tokio/net"]
 gateway = ["serde", "types"]
 
 [dependencies]
 der = { version = "0.7.9", features = ["pem"] }
 getrandom = { version = "0.2.15", optional = true }
 regex = "1.11.1"
-reqwest = { version = "0.12.12", features = [
+reqwest = { version = "0.12.15", features = [
     "json",
     "zstd",
     "rustls-tls-webpki-roots",
@@ -35,23 +34,24 @@ reqwest = { version = "0.12.12", features = [
     "macos-system-configuration",
     "multipart",
 ], optional = true, default-features = false }
-serde = { version = "1.0.217", optional = true, features = ["derive"] }
-serde_json = { version = "1.0.137", optional = true }
+serde = { version = "1.0.219", optional = true, features = ["derive"] }
+serde_json = { version = "1.0.140", optional = true }
 spki = { version = "0.7.3", features = ["pem"] }
-thiserror = "2.0.11"
+thiserror = "2.0.12"
 x509-cert = "0.2.5"
-log = "0.4.25"
+log = "0.4.27"
 url = { version = "2.5.4" }
-http = { version = "1.2.0", optional = true }
+http = { version = "1.3.1", optional = true }
 serde_with = { version = "3.12.0", optional = true }
 hex = "0.4.3"
-tokio = { version = "1.43.0", features = ["macros", "sync", "time"] }
+tokio = { version = "1.44.1", features = ["macros", "sync", "time", "rt"] }
 webpki-roots = "0.26.8"
 futures-util = "0.3.31"
 urlencoding = "2.1.3"
+ws_stream_wasm = { version = "*", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rustls = "0.23.23"
+rustls = "0.23.25"
 tokio-tungstenite = { version = "0.26.2", features = [
     "rustls-tls-webpki-roots",
     "url",
@@ -60,27 +60,20 @@ tokio-tungstenite = { version = "0.26.2", features = [
 [dev-dependencies]
 ed25519-dalek = { version = "2.1.1", features = ["rand_core", "signature"] }
 rand = "0.8.5"
-serde = { version = "1.0.217", features = ["derive"] }
-serde_json = { version = "1.0.137" }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = { version = "1.0.140" }
 serde_test = "1.0.177"
 polyproto = { path = "./", features = ["types", "reqwest", "serde"] }
-env_logger = "0.11.6"
+env_logger = "0.11.7"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-tokio = { version = "1.43.0", features = [
-    "macros",
-    "sync",
-    "time",
-    "rt-multi-thread",
-] }
 ws-mock = "0.3.0"
-httptest = "0.16.1"
+httptest = "0.16.3"
 
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3.50"
 wasm-bindgen = "0.2.100"
-tokio = { version = "1.43.0", features = ["macros", "sync", "time", "rt"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
