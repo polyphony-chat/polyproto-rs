@@ -64,6 +64,11 @@ pub(crate) mod http_client {
         ///
         /// Will fail if the URL is invalid or if there are issues creating the reqwest client.
         pub fn new() -> HttpResult<Self> {
+            #[cfg(target_arch = "wasm32")]
+            let client = reqwest::ClientBuilder::new()
+                .user_agent(format!("polyproto-rs/{}", env!("CARGO_PKG_VERSION")))
+                .build()?;
+            #[cfg(not(target_arch = "wasm32"))]
             let client = reqwest::ClientBuilder::new()
                 .zstd(true)
                 .user_agent(format!("polyproto-rs/{}", env!("CARGO_PKG_VERSION")))
@@ -86,6 +91,7 @@ pub(crate) mod http_client {
         /// # Errors
         ///
         /// Will fail if the URL is invalid or if there are issues creating the reqwest client.
+        #[cfg(not(target_arch = "wasm32"))] // WASM doesn't support zstd, so this function can just be left out
         pub fn new_with_args(
             headers: reqwest::header::HeaderMap,
             zstd_compression: bool,
