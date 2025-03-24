@@ -18,16 +18,16 @@ use polyproto::certs::idcsr::IdCsr;
 use polyproto::types::routes::core::v1::{
     CREATE_DISCOVERABLE, DELETE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_RESOURCE,
     DELETE_SESSION, DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS,
-    GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_RESOURCE_BY_ID, GET_SERVER_IDCERT,
-    LIST_UPLOADED_RESOURCES, ROTATE_SERVER_IDENTITY_KEY, SET_PRIMARY_DISCOVERABLE,
-    UPDATE_RESOURCE_ACCESS, UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM, UPLOAD_RESOURCE,
-    WELL_KNOWN,
+    GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_RESOURCE_BY_ID,
+    GET_RESOURCE_INFO_BY_ID, GET_SERVER_IDCERT, LIST_UPLOADED_RESOURCES,
+    ROTATE_SERVER_IDENTITY_KEY, SET_PRIMARY_DISCOVERABLE, UPDATE_RESOURCE_ACCESS,
+    UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM, WELL_KNOWN,
 };
 use polyproto::types::spki::AlgorithmIdentifierOwned;
 use polyproto::types::x509_cert::SerialNumber;
 use polyproto::types::{
-    DomainName, EncryptedPkm, FederationId, Identifer, PrivateKeyInfo, Resource,
-    ResourceAccessProperties, Service, ServiceName,
+    DomainName, EncryptedPkm, FederationId, Identifer, PrivateKeyInfo, ResourceAccessProperties,
+    ResourceInformation, Service, ServiceName,
 };
 use serde_json::{from_str, json};
 use spki::ObjectIdentifier;
@@ -758,10 +758,8 @@ async fn get_rawr_resource_by_id() {
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
 
-    // Define the expected response data
     let expected_data: Vec<u8> = vec![0, 1, 2, 3]; // Example binary data
 
-    // Set up the server expectation
     let rid = "resource-id-to-get";
     server.expect(
         Expectation::matching(all_of![
@@ -772,13 +770,11 @@ async fn get_rawr_resource_by_id() {
         .respond_with(status_code(200).body(expected_data.clone())),
     );
 
-    // Call the get_rawr_resource_by_id method
     let response = client
         .get_rawr_resource_by_id(rid, Some("token".to_string()), &Url::parse(&url).unwrap())
         .await
         .unwrap();
 
-    // Verify the response data
     assert_eq!(response, expected_data);
 }
 
@@ -788,6 +784,37 @@ async fn get_rawr_resource_info_by_id() {
     let server = Server::run();
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
-    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
-        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+
+    let expected_data = ResourceInformation {
+        resource_id: "resource-id-to-get".to_string(),
+        size: 1024, // Example size in bytes
+        access: ResourceAccessProperties {
+            private: false,
+            public: true,
+            allowlist: vec![Identifer::Instance(DomainName::new("example.com").unwrap())],
+            denylist: vec![],
+        },
+    };
+
+    let rid = "resource-id-to-get";
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(GET_RESOURCE_INFO_BY_ID.method.to_string()),
+            request::path(
+                GET_RESOURCE_INFO_BY_ID
+                    .path
+                    .to_string()
+                    .replace(r#"{rid}"#, rid)
+            ),
+            request::headers(contains(("authorization", any()))),
+        ])
+        .respond_with(json_encoded(expected_data.clone())),
+    );
+
+    let response = client
+        .get_rawr_resource_info_by_id(&Url::parse(&url).unwrap(), rid, Some("token".to_string()))
+        .await
+        .unwrap();
+
+    assert_eq!(response, expected_data);
 }
