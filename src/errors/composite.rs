@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use http::StatusCode;
 use spki::ObjectIdentifier;
 use thiserror::Error;
 
@@ -77,8 +76,8 @@ pub enum RequestError {
     /// Received a status code that indicates something other than success.
     #[error("Received status code {:?}, expected any of {:?}", received, expected)]
     StatusCode {
-        received: StatusCode,
-        expected: Vec<StatusCode>,
+        received: http::StatusCode,
+        expected: Vec<http::StatusCode>,
     },
     #[error("{reason}")]
     Custom { reason: String },

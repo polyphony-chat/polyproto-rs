@@ -26,12 +26,15 @@ pub mod spki;
 pub mod x509_cert;
 
 /// Module defining the [P2Export] type.
+#[cfg(feature = "types")]
 pub mod p2_export;
 
 /// Module defining the `KeyTrial` type family, including [KeyTrial] and [KeyTrialResponse].
+#[cfg(feature = "types")]
 pub mod keytrial;
 
 /// Module defining the "Resource adressing with relative roots" (`RawR`) types.
+#[cfg(feature = "types")]
 pub mod rawr;
 
 #[cfg(feature = "gateway")]
