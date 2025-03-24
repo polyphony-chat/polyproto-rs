@@ -1,0 +1,36 @@
+name: Build and Test (wasm32)
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["*"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install rust toolchain 1.85.1
+        uses: dtolnay/rust-toolchain@1.85.1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          prefix-key: "wasm"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          check-latest: true
+      - name: Run WASM tests with Safari, Firefox, Chrome
+        run: |
+          rustup target add wasm32-unknown-unknown
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          cargo binstall --no-confirm wasm-bindgen-cli --version "0.2.100" --force
+          cargo binstall --no-confirm wasm-pack --force
+          wasm-pack test --node -- --features wasm
+          wasm-pack test --firefox -- --features wasm
+          wasm-pack test --chrome -- --features wasm
