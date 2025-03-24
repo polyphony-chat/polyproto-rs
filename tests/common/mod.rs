@@ -28,6 +28,7 @@ pub(crate) fn init_logger() {
     env_logger::builder()
         .filter_module("crate", log::LevelFilter::Trace)
         .filter_module("polyproto", log::LevelFilter::Trace)
+        .filter_module("httptest", log::LevelFilter::Trace)
         .try_init()
         .unwrap_or(());
 }
