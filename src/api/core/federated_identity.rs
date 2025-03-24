@@ -7,6 +7,7 @@ use super::*;
 mod registration_required {
     use super::*;
     use crate::api::HttpClient;
+    use serde_json::json;
 
     impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
         /// Request the server to rotate its identity key and return the new [IdCert]. This route is
@@ -127,6 +128,8 @@ mod registration_required {
 }
 
 mod registration_not_required {
+    use serde_json::json;
+
     use super::*;
 
     impl HttpClient {

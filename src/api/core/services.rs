@@ -4,6 +4,8 @@
 
 use super::*;
 mod registration_required {
+    use serde_json::json;
+
     use super::*;
 
     impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
@@ -93,6 +95,8 @@ mod registration_required {
 }
 
 mod registration_not_required {
+    use serde_json::json;
+
     use super::*;
 
     impl<S: Signature, T: PrivateKey<S>> Session<S, T> {}

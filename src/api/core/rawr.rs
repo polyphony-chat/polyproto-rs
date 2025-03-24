@@ -7,6 +7,7 @@ mod registration_required {
     use std::fmt::Display;
 
     use http::StatusCode;
+    use serde_json::json;
 
     use crate::api::matches_status_code;
     use crate::types::{Resource, ResourceAccessProperties, ResourceInformation};
