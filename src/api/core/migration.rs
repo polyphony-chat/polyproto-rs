@@ -3,11 +3,39 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 use super::*;
 mod registration_required {
+    use http::StatusCode;
+    use reqwest::multipart::Form;
+
+    use crate::api::matches_status_code;
+    use crate::types::P2Export;
+
     use super::*;
 
     impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
-        pub async fn import_data_to_server() -> HttpResult<()> {
-            todo!()
+        pub async fn import_data_to_server(
+            &self,
+            sensitive_solution: &str,
+            data: P2Export,
+        ) -> HttpResult<()> {
+            let endpoint = self.instance_url.join("/.p2/core/v1/migration/data/")?;
+            let request = self
+                .client
+                .client
+                .request(IMPORT_DATA.method, endpoint)
+                .header("X-P2-Sensitive-Solution", sensitive_solution)
+                .multipart(Form::try_from(data).map_err(|e| RequestError::Custom {
+                    reason: e.to_string(),
+                })?);
+
+            let response = request.send().await?;
+            matches_status_code(
+                &[
+                    StatusCode::ACCEPTED,
+                    StatusCode::CREATED,
+                    StatusCode::NO_CONTENT,
+                ],
+                response.status(),
+            ) // TODO Review and test
         }
 
         pub async fn set_up_redirect() -> HttpResult<()> {
