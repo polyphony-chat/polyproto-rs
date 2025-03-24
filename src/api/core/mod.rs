@@ -13,7 +13,6 @@ use crate::signature::Signature;
 use super::cacheable_cert::CacheableIdCert;
 use crate::types::x509_cert::SerialNumber;
 use log::trace;
-use serde_json::json;
 
 use crate::certs::SessionId;
 use crate::certs::idcert::IdCert;
