@@ -20,7 +20,7 @@ use polyproto::types::routes::core::v1::{
     CREATE_DISCOVERABLE, DELETE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_RESOURCE,
     DELETE_SESSION, DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS,
     GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_RESOURCE_BY_ID,
-    GET_RESOURCE_INFO_BY_ID, GET_SERVER_IDCERT, LIST_UPLOADED_RESOURCES,
+    GET_RESOURCE_INFO_BY_ID, GET_SERVER_IDCERT, LIST_UPLOADED_RESOURCES, REMOVE_REDIRECT,
     ROTATE_SERVER_IDENTITY_KEY, SET_PRIMARY_DISCOVERABLE, SET_UP_REDIRECT, UPDATE_RESOURCE_ACCESS,
     UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM, WELL_KNOWN,
 };
@@ -842,4 +842,26 @@ async fn set_up_redirect() {
         .respond_with(status_code(200)),
     );
     session.set_up_redirect(&[keytrials], &fid).await.unwrap();
+}
+
+#[tokio::test]
+async fn remove_redirect() {
+    init_logger();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new().unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+
+    let fid = FederationId::new("xenia@example.com").unwrap();
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(REMOVE_REDIRECT.method.to_string()),
+            request::path(REMOVE_REDIRECT.path),
+            request::headers(contains(("authorization", any()))),
+            request::query(url_decoded(contains(("removeActorFid", fid.to_string()))))
+        ])
+        .respond_with(status_code(204)),
+    );
+    session.remove_redirect(&fid).await.unwrap();
 }
