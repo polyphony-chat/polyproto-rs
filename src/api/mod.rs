@@ -64,6 +64,7 @@ pub(crate) mod http_client {
     }
 
     pub(crate) struct P2RequestBuilder<'a, T: SendsRequest> {
+        homeserver: Option<Url>,
         key_trials: Vec<KeyTrialResponse>,
         sensitive_solution: Option<String>,
         body: Option<Value>,
@@ -79,6 +80,7 @@ pub(crate) mod http_client {
         /// Construct a new [P2RequestBuilder].
         pub(crate) fn new(client: &'a T) -> Self {
             Self {
+                homeserver: None,
                 client,
                 endpoint: Route {
                     method: Method::default(),
@@ -92,6 +94,11 @@ pub(crate) mod http_client {
                 query: Vec::new(),
                 replace_endpoint_substr: Vec::new(),
             }
+        }
+
+        pub(crate) fn homeserver(mut self, url: Url) -> Self {
+            self.homeserver = Some(url);
+            self
         }
 
         /// Adds key trials to the response if none were added before. Replaces the currently stored
@@ -174,15 +181,21 @@ pub(crate) mod http_client {
         /// Build the request. Fails, if both a body and a multipart are set, or if `reqwest` cannot
         /// build the request for any reason.
         pub(crate) fn build(self) -> Result<Request, InvalidInput> {
-            let mut url = self.endpoint.path.to_string();
-            for (from, to) in self.replace_endpoint_substr.iter() {
-                url = url.replace(from, to);
+            if self.homeserver.is_none() {
+                return Err(InvalidInput::Malformed(
+                    "You forgot to set a homeserver URL".to_string(),
+                ));
             }
-
-            let mut request = self.client.get_client().request(
-                self.endpoint.method,
-                Url::parse(&url).map_err(|e| InvalidInput::Malformed(e.to_string()))?,
-            );
+            let mut path = self.endpoint.path.to_string();
+            for (from, to) in self.replace_endpoint_substr.iter() {
+                path = path.replace(from, to);
+            }
+            let url = self
+                .homeserver
+                .unwrap()
+                .join(&path)
+                .map_err(|e| InvalidInput::Malformed(e.to_string()))?;
+            let mut request = self.client.get_client().request(self.endpoint.method, url);
             if let Some(token) = self.auth_token {
                 request = request.bearer_auth(token);
             }

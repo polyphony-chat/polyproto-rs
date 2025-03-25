@@ -77,6 +77,7 @@ mod registration_required {
         /// Stop an in-progress or existing redirection process from/to actor `fid`.
         pub async fn remove_redirect(&self, fid: &FederationId) -> HttpResult<()> {
             let request = P2RequestBuilder::new(&self)
+                .homeserver(self.instance_url.clone())
                 .endpoint(REMOVE_REDIRECT)
                 .query("removeActorFid", &fid.to_string())
                 .auth_token(self.token.clone())
