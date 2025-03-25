@@ -83,6 +83,7 @@ pub enum RequestError {
     Custom { reason: String },
 }
 
+#[cfg(feature = "reqwest")]
 impl From<InvalidInput> for RequestError {
     fn from(value: InvalidInput) -> Self {
         Self::Custom {
