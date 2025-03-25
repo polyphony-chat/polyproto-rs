@@ -15,12 +15,13 @@ use polyproto::certs::SessionId;
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::idcsr::IdCsr;
+use polyproto::types::keytrial::KeyTrialResponse;
 use polyproto::types::routes::core::v1::{
     CREATE_DISCOVERABLE, DELETE_DISCOVERABLE, DELETE_ENCRYPTED_PKM, DELETE_RESOURCE,
     DELETE_SESSION, DISCOVER_SERVICE_ALL, DISCOVER_SERVICE_SINGULAR, GET_ACTOR_IDCERTS,
     GET_ENCRYPTED_PKM, GET_ENCRYPTED_PKM_UPLOAD_SIZE_LIMIT, GET_RESOURCE_BY_ID,
     GET_RESOURCE_INFO_BY_ID, GET_SERVER_IDCERT, LIST_UPLOADED_RESOURCES,
-    ROTATE_SERVER_IDENTITY_KEY, SET_PRIMARY_DISCOVERABLE, UPDATE_RESOURCE_ACCESS,
+    ROTATE_SERVER_IDENTITY_KEY, SET_PRIMARY_DISCOVERABLE, SET_UP_REDIRECT, UPDATE_RESOURCE_ACCESS,
     UPDATE_SESSION_IDCERT, UPLOAD_ENCRYPTED_PKM, WELL_KNOWN,
 };
 use polyproto::types::spki::AlgorithmIdentifierOwned;
@@ -817,4 +818,24 @@ async fn get_rawr_resource_info_by_id() {
         .unwrap();
 
     assert_eq!(response, expected_data);
+}
+
+#[tokio::test]
+async fn set_up_redirect() {
+    init_logger();
+    let server = Server::run();
+    let url = server_url(&server);
+    let client = polyproto::api::HttpClient::new().unwrap();
+    let fid = FederationId::new("xenia@example.com").unwrap();
+    let keytrials = KeyTrialResponse {};
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(SET_UP_REDIRECT.method.to_string()),
+            request::path(SET_UP_REDIRECT.path),
+            request::headers(contains(("authorization", any()))),
+            request::headers(contains(("X-P2-core-keytrial", ""))),
+            request::body(json_decoded(eq(json!(fid))))
+        ])
+        .respond_with(status_code(200)),
+    );
 }
