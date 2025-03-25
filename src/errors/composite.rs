@@ -83,6 +83,14 @@ pub enum RequestError {
     Custom { reason: String },
 }
 
+impl From<InvalidInput> for RequestError {
+    fn from(value: InvalidInput) -> Self {
+        Self::Custom {
+            reason: value.to_string(),
+        }
+    }
+}
+
 impl From<der::Error> for CertificateConversionError {
     fn from(value: der::Error) -> Self {
         Self::DerError(value)
