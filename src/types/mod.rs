@@ -201,7 +201,7 @@ pub mod routes {
 
             pub const GET_COMPLETED_KEYTRIALS_AND_RESPONSES: Route = Route {
                 method: Method::GET,
-                path: "/.p2/core/v1/keytrial/",
+                path: "/.p2/core/v1/keytrial/{fid}/",
             };
 
             pub const GET_MESSAGES_TO_BE_RESIGNED: Route = Route {
