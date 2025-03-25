@@ -49,7 +49,11 @@ mod registration_required {
         /// intent to move to another home server. To fulfill this action,
         /// a key trial must be passed for all keys with which the actor has sent messages with on this server.
         /// The "new" actor named in this request must confirm setting up this redirect.
-        pub async fn set_up_redirect(&self, keytrials: &[KeyTrialResponse]) -> HttpResult<()> {
+        pub async fn set_up_redirect(
+            &self,
+            keytrials: &[KeyTrialResponse],
+            fid: &FederationId,
+        ) -> HttpResult<()> {
             let request = self
                 .client
                 .client
@@ -59,9 +63,10 @@ mod registration_required {
                 )
                 .bearer_auth(&self.token)
                 .header(
-                    "X-P2-Sensitive-Solution",
+                    "X-P2-core-keytrial",
                     urlencoding::encode(&json!(keytrials).to_string()).into_owned(),
-                );
+                )
+                .body(fid.to_string());
 
             let response = request.send().await?;
             matches_status_code(&[StatusCode::NO_CONTENT, StatusCode::OK], response.status())?;

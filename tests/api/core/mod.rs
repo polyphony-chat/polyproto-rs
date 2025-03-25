@@ -826,6 +826,9 @@ async fn set_up_redirect() {
     let server = Server::run();
     let url = server_url(&server);
     let client = polyproto::api::HttpClient::new().unwrap();
+    let session: polyproto::api::Session<common::Ed25519Signature, common::Ed25519PrivateKey> =
+        polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
+
     let fid = FederationId::new("xenia@example.com").unwrap();
     let keytrials = KeyTrialResponse {};
     server.expect(
@@ -833,9 +836,10 @@ async fn set_up_redirect() {
             request::method(SET_UP_REDIRECT.method.to_string()),
             request::path(SET_UP_REDIRECT.path),
             request::headers(contains(("authorization", any()))),
-            request::headers(contains(("X-P2-core-keytrial", ""))),
-            request::body(json_decoded(eq(json!(fid))))
+            request::headers(contains(("X-P2-core-keytrial".to_lowercase(), any()))),
+            request::body(eq(fid.to_string()))
         ])
         .respond_with(status_code(200)),
     );
+    session.set_up_redirect(&[keytrials], &fid).await.unwrap();
 }
