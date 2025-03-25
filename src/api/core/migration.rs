@@ -92,21 +92,116 @@ mod registration_required {
 }
 
 mod registration_not_required {
+    use http::StatusCode;
+    use serde_json::{from_str, json};
+
+    use crate::api::{P2RequestBuilder, SendsRequest, matches_status_code};
     use crate::types::keytrial::KeyTrialResponse;
 
     use super::*;
 
     impl<S: Signature, T: PrivateKey<S>> Session<S, T> {
-        pub async fn export_all_data() -> HttpResult<Vec<u8>> {
-            todo!()
+        /// Export all of your data for safekeeping or for importing it to another server.
+        /// Only exports data for which a key trial has been passed.
+        ///
+        /// ## Returns
+        ///
+        /// ### `Ok()`
+        ///
+        /// - `None`, if the server has responded with `204`, indicating the server needs time to gather the
+        ///   data. A Retry-After header is included in the response, indicating to the actor the point in
+        ///   time at which they should query this endpoint again. If this point in time is after the expiry
+        ///   timestamp of the completed key trial, another key trial needs to be performed to access the data.
+        /// - `Some(Vec<u8>)` and the requested data, if the server could gather it in time.
+        ///
+        /// ### `Err()`
+        ///
+        /// Errors, if there is some error during building or sending the request, or with parsing the
+        /// response.
+        pub async fn export_all_data(
+            &self,
+            key_trials: &[KeyTrialResponse],
+        ) -> HttpResult<Option<Vec<u8>>> {
+            let request = P2RequestBuilder::new(&self)
+                .auth_token(self.token.clone())
+                .homeserver(self.instance_url.clone())
+                .endpoint(EXPORT_DATA)
+                .key_trials(key_trials.to_vec())
+                .build()
+                .map_err(RequestError::from)?;
+            let response = self.send_request(request).await?;
+            if response.status() == StatusCode::ACCEPTED {
+                Ok(None)
+            } else {
+                let response_bytes = response.bytes().await?;
+                Ok(Some(response_bytes.to_vec()))
+            }
         }
 
-        pub async fn delete_data_from_server() -> HttpResult<()> {
-            todo!()
+        /// Delete all data associated with you from the server. Only deletes data associated with the keys for which the `KeyTrial` has been passed.
+        ///
+        /// ## Parameters
+        ///
+        /// - `break_redirect`: If a redirect has been set up previously: Whether to break that redirect with this action.
+        pub async fn delete_data_from_server(
+            &self,
+            break_redirect: bool,
+            keytrials: &[KeyTrialResponse],
+        ) -> HttpResult<()> {
+            let request = P2RequestBuilder::new(&self)
+                .homeserver(self.instance_url.clone())
+                .endpoint(DELETE_DATA)
+                .auth_token(self.token.clone())
+                .query("breakRedirect", &json!(break_redirect).to_string())
+                .key_trials(keytrials.to_vec())
+                .build()?;
+            let response = self.send_request(request).await?;
+            matches_status_code(
+                &[StatusCode::OK, StatusCode::ACCEPTED, StatusCode::NO_CONTENT],
+                response.status(),
+            )
         }
 
-        pub async fn get_actor_key_trial_responses() -> HttpResult<Vec<KeyTrialResponse>> {
-            todo!()
+        /// Fetch key trials and their responses from other actors. This route exists for
+        /// transparency reasons, and allows actors in contact with the actor mentioned in `fid` to
+        /// verify, that it was the actor who initiated setting up a redirect or the re-signing
+        /// of messages—not a malicious home server.
+        pub async fn get_actor_key_trial_responses(
+            &self,
+            fid: &FederationId,
+            limit: u16,
+            key_trial_id: Option<&str>,
+            not_before: Option<u64>,
+            not_after: Option<u64>,
+        ) -> HttpResult<Vec<KeyTrialResponse>> {
+            let mut request = P2RequestBuilder::new(&self)
+                .auth_token(self.token.clone())
+                .endpoint(GET_COMPLETED_KEYTRIALS_AND_RESPONSES)
+                .replace_endpoint_substr(r#"{fid}"#, &fid.to_string())
+                .query("limit", &limit.to_string());
+            if let Some(id) = key_trial_id {
+                request = request.query("id", id);
+            }
+            if let Some(nbf) = not_before {
+                request = request.query("notBefore", &nbf.to_string());
+            }
+            if let Some(na) = not_after {
+                request = request.query("notAfter", &na.to_string());
+            }
+            let request = request.build()?;
+
+            let response = self.send_request(request).await?;
+            matches_status_code(&[StatusCode::OK, StatusCode::NO_CONTENT], response.status())?;
+            if response.status() == StatusCode::NO_CONTENT {
+                return Ok(Vec::new());
+            }
+            match response.text().await {
+                Ok(text) => from_str::<Vec<KeyTrialResponse>>(&text)
+                    .map_err(RequestError::DeserializationError),
+                Err(e) => Err(RequestError::Custom {
+                    reason: format!("Could not get the full response text: {}", e),
+                }),
+            }
         }
 
         pub async fn get_messages_to_be_resigned<M>() -> HttpResult<M> {
