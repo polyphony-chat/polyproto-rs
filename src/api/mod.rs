@@ -15,19 +15,205 @@ pub use http_client::*;
 
 #[cfg(feature = "reqwest")]
 pub(crate) mod http_client {
+    use std::fmt::Debug;
     use std::sync::Arc;
 
-    use http::StatusCode;
-    use reqwest::RequestBuilder;
+    use http::{Method, StatusCode};
+    use reqwest::multipart::Form;
+    use reqwest::{Client, Request, RequestBuilder, Response};
     use serde::Deserialize;
-    use serde_json::from_str;
+    use serde_json::{Value, from_str, json};
     use url::Url;
 
     use crate::certs::idcert::IdCert;
-    use crate::errors::RequestError;
+    use crate::errors::{InvalidInput, RequestError};
     use crate::key::PrivateKey;
     use crate::signature::Signature;
+    use crate::types::keytrial::KeyTrialResponse;
     use crate::types::routes::Route;
+
+    pub(crate) trait SendsRequest {
+        async fn send_request(&self, request: Request) -> HttpResult<Response>;
+        fn get_client(&self) -> Client;
+    }
+
+    impl SendsRequest for &HttpClient {
+        async fn send_request(&self, request: Request) -> HttpResult<Response> {
+            self.client
+                .execute(request)
+                .await
+                .map_err(crate::errors::composite::RequestError::HttpError)
+        }
+
+        fn get_client(&self) -> Client {
+            self.client.clone()
+        }
+    }
+
+    impl<S: Signature, T: PrivateKey<S>> SendsRequest for &Session<S, T> {
+        async fn send_request(&self, request: Request) -> HttpResult<Response> {
+            self.get_client()
+                .execute(request)
+                .await
+                .map_err(crate::errors::composite::RequestError::HttpError)
+        }
+
+        fn get_client(&self) -> Client {
+            self.client.client.clone()
+        }
+    }
+
+    pub(crate) struct P2RequestBuilder<'a, T: SendsRequest> {
+        key_trials: Vec<KeyTrialResponse>,
+        sensitive_solution: Option<String>,
+        body: Option<Value>,
+        auth_token: Option<String>,
+        multipart: Option<Form>,
+        endpoint: Route,
+        replace_endpoint_substr: Vec<(String, String)>,
+        query: Vec<(String, String)>,
+        client: &'a T,
+    }
+
+    impl<'a, T: SendsRequest> P2RequestBuilder<'a, T> {
+        /// Construct a new [P2RequestBuilder].
+        pub(crate) fn new(client: &'a T) -> Self {
+            Self {
+                client,
+                endpoint: Route {
+                    method: Method::default(),
+                    path: "",
+                },
+                key_trials: Vec::new(),
+                sensitive_solution: None,
+                body: None,
+                auth_token: None,
+                multipart: None,
+                query: Vec::new(),
+                replace_endpoint_substr: Vec::new(),
+            }
+        }
+
+        /// Adds key trials to the response if none were added before. Replaces the currently stored
+        /// vector of key trials with the one passed in this function, if one has been added before.
+        pub(crate) fn key_trials(mut self, key_trials: Vec<KeyTrialResponse>) -> Self {
+            self.key_trials = key_trials;
+            self
+        }
+
+        /// Add a P2 sensitive solution if none was added before. Replaces the previously stored
+        /// sensitive solution, if applicable.
+        pub(crate) fn sensitive_solution(mut self, sensitive_solution: String) -> Self {
+            self.sensitive_solution = Some(sensitive_solution);
+            self
+        }
+
+        /// Add a request body to the request. Replaces the previously stored
+        /// body, if applicable.
+        ///
+        /// ## Errors
+        ///
+        /// This function is infallible. However, building the request using `self.build()` will fail,
+        /// if *both* a body and a multipart are present in the [P2RequestBuilder].
+        pub(crate) fn body(mut self, body: Value) -> Self {
+            self.body = Some(body); // once told me the world was gonna roll me
+            self
+        }
+
+        /// Authorize using a Bearer token. The "Bearer " prefix will be added by `reqwest`. Replaces
+        /// the previously stored token, if applicable.
+        pub(crate) fn auth_token(mut self, token: String) -> Self {
+            self.auth_token = Some(token);
+            self
+        }
+
+        /// Add a multipart form to the request. Replaces the previously stored
+        /// multipart, if applicable.
+        ///
+        /// ## Errors
+        ///
+        /// This function is infallible. However, building the request using `self.build()` will fail,
+        /// if *both* a body and a multipart are present in the [P2RequestBuilder].
+        pub(crate) fn multipart(mut self, form: Form) -> Self {
+            self.multipart = Some(form);
+            self
+        }
+
+        /// Set the endpoint of this request by supplying a [Route]. Replaces
+        /// the previously selected route, if applicable.
+        pub(crate) fn endpoint(mut self, route: Route) -> Self {
+            self.endpoint = route;
+            self
+        }
+
+        /// Add a substring replacement to this route. Multiple calls to this method will mean that
+        /// multiple substring replacements will be performed. Replacements are done in FIFO order.
+        ///
+        /// Some [Route]s have path-query placeholders like `{rid}` or `{fid}`. If you are building
+        /// a request to such a route, you will have to add a substring replacement using this method
+        /// to send the request to the correct endpoint.
+        ///
+        /// ## Example
+        ///
+        /// ```rs
+        /// let mut request_builder = Client::get_request_builder(method, url);
+        /// request_builder.replace_endpoint_substr(r#"{rid}"#, "actual-resource-id");
+        /// ```
+        pub(crate) fn replace_endpoint_substr(mut self, from: &str, to: &str) -> Self {
+            self.replace_endpoint_substr
+                .push((from.to_string(), to.to_string()));
+            self
+        }
+
+        /// Add a query parameter to this route. Does not replace previous query parameters.
+        pub(crate) fn query(mut self, key: &str, value: &str) -> Self {
+            self.query.push((key.to_string(), value.to_string()));
+            self
+        }
+
+        /// Build the request. Fails, if both a body and a multipart are set, or if `reqwest` cannot
+        /// build the request for any reason.
+        pub(crate) fn build(self) -> Result<Request, InvalidInput> {
+            let mut url = self.endpoint.path.to_string();
+            for (from, to) in self.replace_endpoint_substr.iter() {
+                url = url.replace(from, to);
+            }
+
+            let mut request = self.client.get_client().request(
+                self.endpoint.method,
+                Url::parse(&url).map_err(|e| InvalidInput::Malformed(e.to_string()))?,
+            );
+            if let Some(token) = self.auth_token {
+                request = request.bearer_auth(token);
+            }
+            if self.body.is_some() && self.multipart.is_some() {
+                return Err(InvalidInput::Malformed(
+                    "Cannot have both multipart and body in a request".to_string(),
+                ));
+            }
+            if let Some(body) = self.body {
+                request = request.body(body.to_string());
+            } else if let Some(multipart) = self.multipart {
+                request = request.multipart(multipart);
+            }
+
+            if !self.key_trials.is_empty() {
+                request = request.header("X-P2-core-keytrial", json!(self.key_trials).to_string());
+            }
+
+            if let Some(sensitive_solution) = self.sensitive_solution {
+                request = request.header("X-P2-sensitive-solution", sensitive_solution)
+            }
+
+            for (key, value) in self.query.iter() {
+                request = request.query(&[(key, value)]);
+            }
+
+            request
+                .build()
+                .map_err(|e| InvalidInput::Malformed(e.to_string()))
+        }
+    }
 
     #[derive(Debug, Clone)]
     /// A client for making HTTP requests to a polyproto home server. Stores headers such as the
