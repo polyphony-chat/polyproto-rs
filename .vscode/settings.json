@@ -3,6 +3,7 @@
 	// "rust-analyzer.cargo.features": ["types", "reqwest", "gateway", "serde"]
 	"rust-analyzer.cargo.features": [
 		"_wasm_bindgen",
+		"wasm",
 		"types",
 		"reqwest",
 		"gateway",
