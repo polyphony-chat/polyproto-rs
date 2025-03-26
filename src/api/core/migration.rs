@@ -5,6 +5,7 @@ use super::*;
 mod registration_required {
     use http::StatusCode;
     use reqwest::multipart::Form;
+    use serde::Serialize;
     use serde_json::json;
 
     use crate::api::{P2RequestBuilder, SendsRequest, matches_status_code};
@@ -18,10 +19,10 @@ mod registration_required {
         /// Only messages classified as
         /// ["Information not tied to a specific context"](https://docs.polyphony.chat/Protocol%20Specifications/core/#:~:text=Example%3A%20Information%20not,without%0Aany%20issues.)
         /// can be imported.
-        pub async fn import_data_to_server(
+        pub async fn import_data_to_server<M: Serialize>(
             &self,
             sensitive_solution: &str,
-            data: P2Export,
+            data: P2Export<M>,
         ) -> HttpResult<()> {
             let endpoint = self.instance_url.join("/.p2/core/v1/migration/data/")?;
             let request = self
