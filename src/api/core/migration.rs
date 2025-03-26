@@ -93,7 +93,8 @@ mod registration_required {
 
 mod registration_not_required {
     use http::{HeaderValue, StatusCode};
-    
+
+    use serde::Serialize;
     use serde::de::DeserializeOwned;
     use serde_json::{from_str, json};
 
@@ -265,26 +266,85 @@ mod registration_not_required {
             Ok((m, return_body_size))
         }
 
-        pub async fn request_message_resigning() -> HttpResult<()> {
-            todo!()
+        /// Request allowing message re-signing. To fulfill this action, a key trial must be passed.
+        /// Unlocks message re-signing for messages signed with keys for which a key trial has been passed.
+        pub async fn request_message_resigning(
+            &self,
+            keytrials: &[KeyTrialResponse],
+        ) -> HttpResult<()> {
+            let request = P2RequestBuilder::new(&self)
+                .homeserver(self.instance_url.clone())
+                .endpoint(REQUEST_MESSAGE_RESIGNING)
+                .key_trials(keytrials.to_vec())
+                .auth_token(self.token.clone())
+                .build()?;
+            let response = self.send_request(request).await?;
+            matches_status_code(&[StatusCode::OK, StatusCode::NO_CONTENT], response.status())
         }
 
-        pub async fn abort_message_resigning() -> HttpResult<()> {
-            todo!()
+        /// Stop an in-progress or existing re-signing process.
+        pub async fn abort_message_resigning(&self, fid: &FederationId) -> HttpResult<()> {
+            let request = P2RequestBuilder::new(&self)
+                .homeserver(self.instance_url.clone())
+                .endpoint(ABORT_MESSAGE_RESIGNING)
+                .auth_token(self.token.clone())
+                .query("removeActorFid", &fid.to_string())
+                .build()?;
+            let response = self.send_request(request).await?;
+            matches_status_code(&[StatusCode::OK, StatusCode::NO_CONTENT], response.status())
         }
 
-        pub async fn commit_resigned_messages<M>() -> HttpResult<Option<M>> {
-            todo!()
+        /// Commit messages that have been re-signed to the server.
+        pub async fn commit_resigned_messages<M: Serialize + DeserializeOwned>(
+            &self,
+            message_batch: M,
+        ) -> HttpResult<Option<M>> {
+            let request = P2RequestBuilder::new(&self)
+                .auth_token(self.token.clone())
+                .homeserver(self.instance_url.clone())
+                .endpoint(COMMIT_RESIGNED_MESSAGES)
+                .body(json!(message_batch))
+                .build()?;
+            let response = self.send_request(request).await?;
+            matches_status_code(&[StatusCode::OK, StatusCode::NO_CONTENT], response.status())?;
+            let response_text = response.text().await?;
+            if response_text.trim() == "{}" || response_text.is_empty() {
+                Ok(None)
+            } else {
+                match from_str::<M>(&response_text) {
+                    Ok(next_message_batch) => Ok(Some(next_message_batch)),
+                    Err(e) => Err(e.into()),
+                }
+            }
         }
 
-        pub async fn set_up_redirect_extern() -> HttpResult<()> {
-            todo!()
+        /// Tell the homeserver of the "old" actor account that you intend to set up a redirect to this actor
+        /// ("this actor" refers to the actor this [Session] belongs to).
+        pub async fn set_up_redirect_extern(&self, source: &FederationId) -> HttpResult<()> {
+            let request = P2RequestBuilder::new(&self)
+                .homeserver(self.instance_url.clone())
+                .endpoint(SET_UP_REDIRECT_EXTERN)
+                .auth_token(self.token.clone())
+                .query("redirectSourceFid", &source.to_string())
+                .build()?;
+            let response = self.send_request(request).await?;
+            matches_status_code(
+                &[StatusCode::OK, StatusCode::NO_CONTENT, StatusCode::ACCEPTED],
+                response.status(),
+            )
         }
 
-        pub async fn remove_redirect_extern() -> HttpResult<()> {
-            todo!()
+        /// Tell the homeserver of the "old" actor account that you no longer intend to set up a
+        /// redirect to this actor ("this actor" refers to the actor this [Session] belongs to).
+        pub async fn remove_redirect_extern(&self, source: &FederationId) -> HttpResult<()> {
+            let request = P2RequestBuilder::new(&self)
+                .homeserver(self.instance_url.clone())
+                .endpoint(REMOVE_REDIRECT_EXTERN)
+                .auth_token(self.token.clone())
+                .query("redirectSourceFid", &source.to_string())
+                .build()?;
+            let response = self.send_request(request).await?;
+            matches_status_code(&[StatusCode::OK, StatusCode::NO_CONTENT], response.status())
         }
     }
-
-    impl HttpClient {}
 }
