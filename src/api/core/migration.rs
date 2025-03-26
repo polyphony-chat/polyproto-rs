@@ -92,7 +92,9 @@ mod registration_required {
 }
 
 mod registration_not_required {
-    use http::StatusCode;
+    use http::{HeaderValue, StatusCode};
+    use serde::Deserialize;
+    use serde::de::DeserializeOwned;
     use serde_json::{from_str, json};
 
     use crate::api::{P2RequestBuilder, SendsRequest, matches_status_code};
@@ -204,8 +206,63 @@ mod registration_not_required {
             }
         }
 
-        pub async fn get_messages_to_be_resigned<M>() -> HttpResult<M> {
-            todo!()
+        /// Fetch messages to be re-signed. Only returns messages where the signatures correlate
+        /// to ID-Certs for which a key trial has been passed. If this endpoint is queried again
+        /// while the previous batch of messages has not yet been re-signed (or only partially so),
+        /// the returned message batch will contain those uncommitted messages again.
+        ///
+        /// ## Returns
+        ///
+        /// `(M, u64)`, where
+        ///
+        /// - `M: DeserializeOwned`: Message batch type, specified by the caller
+        /// - `u64`: Value of response header "X-P2-Return-Body-Size-Limit", telling the client whether
+        ///   the route to commit re-signed messages has an upload size limit, and what the size of
+        ///   that limit is, in bytes. A value of 0 means that there is no limit.
+        ///
+        /// ## Errors
+        ///
+        /// This function may fail on errors encountered when building the request, when sending the
+        /// request or when parsing the response. In particular, failure on response parsing is expected
+        /// if
+        ///
+        /// - You receive a `403`/`404` error
+        /// - The "X-P2-Return-Body-Size-Limit" header in the response is formatted incorrectly
+        ///   (i.e. not a string-like unsigned-integer-like)
+        /// - The "X-P2-Return-Body-Size-Limit" exists but is larger than `u64::MAX`
+        pub async fn get_messages_to_be_resigned<M: DeserializeOwned>(
+            &self,
+            limit: u32,
+            serial_number: Option<SerialNumber>,
+        ) -> HttpResult<(M, u64)> {
+            let mut request = P2RequestBuilder::new(&self)
+                .auth_token(self.token.clone())
+                .homeserver(self.instance_url.clone())
+                .endpoint(GET_MESSAGES_TO_BE_RESIGNED)
+                .query("limit", &limit.to_string());
+            if let Some(serial) = serial_number {
+                request = request.query("SerialNumber", &serial.to_string());
+            }
+            let request = request.build()?;
+            let response = self.send_request(request).await?;
+            let return_body_size_string = response
+                .headers()
+                .get("X-P2-Return-Body-Size-Limit")
+                .unwrap_or(&HeaderValue::from_str("0").unwrap())
+                .to_str()
+                .map_err(|e| RequestError::Custom {
+                    reason: e.to_string(),
+                })?
+                .to_string();
+            let return_body_size =
+                return_body_size_string
+                    .parse::<u64>()
+                    .map_err(|e| RequestError::Custom {
+                        reason: e.to_string(),
+                    })?;
+            let response_text = response.text().await?;
+            let m = from_str::<M>(&response_text)?;
+            Ok((m, return_body_size))
         }
 
         pub async fn request_message_resigning() -> HttpResult<()> {
