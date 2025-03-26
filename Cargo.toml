@@ -7,10 +7,7 @@ description = "(Generic) Rust types and traits to quickly get a polyproto implem
 repository = "https://github.com/polyphony-chat/polyproto"
 rust-version = "1.85.0"
 
-[target.'cfg(not(target_arch = "wasm32"))'.lib]
-crate-type = ["lib", "cdylib", "rlib"]
-
-[target.'cfg(target_arch = "wasm32")'.lib]
+[lib]
 crate-type = ["cdylib", "rlib"]
 
 [features]
