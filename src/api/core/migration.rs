@@ -93,7 +93,7 @@ mod registration_required {
 
 mod registration_not_required {
     use http::{HeaderValue, StatusCode};
-    use serde::Deserialize;
+    
     use serde::de::DeserializeOwned;
     use serde_json::{from_str, json};
 

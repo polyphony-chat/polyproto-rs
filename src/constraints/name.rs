@@ -23,7 +23,7 @@ impl Constrained for Name {
     /// - MAY have other attributes, which might be ignored by other home servers and other clients.
     // I apologize. This is horrible. I'll redo it eventually. Depression made me do it. -bitfl0wer
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
-        log::trace!("[Name::validate()] Validating Name: {}", self.to_string());
+        log::trace!("[Name::validate()] Validating Name: {}", self);
         let mut num_cn: u8 = 0;
         let mut num_dc: u8 = 0;
         let mut num_uid: u8 = 0;
@@ -36,12 +36,12 @@ impl Constrained for Name {
         for rdn in rdns.iter() {
             log::trace!(
                 "[Name::validate()] Determining OID of RDN {} and performing appropriate validation",
-                rdn.to_string()
+                rdn
             );
             for item in rdn.0.iter() {
                 match item.oid.to_string().as_str() {
                     OID_RDN_UID => {
-                        log::trace!("[Name::validate()] Found UID in RDN: {}", item.to_string());
+                        log::trace!("[Name::validate()] Found UID in RDN: {}", item);
                         num_uid += 1;
                         uid = rdn.clone();
                         validate_rdn_uid(item)?;
@@ -49,7 +49,7 @@ impl Constrained for Name {
                     OID_RDN_UNIQUE_IDENTIFIER => {
                         log::trace!(
                             "[Name::validate()] Found uniqueIdentifier in RDN: {}",
-                            item.to_string()
+                            item
                         );
                         num_unique_identifier += 1;
                         validate_rdn_unique_identifier(item)?;
@@ -57,7 +57,7 @@ impl Constrained for Name {
                     OID_RDN_COMMON_NAME => {
                         log::trace!(
                             "[Name::validate()] Found Common Name in RDN: {}",
-                            item.to_string()
+                            item
                         );
                         num_cn += 1;
                         cn = rdn.clone();
@@ -73,7 +73,7 @@ impl Constrained for Name {
                     OID_RDN_DOMAIN_COMPONENT => {
                         log::trace!(
                             "[Name::validate()] Found Domain Component in RDN: {}",
-                            item.to_string()
+                            item
                         );
                         num_dc += 1;
                         vec_dc.push(rdn.clone());
@@ -81,7 +81,7 @@ impl Constrained for Name {
                     _ => {
                         log::trace!(
                             "[Name::validate()] Found unknown/non-validated component in RDN: {}",
-                            item.to_string()
+                            item
                         );
                     }
                 }
@@ -98,7 +98,7 @@ impl Constrained for Name {
                             .iter()
                             .map(|dc| dc.to_string())
                             .collect::<Vec<String>>(),
-                        uid.to_string()
+                        uid
                     );
                     validate_dc_matches_dc_in_uid(&vec_dc, &uid)?;
                 }
@@ -186,7 +186,7 @@ fn validate_dc_matches_dc_in_uid(
         None => {
             log::warn!(
                 "[validate_dc_matches_dc_in_uid] UID {} does not contain an @",
-                uid.to_string()
+                uid
             );
             return Err(ConstraintError::Malformed(Some(
                 "UID does not contain an @".to_string(),
@@ -262,7 +262,7 @@ fn validate_uid_username_matches_cn(
         None => {
             log::warn!(
                 "[validate_dc_matches_dc_in_uid] UID \"{}\" does not contain an @",
-                uid.to_string()
+                uid
             );
             return Err(ConstraintError::Malformed(Some(
                 "UID does not contain an @".to_string(),

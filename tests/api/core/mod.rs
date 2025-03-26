@@ -5,7 +5,6 @@
 use std::str::FromStr;
 
 use der::asn1::{BitString, GeneralizedTime, Uint};
-use http::response;
 use httptest::matchers::request::method_path;
 use httptest::matchers::{any, contains, eq, json_decoded, matches, request, url_decoded};
 use httptest::responders::{json_encoded, status_code};

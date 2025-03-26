@@ -4,8 +4,6 @@
 
 use der::{Any, DecodePem};
 use log::{debug, trace};
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 use spki::AlgorithmIdentifier;
 
 use crate::certs::Target;

@@ -131,10 +131,10 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         log::trace!("[IdCert::from_actor_csr()] creating actor certificate");
         let signature_algorithm = signing_key.algorithm_identifier();
         log::trace!("[IdCert::from_actor_csr()] creating IdCertTbs");
-        log::trace!("[IdCert::from_actor_csr()] Issuer: {}", issuer.to_string());
+        log::trace!("[IdCert::from_actor_csr()] Issuer: {}", issuer);
         log::trace!(
             "[IdCert::from_actor_csr()] Subject: {}",
-            id_csr.inner_csr.subject.to_string()
+            id_csr.inner_csr.subject
         );
         let id_cert_tbs = IdCertTbs::<S, P> {
             serial_number,

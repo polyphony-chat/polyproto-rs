@@ -114,11 +114,11 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCertTbs<S, P> {
         );
         log::trace!(
             "[IdCertTbs::validate()] Issuer: {}",
-            self.issuer.to_string()
+            self.issuer
         );
         log::trace!(
             "[IdCertTbs::validate()] Subject: {}",
-            self.subject.to_string()
+            self.subject
         );
         match equal_domain_components(&self.issuer, &self.subject) {
             true => debug!("Domain components of issuer and subject are equal"),
