@@ -8,3 +8,5 @@ cert.csr
 cert.der
 /firedbg
 .vscode/ltex.*
+pkg/
+wasm-pack.log
