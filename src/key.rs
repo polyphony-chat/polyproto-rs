@@ -36,5 +36,7 @@ pub trait PublicKey<S: Signature>: PartialEq + Eq + Clone {
         S::algorithm_identifier()
     }
     /// Creates a new [Self] from a [PublicKeyInfo].
-    fn try_from_public_key_info(public_key_info: PublicKeyInfo) -> Result<Self, CertificateConversionError>;
+    fn try_from_public_key_info(
+        public_key_info: PublicKeyInfo,
+    ) -> Result<Self, CertificateConversionError>;
 }
