@@ -229,6 +229,11 @@ pub mod routes {
                 path: "/.p2/core/v1/redirect/extern",
             };
 
+            pub const REMOVE_REDIRECT_EXTERN: Route = Route {
+                method: Method::DELETE,
+                path: "/.p2/core/v1/redirect/extern",
+            };
+
             pub const GET_RESOURCE_BY_ID: Route = Route {
                 method: Method::GET,
                 path: "/.p2/core/v1/resource/",
