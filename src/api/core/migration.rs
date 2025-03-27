@@ -9,8 +9,9 @@ mod registration_required {
     use serde_json::json;
 
     use crate::api::{P2RequestBuilder, SendsRequest, matches_status_code};
-    use crate::types::P2Export;
     use crate::types::keytrial::KeyTrialResponse;
+    #[allow(deprecated)]
+    use crate::types::p2_export::P2Export;
 
     use super::*;
 
