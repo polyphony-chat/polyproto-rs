@@ -25,8 +25,14 @@ pub mod spki;
 /// the `serde` crate, if the `serde` feature is enabled.
 pub mod x509_cert;
 
+/// # 🚧 Under construction
+///
+/// The [P2Export] type will very likely change drastically in the future. As such, this module
+/// lacks a lot of functionality.
+///
 /// Module defining the [P2Export] type.
 #[cfg(feature = "types")]
+#[deprecated]
 pub mod p2_export;
 
 /// Module defining the `KeyTrial` type family, including [KeyTrial] and [KeyTrialResponse].
@@ -45,8 +51,6 @@ pub mod gateway;
 pub use encrypted_pkm::*;
 #[cfg(feature = "types")]
 pub use federation_id::*;
-#[cfg(feature = "types")]
-pub use p2_export::*;
 #[cfg(feature = "types")]
 pub use rawr::*;
 #[cfg(feature = "types")]
