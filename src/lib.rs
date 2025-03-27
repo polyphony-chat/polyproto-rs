@@ -173,6 +173,7 @@ pub mod signature;
 pub mod types;
 
 #[cfg(all(target_arch = "wasm32", feature = "_wasm_bindgen"))]
+/// 🚧 Under construction! 👷 Module for exporting polyproto to JS/TS.
 pub mod wasm_bindgen;
 
 mod constraints;
