@@ -111,6 +111,11 @@ impl WellKnown {
             Err(_) => return false,
         };
         let actual_domain = &self.api.host();
+        trace!(
+            "Checking for equality of {:?} and {:?}",
+            visible_domain.host(),
+            *actual_domain
+        );
         visible_domain.host() == *actual_domain
     }
 

@@ -186,6 +186,9 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     // TODO: Test me
     #[cfg(feature = "reqwest")]
     pub async fn verify_link_visible_actual_domain_names(&self, client: &HttpClient) -> bool {
+        use log::debug;
+
+        trace!("Retrieving .well-known from issuer {:?}", self.issuer_url());
         let well_known = match WellKnown::new(
             client,
             &match self.issuer_url() {
@@ -195,8 +198,14 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         )
         .await
         {
-            Ok(wk) => wk,
-            Err(_) => return false,
+            Ok(wk) => {
+                trace!("Got well known information");
+                wk
+            }
+            Err(_) => {
+                debug!("Got no well known information!");
+                return false;
+            }
         };
         well_known.matches_certificate(self)
     }
