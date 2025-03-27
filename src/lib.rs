@@ -139,6 +139,14 @@ of this project.
     clippy::todo
 )]
 
+#[cfg(all(
+    target_arch = "wasm32",
+    feature = "_wasm_bindgen",
+    not(feature = "__no_wee_alloc")
+))]
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
 /// The OID for the `domainComponent` RDN
 pub const OID_RDN_DOMAIN_COMPONENT: &str = "0.9.2342.19200300.100.1.25";
 /// The OID for the `commonName` RDN
@@ -167,6 +175,10 @@ pub mod key;
 pub mod signature;
 /// Types used in polyproto and the polyproto HTTP/REST APIs
 pub mod types;
+
+#[cfg(all(target_arch = "wasm32", feature = "_wasm_bindgen"))]
+/// 🚧 Under construction! 👷 Module for exporting polyproto to JS/TS.
+pub mod wasm_bindgen;
 
 mod constraints;
 

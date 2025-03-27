@@ -1,0 +1,40 @@
+#!/bin/bash
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+# check number of arguments
+if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+    echo "Error: Invalid number of arguments. Usage: $0 <build|pack|publish> [release|debug]"
+    exit 1
+fi
+
+command=$1
+mode=${2:-"debug"}
+
+# validate if arg #1 is valid
+if [[ "$command" != "build" && "$command" != "pack" && "$command" != "publish" ]]; then
+    echo "Error: First argument must be one of 'build', 'pack', or 'publish'."
+    exit 1
+fi
+
+# same for arg #2
+if [[ "$mode" != "release" && "$mode" != "debug" ]]; then
+    echo "Error: Second argument must be either 'release' or 'debug'. Defaulting to 'debug'."
+    mode="debug"
+fi
+
+# wasm-pack check
+if ! command -v wasm-pack &> /dev/null; then
+    # prompt user to install wasm-pack
+    read -p "wasm-pack could not be found. Do you want to install it? (y/n): " install_wasm_pack
+    if [[ "$install_wasm_pack" == [Yy]* ]]; then
+        cargo install wasm-pack --force
+    else
+        echo "Error: wasm-pack is required for this script."
+        exit 1
+    fi
+fi
+
+# Execute the wasm-pack command
+wasm-pack $command --$mode --no-default-features --features=wasm,reqwest,serde,types,_wasm_bindgen
