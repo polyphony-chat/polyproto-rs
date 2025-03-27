@@ -43,7 +43,7 @@ mod registration_required {
                     StatusCode::NO_CONTENT,
                 ],
                 response.status(),
-            ) // TODO Review and test
+            ) // TODO Review and test when P2Export is overhauled
         }
 
         /// This route is used by actors who would like to move their identity to another home server.

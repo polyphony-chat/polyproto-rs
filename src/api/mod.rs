@@ -318,8 +318,14 @@ pub(crate) mod http_client {
                 .request(route.method, instance_url.join(route.path)?))
         }
 
-        /// Sends a request and returns a [HttpResult].
-        /// DOCUMENTME
+        /// Sends an HTTP request to the specified URL using the given method and optional body.
+        ///
+        /// ## Errors
+        ///
+        /// This function will return an error in the following cases:
+        /// * The URL is invalid and cannot be parsed.
+        /// * There are issues sending the request using the underlying reqwest client.
+        /// * The request fails due to network problems or other errors encountered during execution.
         pub async fn request(
             &self,
             method: reqwest::Method,
@@ -335,7 +341,24 @@ pub(crate) mod http_client {
             Ok(request.send().await?)
         }
 
-        /// DOCUMENTME
+        /// Sends an HTTP request to the specified URL using the given method and optional body, and attempts
+        /// to deserialize the response into a specified type.
+        ///
+        /// ## Returns
+        ///
+        /// Returns an `HttpResult<T>` containing the deserialized response of type `T` if successful.
+        ///
+        /// ## Errors
+        ///
+        /// This function will return an error in the following cases:
+        /// * The URL is invalid and cannot be parsed.
+        /// * There are issues sending the request using the underlying reqwest client.
+        /// * The request fails due to network problems or other errors encountered during execution.
+        /// * The response body cannot be deserialized into the specified type `T`. This might happen,
+        ///   if the server responds with no body or an empty string to indicate an empty container,
+        ///   like `None` when `T = Option<...>`, an empty vector if `T = Vec<...>` and so on. If such
+        ///   behaviour is expected, use `request` instead and "manually" deserialize the result into
+        ///   the desired type.
         pub async fn request_as<T: for<'a> Deserialize<'a>>(
             &self,
             method: reqwest::Method,
