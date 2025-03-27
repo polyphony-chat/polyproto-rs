@@ -182,7 +182,6 @@ impl From<Opcode> for u16 {
 impl TryFrom<u16> for Opcode {
     type Error = crate::errors::InvalidInput;
 
-    // TODO: i know this can be done better but i am incredibly sleep deprived and just happy to have it work
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         Ok(match value {
             0 => Self::Heartbeat,
