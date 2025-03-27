@@ -101,7 +101,6 @@ impl WellKnown {
     are fulfilled, `true` is returned. If any of the criteria are not fulfilled, `false` is returned.
     Criterion #3 is fulfilled by the existence of this struct object.
     */
-    // TODO: Test me
     pub fn matches_certificate<S: Signature, P: PublicKey<S>>(
         &self,
         cert: &IdCertTbs<S, P>,

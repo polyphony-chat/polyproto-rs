@@ -199,7 +199,7 @@ mod registration_not_required {
                 request = request.bearer_auth(token);
             }
             let response = request.send().await;
-            // TODO: Might error if the list is empty/204 is received. Test it.
+            // BUG: Will error if the list is empty/204 is received.
             HttpClient::handle_response(response).await
         }
     }

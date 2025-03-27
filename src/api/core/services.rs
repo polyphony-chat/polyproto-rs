@@ -102,7 +102,6 @@ mod registration_not_required {
     impl<S: Signature, T: PrivateKey<S>> Session<S, T> {}
 
     impl HttpClient {
-        // TODO: Test discover_services and discover_service
         /// Fetch a list of all services that the actor specified in the `actor_fid` argument has made
         /// discoverable.
         ///

@@ -183,7 +183,6 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     ///
     /// - The _magic_ 5 conditions are all met
     /// - There is no difference between the "visible" and "actual" domain names
-    // TODO: Test me
     #[cfg(feature = "reqwest")]
     pub async fn verify_link_visible_actual_domain_names(&self, client: &HttpClient) -> bool {
         use log::debug;
