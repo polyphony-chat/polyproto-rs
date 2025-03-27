@@ -207,19 +207,21 @@ impl TryFrom<Attribute> for KeyUsages {
 
     fn try_from(value: Attribute) -> Result<Self, Self::Error> {
         if value.tag() != Tag::Sequence {
-            return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(
-                format!("Expected Sequence, found {}", value.tag(),),
-            )));
+            return Err(CertificateConversionError::InvalidInput(
+                InvalidInput::Malformed(format!("Expected Sequence, found {}", value.tag(),)),
+            ));
         }
         match value.values.len() {
             0 => return Ok(KeyUsages::new(&[])),
             1 => (),
             _ => {
-                return Err(CertificateConversionError::InvalidInput(InvalidInput::Length {
-                    min_length: 0,
-                    max_length: 1,
-                    actual_length: value.values.len().to_string(),
-                }));
+                return Err(CertificateConversionError::InvalidInput(
+                    InvalidInput::Length {
+                        min_length: 0,
+                        max_length: 1,
+                        actual_length: value.values.len().to_string(),
+                    },
+                ));
             }
         };
         let inner_value = value.values.get(0).expect("Illegal state. Please report this error to https://github.com/polyphony-chat/polyproto");
@@ -233,12 +235,12 @@ impl TryFrom<Extension> for KeyUsages {
 
     fn try_from(value: Extension) -> Result<Self, Self::Error> {
         if value.extn_id.to_string().as_str() != OID_KEY_USAGE {
-            return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(
-                format!(
+            return Err(CertificateConversionError::InvalidInput(
+                InvalidInput::Malformed(format!(
                     "Expected OID {} for KeyUsages, found OID {}",
                     OID_KEY_USAGE, value.extn_id
-                ),
-            )));
+                )),
+            ));
         }
         let any = Any::from_der(value.extn_value.as_bytes())?;
         KeyUsages::from_bitstring(BitString::from_der(&any.to_der()?)?)

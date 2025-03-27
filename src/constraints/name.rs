@@ -47,18 +47,12 @@ impl Constrained for Name {
                         validate_rdn_uid(item)?;
                     }
                     OID_RDN_UNIQUE_IDENTIFIER => {
-                        log::trace!(
-                            "[Name::validate()] Found uniqueIdentifier in RDN: {}",
-                            item
-                        );
+                        log::trace!("[Name::validate()] Found uniqueIdentifier in RDN: {}", item);
                         num_unique_identifier += 1;
                         validate_rdn_unique_identifier(item)?;
                     }
                     OID_RDN_COMMON_NAME => {
-                        log::trace!(
-                            "[Name::validate()] Found Common Name in RDN: {}",
-                            item
-                        );
+                        log::trace!("[Name::validate()] Found Common Name in RDN: {}", item);
                         num_cn += 1;
                         cn = rdn.clone();
                         if num_cn > 1 {
@@ -71,10 +65,7 @@ impl Constrained for Name {
                         }
                     }
                     OID_RDN_DOMAIN_COMPONENT => {
-                        log::trace!(
-                            "[Name::validate()] Found Domain Component in RDN: {}",
-                            item
-                        );
+                        log::trace!("[Name::validate()] Found Domain Component in RDN: {}", item);
                         num_dc += 1;
                         vec_dc.push(rdn.clone());
                     }
