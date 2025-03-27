@@ -21,6 +21,7 @@ serde_with = ["dep:serde_with"]
 serde_json = ["dep:serde_json"]
 gateway = ["serde", "types"]
 _wasm_bindgen = ["wasm", "dep:wasm-bindgen", "dep:js-sys", "dep:wee_alloc"]
+__no_wee_alloc = []
 
 [dependencies]
 der = { version = "0.7.9", features = ["pem"] }

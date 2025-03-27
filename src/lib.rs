@@ -139,7 +139,11 @@ of this project.
     clippy::todo
 )]
 
-#[cfg(all(target_arch = "wasm32", feature = "_wasm_bindgen"))]
+#[cfg(all(
+    target_arch = "wasm32",
+    feature = "_wasm_bindgen",
+    not(feature = "__no_wee_alloc")
+))]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
