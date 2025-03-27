@@ -9,6 +9,7 @@ use httptest::matchers::request::method_path;
 use httptest::matchers::{any, contains, eq, json_decoded, matches, request, url_decoded};
 use httptest::responders::{json_encoded, status_code};
 use httptest::*;
+use polyproto::Name;
 use polyproto::api::core::{ServiceDeleteResponse, WellKnown, current_unix_time};
 use polyproto::certs::SessionId;
 use polyproto::certs::capabilities::Capabilities;
@@ -649,8 +650,15 @@ async fn get_well_known() {
 fn well_known_matches_certificate() {
     let well_known = WellKnown::from_url(&Url::parse("https://polyphony.chat/.p2/core").unwrap());
     let cert = common::actor_id_cert("flori");
-    assert!(well_known.matches_certificate(&cert.id_cert_tbs))
+    assert!(well_known.matches_certificate(&cert.id_cert_tbs));
+    let mut cert2 = cert.clone();
+    cert2.id_cert_tbs.issuer = Name::from_str("DC=bogus,DC=example,DC=com").unwrap();
+    assert!(!well_known.matches_certificate(&cert2.id_cert_tbs));
+    let well_known =
+        WellKnown::from_url(&Url::parse("https://subd.polyphony.chat/.p2/core").unwrap());
+    assert!(!well_known.matches_certificate(&cert.id_cert_tbs));
 }
+
 #[tokio::test]
 async fn delete_rawr_resource() {
     init_logger();
@@ -829,7 +837,10 @@ async fn set_up_redirect() {
         polyproto::api::Session::new(&client, "12345", Url::parse(&url).unwrap(), None);
 
     let fid = FederationId::new("xenia@example.com").unwrap();
-    let keytrials = KeyTrialResponse {};
+    let keytrials = KeyTrialResponse {
+        signature: "".to_string(),
+        serial_number: 1,
+    };
     server.expect(
         Expectation::matching(all_of![
             request::method(SET_UP_REDIRECT.method.to_string()),
@@ -863,4 +874,105 @@ async fn remove_redirect() {
         .respond_with(status_code(204)),
     );
     session.remove_redirect(&fid).await.unwrap();
+}
+
+/**
+ * TODO: This test is complex. We would either need to mock server results, to achieve something
+ * closer to a unit test, or we'd need to control the URLs that the tested method is trying to call.
+ *
+ * The test will always fail, because it is trying to retrieve the .well-known from a domain like
+ * one.example.com, which doesn't exist.
+ */
+#[allow(unused)]
+async fn verify_link_visible_actual_domain_names() {
+    init_logger();
+    let server = Server::run();
+    let url = server_url(&server);
+    let server = Server::run();
+    let client = polyproto::api::HttpClient::new().unwrap();
+
+    let keys = {
+        let mut vec = Vec::new();
+        for i in 0..4 {
+            vec.push(gen_priv_key());
+        }
+        vec
+    };
+    let home_server_1_cert = IdCert::from_ca_csr(
+        IdCsr::new(
+            &Name::from_str("DC=one,DC=example,DC=com").unwrap(),
+            keys.get(1).unwrap(),
+            &Capabilities::default_home_server(),
+            Some(polyproto::certs::Target::HomeServer),
+        )
+        .unwrap(),
+        keys.get(1).unwrap(),
+        polyproto::types::der::asn1::Uint::from(1).0,
+        Name::from_str("DC=one,DC=example,DC=com").unwrap(),
+        common::default_validity(),
+    )
+    .unwrap();
+    let home_server_2_cert = IdCert::from_ca_csr(
+        IdCsr::new(
+            &Name::from_str("DC=two,DC=example,DC=com").unwrap(),
+            keys.get(2).unwrap(),
+            &Capabilities::default_home_server(),
+            Some(polyproto::certs::Target::HomeServer),
+        )
+        .unwrap(),
+        keys.get(2).unwrap(),
+        polyproto::types::der::asn1::Uint::from(1).0,
+        Name::from_str("DC=two,DC=example,DC=com").unwrap(),
+        common::default_validity(),
+    )
+    .unwrap();
+    let actor_1_cert = IdCert::from_actor_csr(
+        IdCsr::new(
+            &Name::from_str(
+                "CN=flori,DC=one,DC=example,DC=com,UID=flori@one.example.com,uniqueIdentifier=client1",
+            )
+            .unwrap(),
+            keys.get(1).unwrap(),
+            &Capabilities::default_actor(),
+            Some(polyproto::certs::Target::Actor),
+        )
+        .unwrap(),
+        keys.get(1).unwrap(),
+        polyproto::types::der::asn1::Uint::from(1).0,
+        Name::from_str("DC=one,DC=example,DC=com").unwrap(),
+        common::default_validity(),
+    )
+    .unwrap();
+    let actor_2_cert = IdCert::from_actor_csr(
+        IdCsr::new(
+            &Name::from_str(
+                "CN=flori,DC=two,DC=example,DC=com,UID=flori@two.example.com,uniqueIdentifier=client1",
+            )
+            .unwrap(),
+            keys.get(2).unwrap(),
+            &Capabilities::default_actor(),
+            Some(polyproto::certs::Target::Actor),
+        )
+        .unwrap(),
+        keys.get(2).unwrap(),
+        polyproto::types::der::asn1::Uint::from(1).0,
+        Name::from_str("DC=two,DC=example,DC=com").unwrap(),
+        common::default_validity(),
+    )
+    .unwrap();
+
+    server.expect(
+        Expectation::matching(all_of![
+            request::method(http::Method::GET.to_string()),
+            request::path(".well-known/polyproto-core"),
+        ])
+        .respond_with(json_encoded(WellKnown::from_url(
+            &home_server_1_cert.issuer_url().unwrap(),
+        ))),
+    );
+    assert!(
+        actor_1_cert
+            .verify_link_visible_actual_domain_names(&client)
+            .await
+    )
 }
