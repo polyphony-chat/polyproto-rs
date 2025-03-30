@@ -1,6 +1,6 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use std::str::FromStr;
 
@@ -11,7 +11,7 @@ use spki::ObjectIdentifier;
 use x509_cert::attr::Attribute;
 use x509_cert::ext::Extension;
 
-use crate::errors::{ConstraintError, CertificateConversionError, InvalidInput};
+use crate::errors::{CertificateConversionError, ConstraintError, InvalidInput};
 
 use super::OID_BASIC_CONSTRAINTS;
 
@@ -60,17 +60,22 @@ impl TryFrom<Attribute> for BasicConstraints {
         }
         let values = value.values;
         if values.len() != 1usize {
-            return Err(CertificateConversionError::InvalidInput(InvalidInput::Length {
-                min_length: 1,
-                max_length: 1,
-                actual_length: values.len().to_string(),
-            }));
+            return Err(CertificateConversionError::InvalidInput(
+                InvalidInput::Length {
+                    min_length: 1,
+                    max_length: 1,
+                    actual_length: values.len().to_string(),
+                },
+            ));
         }
         let element = values.get(0).expect("This should be infallible. Report this issue at https://github.com/polyphony-chat/polyproto");
         if element.tag() != Tag::Sequence {
-            return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(
-                format!("Expected a Sequence tag, found {}", element.tag()),
-            )));
+            return Err(CertificateConversionError::InvalidInput(
+                InvalidInput::Malformed(format!(
+                    "Expected a Sequence tag, found {}",
+                    element.tag()
+                )),
+            ));
         }
         let sequence = SequenceOf::<Any, 2>::from_der(&element.to_der()?)?;
         let mut num_ca = 0u8;
@@ -85,7 +90,11 @@ impl TryFrom<Attribute> for BasicConstraints {
                         num_ca += 1;
                         ca = any_to_bool(value.clone())?;
                     } else {
-                        return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed("Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string())));
+                        return Err(CertificateConversionError::InvalidInput(
+                            InvalidInput::Malformed(
+                                "Encountered > 1 Boolean tags. Expected 1 Boolean tag.".to_string(),
+                            ),
+                        ));
                     }
                 }
                 Tag::Integer => {
@@ -94,16 +103,28 @@ impl TryFrom<Attribute> for BasicConstraints {
                         num_path_length += 1;
                         path_length = Some(any_to_u64(value.clone())?);
                     } else {
-                        return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed("Encountered > 1 Integer tags. Expected 0 or 1 Integer tags.".to_string())));
+                        return Err(CertificateConversionError::InvalidInput(
+                            InvalidInput::Malformed(
+                                "Encountered > 1 Integer tags. Expected 0 or 1 Integer tags."
+                                    .to_string(),
+                            ),
+                        ));
                     }
                 }
-                _ => return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(format!("Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer", value.tag())))),
+                _ => {
+                    return Err(CertificateConversionError::InvalidInput(
+                        InvalidInput::Malformed(format!(
+                            "Encountered unexpected tag {:?}, when tag should have been either Boolean or Integer",
+                            value.tag()
+                        )),
+                    ));
+                }
             }
         }
         if num_ca == 0 {
-            return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(
-                "Expected 1 Boolean tag, found 0".to_string(),
-            )));
+            return Err(CertificateConversionError::InvalidInput(
+                InvalidInput::Malformed("Expected 1 Boolean tag, found 0".to_string()),
+            ));
         }
         Ok(BasicConstraints { ca, path_length })
     }
@@ -141,9 +162,9 @@ impl TryFrom<BasicConstraints> for Extension {
         let element = match set.get(0) {
             Some(element) => element,
             None => {
-                return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(
-                    "SetOfVec has no elements".to_string(),
-                )))
+                return Err(CertificateConversionError::InvalidInput(
+                    InvalidInput::Malformed("SetOfVec has no elements".to_string()),
+                ));
             }
         };
         let sequence = SequenceOf::<Any, 2>::from_der(&element.to_der()?)?;
@@ -171,7 +192,9 @@ impl TryFrom<Extension> for BasicConstraints {
         if value.critical && !matches!(value.extn_id.to_string().as_str(), OID_BASIC_CONSTRAINTS) {
             // Error if we encounter a "critical" X.509 extension which we do not know of
             warn!("Unknown critical extension: {:#?}", value.extn_id);
-            return Err(CertificateConversionError::UnknownCriticalExtension { oid: value.extn_id });
+            return Err(CertificateConversionError::UnknownCriticalExtension {
+                oid: value.extn_id,
+            });
         }
         // If the Extension is a valid BasicConstraint, the octet string will contain DER ANY values
         // in a DER SET OF type
@@ -181,9 +204,12 @@ impl TryFrom<Extension> for BasicConstraints {
                 "Encountered too many values in BasicConstraints. Found {} values",
                 sequence.len()
             );
-            return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(
-                format!("This x509_cert::Extension has {} values stored. Expected a maximum of 2 values", sequence.len()),
-            )));
+            return Err(CertificateConversionError::InvalidInput(
+                InvalidInput::Malformed(format!(
+                    "This x509_cert::Extension has {} values stored. Expected a maximum of 2 values",
+                    sequence.len()
+                )),
+            ));
         }
         let mut bool_encounters = 0u8;
         let mut int_encounters = 0u8;
@@ -206,16 +232,26 @@ impl TryFrom<Extension> for BasicConstraints {
                 }
                 _ => {
                     warn!("Encountered unexpected tag: {:?}", item.tag());
-                    return Err(CertificateConversionError::InvalidInput(InvalidInput::Malformed(format!("Encountered unexpected tag {:?}, when tag should have been either Boolean, Integer or Null", item.tag()))));
+                    return Err(CertificateConversionError::InvalidInput(
+                        InvalidInput::Malformed(format!(
+                            "Encountered unexpected tag {:?}, when tag should have been either Boolean, Integer or Null",
+                            item.tag()
+                        )),
+                    ));
                 }
             }
             if bool_encounters > 1 || int_encounters > 1 || null_encounters > 1 {
-                warn!("Encountered too many values in BasicConstraints. BasicConstraints are likely malformed. BasicConstraints: {:#?}", value);
-                return Err(CertificateConversionError::InvalidInput(InvalidInput::Length {
-                    min_length: 0,
-                    max_length: 1,
-                    actual_length: 2.to_string(),
-                }));
+                warn!(
+                    "Encountered too many values in BasicConstraints. BasicConstraints are likely malformed. BasicConstraints: {:#?}",
+                    value
+                );
+                return Err(CertificateConversionError::InvalidInput(
+                    InvalidInput::Length {
+                        min_length: 0,
+                        max_length: 1,
+                        actual_length: 2.to_string(),
+                    },
+                ));
             }
         }
         Ok(BasicConstraints { ca, path_length })
@@ -240,7 +276,10 @@ fn any_to_bool(value: Any) -> Result<bool, ConstraintError> {
         },
         _ => {
             warn!("Encountered unexpected tag: {:?}", value.tag());
-            Err(ConstraintError::Malformed(Some(format!("Found {:?} in value, which does not match expected [Tag::Boolean, Tag::Integer, Tag::Null]", value.tag().to_string()))))
+            Err(ConstraintError::Malformed(Some(format!(
+                "Found {:?} in value, which does not match expected [Tag::Boolean, Tag::Integer, Tag::Null]",
+                value.tag().to_string()
+            ))))
         }
     }
 }
@@ -258,7 +297,10 @@ fn any_to_u64(value: Any) -> Result<u64, ConstraintError> {
         }
         _ => {
             warn!("Encountered unexpected tag: {:?}", value.tag());
-            Err(ConstraintError::Malformed(Some(format!("Found {:?} in value, which does not match expected [Tag::Boolean, Tag::Integer, Tag::Null]", value.tag().to_string()))))
+            Err(ConstraintError::Malformed(Some(format!(
+                "Found {:?} in value, which does not match expected [Tag::Boolean, Tag::Integer, Tag::Null]",
+                value.tag().to_string()
+            ))))
         }
     }
 }

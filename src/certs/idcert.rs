@@ -1,22 +1,26 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use der::asn1::Uint;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
+use x509_cert::Certificate;
 use x509_cert::name::Name;
 use x509_cert::time::Validity;
-use x509_cert::Certificate;
 
-use crate::errors::{ConstraintError, CertificateConversionError, InvalidCert, ERR_CERTIFICATE_TO_DER_ERROR};
+use crate::Constrained;
+#[cfg(feature = "reqwest")]
+use crate::api::HttpClient;
+use crate::errors::{
+    CertificateConversionError, ConstraintError, ERR_CERTIFICATE_TO_DER_ERROR, InvalidCert,
+};
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
-use crate::Constrained;
 
+use super::Target;
 use super::idcerttbs::IdCertTbs;
 use super::idcsr::IdCsr;
-use super::Target;
 
 /// A signed polyproto ID-Cert, consisting of the actual certificate, the CA-generated signature and
 /// metadata about that signature.
@@ -28,16 +32,19 @@ use super::Target;
 ///
 /// - **S**: The [Signature] and - by extension - [SignatureAlgorithm] this certificate was
 ///   signed with.
-/// - **P**: A [PublicKey] type P which can be used to verify [Signature]s of type S.
+/// - **P**: A [PublicKey] type `P` which can be used to verify [Signature]s of type `S`.
 ///
 /// ## Verifying an ID-Cert
 ///
-/// To verify an ID-Cert, you can use the [full_verify_actor()] or [full_verify_home_server()] methods.
+/// To verify an ID-Cert, use the [full_verify_actor()] or [full_verify_home_server()] methods.
 /// These methods will check if the certificate is valid at a given time, if the signature is correct,
-/// and if the certificate is well-formed and up to polyproto specification.
+/// and if the certificate is well-formed and up to polyproto specification. Using the [Constrained]
+/// trait and its associated `verify()` method is **not** sufficient for this purpose.
 ///
-/// If you only need to check
-/// if the certificate is valid at a given time, you can use the [valid_at()] method.
+/// If you only need to check if the certificate is valid at a given time, use the [valid_at()] method.
+///
+/// If you only need to verify whether the certificate is well-formed, use the [Constrained] trait
+/// and its associated `verify()` method.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdCert<S: Signature, P: PublicKey<S>> {
     /// Inner TBS (To be signed) certificate
@@ -124,10 +131,10 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         log::trace!("[IdCert::from_actor_csr()] creating actor certificate");
         let signature_algorithm = signing_key.algorithm_identifier();
         log::trace!("[IdCert::from_actor_csr()] creating IdCertTbs");
-        log::trace!("[IdCert::from_actor_csr()] Issuer: {}", issuer.to_string());
+        log::trace!("[IdCert::from_actor_csr()] Issuer: {}", issuer);
         log::trace!(
             "[IdCert::from_actor_csr()] Subject: {}",
-            id_csr.inner_csr.subject.to_string()
+            id_csr.inner_csr.subject
         );
         let id_cert_tbs = IdCertTbs::<S, P> {
             serial_number,
@@ -167,7 +174,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             Err(e) => {
                 return Err(InvalidCert::InvalidProperties(ConstraintError::Malformed(
                     Some(e.to_string()),
-                )))
+                )));
             }
         };
         match target {
@@ -197,6 +204,10 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// Create an [IdCert] from a byte slice containing a PEM encoded X.509 Certificate.
     /// The resulting `IdCert` has the same validity guarantees as when using [IdCert::full_verify_actor()]
     /// or [IdCert::full_verify_home_server()].
+    ///
+    /// ## Parameters
+    ///
+    /// - `time`: UNIX Timestamp; Certificate validity will be tested for given this timestamp.
     pub fn from_pem(
         pem: &str,
         target: Target,
@@ -208,7 +219,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             Err(e) => {
                 return Err(InvalidCert::InvalidProperties(ConstraintError::Malformed(
                     Some(e.to_string()),
-                )))
+                )));
             }
         };
         match target {
@@ -247,7 +258,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
 
     /// Checks, if the certificate is valid at a given time. Does not check if the certificate is
     /// well-formed, up to polyproto specification or if the signature is correct. If you need to
-    /// verify these properties, use either [IdCert::full_verify_actor()] or [IdCert::full_verify_home_server()]
+    /// verify these properties, use either `full_verify_actor` or `full_verify_home_server`
     /// instead.
     pub fn valid_at(&self, time: u64) -> bool {
         self.id_cert_tbs.valid_at(time)
@@ -259,6 +270,14 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// - The signature of the certificate is correct
     /// - The certificate is well-formed and up to polyproto specification
     /// - All parts that make up the certificate are well-formed and up to polyproto specification
+    ///
+    /// ## Difference between this and `Constrained::validate()`
+    ///
+    /// While [Constrained] and the associated `validate` method implementation for this type check
+    /// for well-formedness in context of the polyproto specification, the `full_verify_actor` and
+    /// `full_verify_homeserver` provide cryptographic verification in *addition* by checking if
+    /// the certificates' signature matches the data and if the signature was indeed generated by
+    /// the home server. This, of course, makes the assumption that the public key can be trusted.
     pub fn full_verify_actor(
         &self,
         time: u64,
@@ -267,6 +286,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         if !self.valid_at(time) {
             return Err(InvalidCert::InvalidValidity);
         }
+        self.validate(Some(Target::Actor))?;
         log::trace!("[IdCert::full_verify_actor(&self)] verifying signature (actor certificate)");
         let der = match self.id_cert_tbs.clone().to_der() {
             Ok(der) => der,
@@ -289,7 +309,16 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     /// - The signature of the certificate is correct
     /// - The certificate is well-formed and up to polyproto specification
     /// - All parts that make up the certificate are well-formed and up to polyproto specification
+    ///
+    /// ## Difference between this and `Constrained::validate()`
+    ///
+    /// While [Constrained] and the associated `validate` method implementation for this type check
+    /// for well-formedness in context of the polyproto specification, the `full_verify_actor` and
+    /// `full_verify_homeserver` provide cryptographic verification in *addition* by checking if
+    /// the certificates' signature matches the data and if the signature was indeed generated by
+    /// the home server. This, of course, makes the assumption that the public key can be trusted.
     pub fn full_verify_home_server(&self, time: u64) -> Result<(), InvalidCert> {
+        self.validate(Some(Target::HomeServer))?;
         if !self.valid_at(time) {
             return Err(InvalidCert::InvalidValidity);
         }
@@ -312,6 +341,37 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             .id_cert_tbs
             .subject_public_key
             .verify_signature(&self.signature, &der)?)
+    }
+
+    /// From an [IdCertTbs], retrieve the `issuer` as a [Url].
+    pub fn issuer_url(&self) -> Result<url::Url, url::ParseError> {
+        self.id_cert_tbs.issuer_url()
+    }
+
+    /// _Sorry for the long name._
+    ///
+    /// Verifies the conditions listed in [section #3.1](https://docs.polyphony.chat/Protocol%20Specifications/core/#31-well-known)
+    /// of the polyproto protocol specification regarding hosting a polyproto server under a different
+    /// domain name than the one visible to the public.
+    ///
+    /// ## Returns
+    ///
+    /// ### `false`, if
+    ///
+    /// - Any of the 5 conditions listed in section #3.1 are found to be violated
+    /// - The server hosting the "visible domain name" is not reachable, but the "actual domain name"
+    ///   server is reachable.
+    /// - Both servers are not reachable
+    ///
+    /// ### `true`, if
+    ///
+    /// - The _magic_ 5 conditions are all met
+    /// - There is no difference between the "visible" and "actual" domain names
+    #[cfg(feature = "reqwest")]
+    pub async fn verify_link_visible_actual_domain_names(&self, client: &HttpClient) -> bool {
+        self.id_cert_tbs
+            .verify_link_visible_actual_domain_names(client)
+            .await
     }
 }
 

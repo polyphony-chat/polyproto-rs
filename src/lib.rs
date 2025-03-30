@@ -1,23 +1,25 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 /*!
-<div align="center">
+<img src="https://cloud.bitfl0wer.de/apps/files_sharing/publicpreview/2qCxoXJ27yW7QNR?file=/&fileId=1143147&x=256&y=256&a=true" align="left" alt="a purple cog, split in the middle along the horizontal axis with a gap inbetween the two halves. three overlayed, offset sinus-like waves travel through that gap. each wave has a different shade of purple" width="128px" height="auto"></img>
 
+### `polyproto`
+
+![dev-status]
 [![Discord]][Discord-invite]
-[![Matrix]][Matrix-invite]
 [![Build][build-shield]][build-url]
 [![Coverage][coverage-shield]][coverage-url]
-<img src="https://img.shields.io/static/v1?label=Status&message=Alpha&color=blue" alt="Blue status badge, reading 'Alpha'">
-
-</div>
-
-# polyproto
 
 Crate supplying (generic) Rust types and traits to quickly get a
 [polyproto](https://docs.polyphony.chat/Protocol%20Specifications/core/) implementation up and
 running, as well as an HTTP client for the polyproto API.
+
+**[Overview/TL;DR][overview]** • **[crates.io][crates-link]** • **[Protocol Specification][docs]**
+**[Overview/TL;DR][overview]** • **[crates.io][crates-link]** • **[Protocol Specification][docs]**
+
+## Crate overview
 
 Building upon types offered by the [der](https://crates.io/crates/der),
 [x509_cert](https://crates.io/crates/x509_cert) and [spki](https://crates.io/crates/spki) crates,
@@ -30,12 +32,15 @@ crate.
 
 ## Implementing polyproto
 
-Start by implementing the trait [crate::signature::Signature] for a signature algorithm of your
+Start by implementing the trait `[crate::signature::Signature]` for a signature algorithm of your
+Start by implementing the trait `[crate::signature::Signature]` for a signature algorithm of your
 choice. Popular crates for cryptography and signature algorithms supply their own `PublicKey` and
 `PrivateKey` types. You should extend upon these types with your own structs and implement the
-[crate::key] traits for these new structs.
+`[crate::key]` traits for these new structs.
+`[crate::key]` traits for these new structs.
 
-You can then use the [crate::certs] types to build certificates using your implementations of the
+You can then use the `[crate::certs]` types to build certificates using your implementations of the
+You can then use the `[crate::certs]` types to build certificates using your implementations of the
 aforementioned traits.
 
 **View the [examples](./examples/)** directory for a simple example on how to implement and use this
@@ -59,6 +64,14 @@ This crate has not undergone any security audits.
 
 ## WebAssembly
 
+!!! warning
+
+    As of `v0.10`, the `wasm` target is currently untested. Support will be re-added in the future.
+
+!!! warning
+
+    As of `v0.10`, the `wasm` target is currently untested. Support will be re-added in the future.
+
 This crate is designed to work with the `wasm32-unknown-unknown` target. To compile for `wasm`, you
 will have to use the `wasm` feature:
 
@@ -79,14 +92,43 @@ the `types` and `serde` features. Using these features, you can implement your o
 the polyproto crate acting as a single source of truth for request and response types, as well as
 request routes and methods through the exported `static` `Route`s.
 
-[build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/polyproto/build_and_test.yml?style=flat
-[build-url]: https://github.com/polyphony-chat/polyproto/blob/main/.github/workflows/build_and_test.yml
-[coverage-shield]: https://coveralls.io/repos/github/polyphony-chat/polyproto/badge.svg?branch=main
-[coverage-url]: https://coveralls.io/github/polyphony-chat/polyproto?branch=main
+## WebSocket Gateway client
+
+Since `v0.10`, this crate ships polyproto WebSocket Gateway client functionality, gated behind the `gateway` feature.
+The implementation of this feature is super backend-agnostic—though, for now, we have sealed the needed traits, and are only shipping a `tokio-tungstenite` backend for testing.
+
+The gateway handles establishing a connection to the server, sending regular heartbeats at the specified interval and responding to Opcode 11—the manual heartbeat request.
+
+Apart from the Hello payload, library consumers can easily get access to all messages received from the gateway by calling `subscribe()` on the internal `tokio::sync::watch::Sender<GatewayMessage>`. This means that this crate handles only the bare necessities of connecting to the gateway, and that you are free to handle incoming messages however you would like to. Our `GatewayMessage` type is `.into()` and `From::<>`-compatible with `tokio_tungstenite::tungstenite::Message`, so that you are not locked into using our message types, should you not want that.
+
+## Versioning and MSRV
+
+Semver v2.0 is used for the versioning scheme for this crate.
+
+The default feature set of this crate is used to determine, verify and update the MSRV and semver version
+of this crate.
+
+## Logo
+
+The polyproto logo was designed by the wonderful [antidoxi](https://antidoxi.carrd.co/).
+The polyproto logos provided in this document are not covered by the MPL-2.0 license covering the rest
+of this project.
+
+[dev-status]: https://img.shields.io/static/v1?label=Status&message=Alpha&color=blue
+[build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/polyproto-rs/build_and_test.yml?style=flat
+[build-url]: https://github.com/polyphony-chat/polyproto-rs/blob/main/.github/workflows/build_and_test.yml
+[coverage-shield]: https://coveralls.io/repos/github/polyphony-chat/polyproto-rs/badge.svg?branch=main
+[coverage-url]: https://coveralls.io/github/polyphony-chat/polyproto-rs?branch=main
+[build-shield]: https://img.shields.io/github/actions/workflow/status/polyphony-chat/polyproto-rs/build_and_test.yml?style=flat
+[build-url]: https://github.com/polyphony-chat/polyproto-rs/blob/main/.github/workflows/build_and_test.yml
+[coverage-shield]: https://coveralls.io/repos/github/polyphony-chat/polyproto-rs/badge.svg?branch=main
+[coverage-url]: https://coveralls.io/github/polyphony-chat/polyproto-rs?branch=main
 [Discord]: https://dcbadge.vercel.app/api/server/m3FpcapGDD?style=flat
 [Discord-invite]: https://discord.com/invite/m3FpcapGDD
-[Matrix]: https://img.shields.io/matrix/polyproto%3Atu-dresden.de?server_fqdn=matrix.org&style=flat&label=Matrix%20Room
-[Matrix-invite]: https://matrix.to/#/#polyproto:tu-dresden.de
+[crates-link]: https://crates.io/crates/polyproto
+[docs]: https://docs.polyphony.chat/Protocol%20Specifications/core/
+[overview]: https://docs.polyphony.chat/Overviews/core/
+
 */
 
 #![forbid(unsafe_code)]
@@ -96,6 +138,14 @@ request routes and methods through the exported `static` `Route`s.
     missing_copy_implementations,
     clippy::todo
 )]
+
+#[cfg(all(
+    target_arch = "wasm32",
+    feature = "_wasm_bindgen",
+    not(feature = "__no_wee_alloc")
+))]
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 /// The OID for the `domainComponent` RDN
 pub const OID_RDN_DOMAIN_COMPONENT: &str = "0.9.2342.19200300.100.1.25";
@@ -109,7 +159,7 @@ pub const OID_RDN_UID: &str = "0.9.2342.19200300.100.1.1";
 use certs::Target;
 use errors::base::ConstraintError;
 
-#[cfg(feature = "reqwest")]
+#[cfg(any(feature = "reqwest", feature = "types"))]
 /// Ready-to-use API routes, implemented using `reqwest`
 pub mod api;
 /// Generic polyproto certificate types and traits.
@@ -117,22 +167,33 @@ pub mod certs;
 /// Error types used in this crate
 pub mod errors;
 /// polyproto gateway server connection
+#[cfg(all(feature = "gateway", feature = "reqwest"))]
 pub mod gateway;
 /// Generic polyproto public- and private key traits.
 pub mod key;
 /// Generic polyproto signature traits.
 pub mod signature;
-#[cfg(feature = "types")]
 /// Types used in polyproto and the polyproto HTTP/REST APIs
 pub mod types;
+
+#[cfg(all(target_arch = "wasm32", feature = "_wasm_bindgen"))]
+/// 🚧 Under construction! 👷 Module for exporting polyproto to JS/TS.
+pub mod wasm_bindgen;
 
 mod constraints;
 
 pub use der;
 pub use spki;
-#[cfg(feature = "reqwest")]
 pub use url;
 pub use x509_cert::name::*;
+
+#[cfg(feature = "types")]
+pub(crate) mod sealer {
+    /// > Ferri-Stik: An adhesive as strong as `rustc`!
+    ///
+    /// Look up "sealed trait pattern rust" to learn more.
+    pub trait Glue {}
+}
 
 /// Types implementing [Constrained] can be validated to be well-formed.
 ///
@@ -160,17 +221,19 @@ pub use x509_cert::name::*;
 /// The password "123" might be well-formed, as in, it meets the validation criteria specified by
 /// the system. However, this makes no implications about "123" being the correct password for a
 /// given user account.
+// FIXME: Hi! If you are reading this: Yes, I am aware that this is not optimal. I am currently
+// in the prototyping phase of the project and this works well enough. It will be made more sophisticated
+// in the future - perhaps, it starts with you reading this message?
 pub trait Constrained {
     /// Perform validation on the type, returning an error if the type is not well-formed.
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError>;
 }
 
 #[cfg(test)]
+#[cfg(not(tarpaulin_include))]
 pub(crate) mod testing_utils {
+
     pub(crate) fn init_logger() {
-        if std::env::var("RUST_LOG").is_err() {
-            std::env::set_var("RUST_LOG", "trace");
-        }
         env_logger::builder()
             .filter_module("crate", log::LevelFilter::Trace)
             .try_init()

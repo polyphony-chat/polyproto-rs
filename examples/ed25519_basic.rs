@@ -1,6 +1,6 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 // Example implementation of polyproto's signature and key traits for ed25519-dalek.
 // This example is not complete and should not be copy-pasted into a production environment without
@@ -22,6 +22,10 @@ fn main() {
     let priv_key = Ed25519PrivateKey::gen_keypair(&mut csprng);
     println!("Private Key is: {:?}", priv_key.key.to_bytes());
     println!("Public Key is: {:?}", priv_key.public_key.key.to_bytes());
+    println!(
+        "Public Key OID is: {:?}",
+        priv_key.public_key.algorithm_identifier()
+    );
     println!();
 
     // Create and sign a message
@@ -75,6 +79,10 @@ impl std::fmt::Display for Ed25519Signature {
 impl Signature for Ed25519Signature {
     // We define the signature type from the ed25519-dalek crate as the associated type.
     type Signature = Ed25519DalekSignature;
+
+    fn as_bytes(&self) -> Vec<u8> {
+        self.as_signature().to_vec()
+    }
 
     // This is straightforward: we return a reference to the signature.
     fn as_signature(&self) -> &Self::Signature {

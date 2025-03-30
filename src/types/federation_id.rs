@@ -4,14 +4,52 @@
 
 use regex::Regex;
 
-use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX};
 use crate::Constrained;
+use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX};
 
 /// The regular expression for a valid `FederationId`.
 pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)$";
+/// The regular expression for a valid domain name.
+pub static REGEX_DOMAIN_NAME: &str = r"\b([a-z0-9-]+(\.[a-z0-9-]+)*)$";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+/// Common types of federation identifiers.
+pub enum Identifer {
+    /// A "domain name", identifying an instance
+    Instance(DomainName),
+    /// A "federation ID", identifying a unique actor
+    FederationId(FederationId),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// Domain names are what identify an instance.
+pub struct DomainName {
+    pub(crate) value: String,
+}
+
+impl DomainName {
+    /// Validates input, then creates a new [DomainName].
+    pub fn new(domain_name: &str) -> Result<Self, ConstraintError> {
+        let regex = Regex::new(REGEX_DOMAIN_NAME).unwrap();
+        if regex.is_match(domain_name) {
+            Ok(Self {
+                value: domain_name.to_string(),
+            })
+        } else {
+            Err(ConstraintError::Malformed(Some(String::from(
+                "Supplied domain name does not match regex",
+            ))))
+        }
+    }
+}
+
+impl std::fmt::Display for DomainName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.value)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// A `FederationId` is a globally unique identifier for an actor in the context of polyproto.
 pub struct FederationId {
     /// Must be unique on each instance.
@@ -67,11 +105,11 @@ impl std::fmt::Display for FederationId {
 #[cfg(feature = "serde")]
 mod serde {
     use serde::de::Visitor;
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
 
-    use crate::errors::ERR_MSG_FEDERATION_ID_REGEX;
+    use crate::errors::{ERR_MSG_DOMAIN_NAME_REGEX, ERR_MSG_FEDERATION_ID_REGEX};
 
-    use super::FederationId;
+    use super::{DomainName, FederationId, Identifer};
 
     struct FidVisitor;
 
@@ -96,6 +134,96 @@ mod serde {
             D: serde::Deserializer<'de>,
         {
             deserializer.deserialize_str(FidVisitor)
+        }
+    }
+
+    impl Serialize for FederationId {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            serializer.serialize_str(&self.to_string())
+        }
+    }
+
+    struct DnVisitor;
+
+    impl Visitor<'_> for DnVisitor {
+        type Value = DomainName;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a valid domain name (please open a bug report if your domain name is valid and still caused this error)")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            DomainName::new(v).map_err(|_| E::custom(ERR_MSG_DOMAIN_NAME_REGEX.to_string()))
+        }
+    }
+
+    impl<'de> Deserialize<'de> for DomainName {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_str(DnVisitor)
+        }
+    }
+
+    impl Serialize for DomainName {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            serializer.serialize_str(&self.to_string())
+        }
+    }
+
+    struct IdVisitor;
+
+    impl Visitor<'_> for IdVisitor {
+        type Value = Identifer;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a valid DomainName or FederationId")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            if let Ok(fid) = FederationId::new(v) {
+                Ok(Identifer::FederationId(fid) as Self::Value)
+            } else if let Ok(dn) = DomainName::new(v) {
+                Ok(Identifer::Instance(dn) as Self::Value)
+            } else {
+                Err(E::custom(
+                    "passed string is neither a valid DomainName nor a valid FederationId",
+                ))
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Identifer {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_str(IdVisitor)
+        }
+    }
+
+    impl Serialize for Identifer {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            match self {
+                Identifer::Instance(domain_name) => domain_name.serialize(serializer),
+                Identifer::FederationId(federation_id) => federation_id.serialize(serializer),
+            }
         }
     }
 }

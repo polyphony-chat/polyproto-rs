@@ -2,10 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-mod challenge_string;
 mod federation_id;
+mod rawr;
 mod service;
 
+use crate::Constrained;
 use crate::certs::Target;
 use crate::errors::ConstraintError;
-use crate::Constrained;

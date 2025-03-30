@@ -1,21 +1,24 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use der::asn1::Uint;
 use der::{Decode, Encode};
+use log::trace;
 use spki::AlgorithmIdentifierOwned;
+use x509_cert::TbsCertificate;
 use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
-use x509_cert::name::Name;
+use x509_cert::name::{Name, RdnSequence};
 use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
-use x509_cert::TbsCertificate;
 
+use crate::Constrained;
+#[cfg(feature = "reqwest")]
+use crate::api::{HttpClient, core::WellKnown};
 use crate::errors::CertificateConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
-use crate::Constrained;
 
 use super::capabilities::Capabilities;
 use super::idcsr::IdCsr;
@@ -43,15 +46,15 @@ use super::{PublicKeyInfo, Target};
 /// `TryFrom<IdCertTbs<T>> for TbsCertificateInner<P>`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdCertTbs<S: Signature, P: PublicKey<S>> {
-    /// The certificates' serial number, as issued by the Certificate Authority.
+    /// The certificates' serial number, as issued by the Certificate Authority. Unique per home server.
     pub serial_number: Uint,
     /// The signature algorithm used by the Certificate Authority to sign this certificate.
     pub signature_algorithm: AlgorithmIdentifierOwned,
-    /// X.501 name, identifying the issuer of the certificate.
+    /// A polyproto Distinguished Name (pDN) "issuer", describing the home server that issued the certificate.
     pub issuer: Name,
     /// Validity period of this certificate
     pub validity: Validity,
-    /// X.501 name, identifying the subject (actor) of the certificate.
+    /// A polyproto Distinguished Name (pDN) "subject", describing the actor the certificate is issued to.
     pub subject: Name,
     /// The subjects' public key: [PublicKey].
     pub subject_public_key: P,
@@ -155,6 +158,74 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
         time >= self.validity.not_before.to_unix_duration().as_secs()
             && time <= self.validity.not_after.to_unix_duration().as_secs()
     }
+
+    /// From an [IdCertTbs], retrieve the `issuer` as a [Url].
+    pub fn issuer_url(&self) -> Result<url::Url, url::ParseError> {
+        rdns_to_url(&self.issuer)
+    }
+
+    /// _Sorry for the long name._
+    ///
+    /// Verifies the conditions listed in [section #3.1](https://docs.polyphony.chat/Protocol%20Specifications/core/#31-well-known)
+    /// of the polyproto protocol specification regarding hosting a polyproto server under a different
+    /// domain name than the one visible to the public.
+    ///
+    /// ## Returns
+    ///
+    /// ### `false`, if
+    ///
+    /// - Any of the 5 conditions listed in section #3.1 are found to be violated
+    /// - The server hosting the "visible domain name" is not reachable, but the "actual domain name"
+    ///   server is reachable.
+    /// - Both servers are not reachable
+    ///
+    /// ### `true`, if
+    ///
+    /// - The _magic_ 5 conditions are all met
+    /// - There is no difference between the "visible" and "actual" domain names
+    #[cfg(feature = "reqwest")]
+    pub async fn verify_link_visible_actual_domain_names(&self, client: &HttpClient) -> bool {
+        use log::debug;
+
+        trace!("Retrieving .well-known from issuer {:?}", self.issuer_url());
+        let well_known = match WellKnown::new(
+            client,
+            &match self.issuer_url() {
+                Ok(url) => url,
+                Err(_) => return false,
+            },
+        )
+        .await
+        {
+            Ok(wk) => {
+                trace!("Got well known information");
+                wk
+            }
+            Err(_) => {
+                debug!("Got no well known information!");
+                return false;
+            }
+        };
+        well_known.matches_certificate(self)
+    }
+}
+
+fn rdns_to_url(rdn_sequence: &RdnSequence) -> Result<url::Url, url::ParseError> {
+    use url::Url;
+
+    let mut url_parts = Vec::new();
+    let mut url_str = String::from("https://");
+    for rdn in rdn_sequence.0.iter() {
+        url_parts.push(rdn);
+    }
+    url_parts.reverse();
+    for part in url_parts.iter() {
+        url_str += &part.to_string().split_off(3);
+        url_str += ".";
+    }
+    let _ = url_str.pop();
+    trace!(r#"Trying to parse string "{}" as url::Url..."#, url_str);
+    Url::parse(url_str.trim())
 }
 
 impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
@@ -211,7 +282,7 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<IdCertTbs<S, Q>>
                         "Could not convert serial number: {}",
                         e
                     )),
-                ))
+                ));
             }
         };
 

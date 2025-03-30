@@ -1,6 +1,6 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use spki::AlgorithmIdentifierOwned;
 
@@ -36,5 +36,7 @@ pub trait PublicKey<S: Signature>: PartialEq + Eq + Clone {
         S::algorithm_identifier()
     }
     /// Creates a new [Self] from a [PublicKeyInfo].
-    fn try_from_public_key_info(public_key_info: PublicKeyInfo) -> Result<Self, CertificateConversionError>;
+    fn try_from_public_key_info(
+        public_key_info: PublicKeyInfo,
+    ) -> Result<Self, CertificateConversionError>;
 }

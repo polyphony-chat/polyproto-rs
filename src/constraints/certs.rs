@@ -86,24 +86,25 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCert<S, P> {
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCertTbs<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
         log::trace!(
-            "[IdCertTbs::validate()] validating capabilities for target: {:?}",
-            target
+            "Validating if DER encoding is intact for certificate serial {:?}",
+            self.serial_number
         );
+        match self.clone().to_der() {
+            Ok(der) => der,
+            Err(_) => {
+                log::warn!("{}", crate::errors::ERR_CERTIFICATE_TO_DER_ERROR);
+                return Err(ConstraintError::Malformed(Some(
+                    crate::errors::ERR_CERTIFICATE_TO_DER_ERROR.to_string(),
+                )));
+            }
+        };
+        log::trace!("validating capabilities for target: {:?}", target);
         self.capabilities.validate(target)?;
-        dbg!(self.issuer.to_string());
         self.issuer.validate(Some(Target::HomeServer))?;
         self.subject.validate(target)?;
-        log::trace!(
-            "[IdCertTbs::validate()] checking if domain components of issuer and subject are equal"
-        );
-        log::trace!(
-            "[IdCertTbs::validate()] Issuer: {}",
-            self.issuer.to_string()
-        );
-        log::trace!(
-            "[IdCertTbs::validate()] Subject: {}",
-            self.subject.to_string()
-        );
+        log::trace!("Checking if domain components of issuer and subject are equal");
+        log::trace!("Issuer: {}", self.issuer);
+        log::trace!("Subject: {}", self.subject);
         match equal_domain_components(&self.issuer, &self.subject) {
             true => debug!("Domain components of issuer and subject are equal"),
             false => {
@@ -111,9 +112,10 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCertTbs<S, P> {
                     "{}\nIssuer: {}\nSubject: {}",
                     ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT, &self.issuer, &self.subject
                 );
-                return Err(ConstraintError::Malformed(Some(
-                    ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT.to_string(),
-                )));
+                return Err(ConstraintError::Malformed(Some(format!(
+                    "{}\nIssuer: {}\nSubject: {}",
+                    ERR_MSG_DC_MISMATCH_ISSUER_SUBJECT, &self.issuer, &self.subject
+                ))));
             }
         }
         if let Some(target) = target {

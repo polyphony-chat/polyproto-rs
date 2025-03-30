@@ -1,12 +1,12 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use std::str::FromStr;
 use std::time::Duration;
 
-use der::asn1::{BitString, Uint, UtcTime};
 use der::Encode;
+use der::asn1::{BitString, Uint, UtcTime};
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
@@ -15,9 +15,9 @@ use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
+use x509_cert::Certificate;
 use x509_cert::name::RdnSequence;
 use x509_cert::time::{Time, Validity};
-use x509_cert::Certificate;
 
 /// The following example uses the same setup as in ed25519_basic.rs, but in its main method, it
 /// creates a certificate signing request (CSR) and writes it to a file. The CSR is created from a
@@ -97,6 +97,10 @@ impl std::fmt::Display for Ed25519Signature {
 impl Signature for Ed25519Signature {
     // We define the signature type from the ed25519-dalek crate as the associated type.
     type Signature = Ed25519DalekSignature;
+
+    fn as_bytes(&self) -> Vec<u8> {
+        self.as_signature().to_vec()
+    }
 
     // This is straightforward: we return a reference to the signature.
     fn as_signature(&self) -> &Self::Signature {
@@ -213,7 +217,10 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
     #[cfg(not(tarpaulin_include))]
     fn try_from_public_key_info(
         public_key_info: PublicKeyInfo,
-    ) -> std::result::Result<Ed25519PublicKey, polyproto::errors::composite::CertificateConversionError> {
+    ) -> std::result::Result<
+        Ed25519PublicKey,
+        polyproto::errors::composite::CertificateConversionError,
+    > {
         let mut key_vec = public_key_info.public_key_bitstring.raw_bytes().to_vec();
         key_vec.resize(32, 0);
         let signature_array: [u8; 32] = {

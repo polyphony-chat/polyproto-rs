@@ -25,7 +25,7 @@ pub enum InvalidCert {
 /// Errors related to Public Keys and Signatures
 pub enum PublicKeyError {
     #[error("The signature does not match the data")]
-    /// The signature does not match the data
+    /// The signature does not match the data or the signature is malformed
     BadSignature,
     #[error("The provided PublicKeyInfo could not be made into a PublicKey")]
     /// The provided PublicKey is invalid
@@ -33,7 +33,7 @@ pub enum PublicKeyError {
 }
 
 #[derive(Error, Debug, PartialEq, Clone)]
-/// Errors that can occur when converting between certificate types
+/// Errors that can occur when converting between certificate-related types
 pub enum CertificateConversionError {
     #[error(transparent)]
     /// The constraints of the source or target types were met
@@ -73,6 +73,23 @@ pub enum RequestError {
     #[error(transparent)]
     /// The URL could not be parsed
     UrlError(#[from] url::ParseError),
+    /// Received a status code that indicates something other than success.
+    #[error("Received status code {:?}, expected any of {:?}", received, expected)]
+    StatusCode {
+        received: http::StatusCode,
+        expected: Vec<http::StatusCode>,
+    },
+    #[error("{reason}")]
+    Custom { reason: String },
+}
+
+#[cfg(feature = "reqwest")]
+impl From<InvalidInput> for RequestError {
+    fn from(value: InvalidInput) -> Self {
+        Self::Custom {
+            reason: value.to_string(),
+        }
+    }
 }
 
 impl From<der::Error> for CertificateConversionError {

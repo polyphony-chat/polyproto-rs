@@ -1,6 +1,6 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use der::Length;
 use regex::Regex;
@@ -10,7 +10,7 @@ use crate::certs::capabilities::{Capabilities, KeyUsage};
 use crate::certs::idcert::IdCert;
 use crate::certs::idcerttbs::IdCertTbs;
 use crate::certs::idcsr::{IdCsr, IdCsrInner};
-use crate::certs::{equal_domain_components, SessionId, Target};
+use crate::certs::{SessionId, Target, equal_domain_components};
 use crate::errors::ConstraintError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
@@ -32,9 +32,9 @@ mod name_constraints {
 
     use x509_cert::name::Name;
 
+    use crate::Constrained;
     use crate::certs::Target;
     use crate::testing_utils::init_logger;
-    use crate::Constrained;
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
