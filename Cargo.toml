@@ -50,7 +50,7 @@ tokio = { version = "1.44.1", features = ["macros", "sync", "time", "rt"] }
 webpki-roots = "0.26.8"
 futures-util = "0.3.31"
 urlencoding = "2.1.3"
-ws_stream_wasm = { version = "*", optional = true }
+ws_stream_wasm = { version = "0.7.4", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = { version = "0.2.100", optional = true }
