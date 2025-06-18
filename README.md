@@ -6,6 +6,7 @@
 [![Discord]][Discord-invite]
 [![Build][build-shield]][build-url]
 [![Coverage][coverage-shield]][coverage-url]
+[![FAQ-shield]][FAQ]
 
 Crate supplying (generic) Rust types and traits to quickly get a
 [polyproto](https://docs.polyphony.chat/Protocol%20Specifications/core/) implementation up and
@@ -111,3 +112,5 @@ of this project.
 [crates-link]: https://crates.io/crates/polyproto
 [docs]: https://docs.polyphony.chat/Protocol%20Specifications/core/
 [overview]: https://docs.polyphony.chat/Overviews/core/
+[FAQ-shield]: https://img.shields.io/badge/Frequently_Asked_Questions_(FAQ)-ff62bd
+[FAQ]: https://github.com/polyphony-chat/.github/blob/main/FAQ.md
