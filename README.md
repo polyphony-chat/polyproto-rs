@@ -89,6 +89,13 @@ The gateway handles establishing a connection to the server, sending regular hea
 
 Apart from the Hello payload, library consumers can easily get access to all messages received from the gateway by calling `subscribe()` on the internal `tokio::sync::watch::Sender<GatewayMessage>`. This means that this crate handles only the bare necessities of connecting to the gateway, and that you are free to handle incoming messages however you would like to. Our `GatewayMessage` type is `.into()` and `From::<>`-compatible with `tokio_tungstenite::tungstenite::Message`, so that you are not locked into using our message types, should you not want that.
 
+## `sqlx` Compatibility
+
+The `sqlx_postgres` feature adds `sqlx` PostgreSQL support for some types offered by this crate.
+
+For development purposes, if you'd like to `cargo test` this crate, you will have to provide a
+`DATABASE_URL`, just as sqlx orders you to do.
+
 ## Versioning and MSRV
 
 Semver v2.0 is used for the versioning scheme for this crate.
@@ -112,5 +119,3 @@ of this project.
 [crates-link]: https://crates.io/crates/polyproto
 [docs]: https://docs.polyphony.chat/Protocol%20Specifications/core/
 [overview]: https://docs.polyphony.chat/Overviews/core/
-[FAQ-shield]: https://img.shields.io/badge/Frequently_Asked_Questions_(FAQ)-ff62bd
-[FAQ]: https://github.com/polyphony-chat/.github/blob/main/FAQ.md

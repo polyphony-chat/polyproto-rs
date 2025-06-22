@@ -124,6 +124,16 @@ impl From<u128> for SerialNumber {
     }
 }
 
+impl std::fmt::Display for SerialNumber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let converted_string = String::from_utf8(
+            hex::decode(<Self as ToString>::to_string(self)).map_err(|_| core::fmt::Error {})?,
+        )
+        .map_err(|_| core::fmt::Error {})?;
+        f.write_str(&converted_string)
+    }
+}
+
 #[cfg(feature = "serde")]
 mod serde_support {
     use serde::de::Visitor;
@@ -179,6 +189,37 @@ mod serde_support {
     }
 }
 
+#[cfg(feature = "sqlx_postgres")]
+mod sqlx_postgres_support {
+    use super::*;
+    impl sqlx::Type<sqlx::Postgres> for SerialNumber {
+        fn type_info() -> <sqlx::Postgres as sqlx::Database>::TypeInfo {
+            <&str as sqlx::Type<sqlx::Postgres>>::type_info()
+        }
+    }
+
+    impl<'q> sqlx::Encode<'q, sqlx::Postgres> for SerialNumber {
+        fn encode_by_ref(
+            &self,
+            buf: &mut <sqlx::Postgres as sqlx::Database>::ArgumentBuffer<'q>,
+        ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
+            <String as sqlx::Encode<'q, sqlx::Postgres>>::encode_by_ref(&self.to_string(), buf)
+        }
+    }
+
+    impl<'r> sqlx::Decode<'r, sqlx::Postgres> for SerialNumber {
+        fn decode(
+            value: <sqlx::Postgres as sqlx::Database>::ValueRef<'r>,
+        ) -> Result<Self, sqlx::error::BoxDynError> {
+            let string = value.as_str()?;
+            let number = string
+                .parse::<u128>()
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+            Ok(Self::from(number))
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use log::trace;
@@ -187,6 +228,52 @@ mod test {
     use crate::testing_utils::init_logger;
 
     use super::SerialNumber;
+
+    #[cfg(feature = "sqlx_postgres")]
+    async fn test_sqlx_roundtrip_for_value(pool: &sqlx::PgPool, value: u128) {
+        let serial_number = SerialNumber::from(value);
+        let stringed = value.to_string();
+
+        sqlx::query("INSERT INTO serial_number_test (serial_number) VALUES ($1)")
+            .bind(&stringed)
+            .execute(pool)
+            .await
+            .unwrap();
+
+        let result: (SerialNumber,) =
+            sqlx::query_as("SELECT serial_number FROM serial_number_test LIMIT 1")
+                .fetch_one(pool)
+                .await
+                .unwrap();
+
+        assert_eq!(result.0, serial_number);
+        assert_eq!(result.0.try_as_u128().unwrap(), value);
+
+        sqlx::query("DELETE FROM serial_number_test")
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+
+    #[cfg(feature = "sqlx_postgres")]
+    #[sqlx::test]
+    async fn test_sqlx_roundtrip(pool: sqlx::PgPool) -> sqlx::Result<()> {
+        init_logger();
+
+        // Create a temporary table for the test
+        sqlx::query(
+            "CREATE TABLE serial_number_test (id SERIAL PRIMARY KEY, serial_number TEXT NOT NULL);",
+        )
+        .execute(&pool)
+        .await?;
+
+        test_sqlx_roundtrip_for_value(&pool, 0).await;
+        test_sqlx_roundtrip_for_value(&pool, 1).await;
+        test_sqlx_roundtrip_for_value(&pool, 1234567890).await;
+        test_sqlx_roundtrip_for_value(&pool, u128::MAX).await;
+
+        Ok(())
+    }
 
     #[test]
     fn serialize_deserialize() {
