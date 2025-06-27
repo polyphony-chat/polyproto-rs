@@ -10,3 +10,4 @@ cert.der
 .vscode/ltex.*
 pkg/
 wasm-pack.log
+.env
