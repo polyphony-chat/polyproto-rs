@@ -260,7 +260,7 @@ mod test {
     fn test_convert_serial_number() {
         let biguint = Uint::new(&[10u8, 240u8]).unwrap();
         assert_eq!(biguint.as_bytes(), &[10u8, 240u8]);
-        let serial_number = SerialNumber::new(biguint.as_bytes()).unwrap();
+        let serial_number = SerialNumber::from_bytes_be(biguint.as_bytes()).unwrap();
         assert_eq!(
             strip_leading_zeroes(serial_number.as_bytes()),
             biguint.as_bytes()
@@ -268,7 +268,7 @@ mod test {
 
         let biguint = Uint::new(&[240u8, 10u8]).unwrap();
         assert_eq!(biguint.as_bytes(), &[240u8, 10u8]);
-        let serial_number = SerialNumber::new(biguint.as_bytes()).unwrap();
+        let serial_number = SerialNumber::from_bytes_be(biguint.as_bytes()).unwrap();
         assert_eq!(
             strip_leading_zeroes(serial_number.as_bytes()),
             biguint.as_bytes()

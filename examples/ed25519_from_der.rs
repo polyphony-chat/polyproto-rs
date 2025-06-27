@@ -5,13 +5,14 @@
 use std::str::FromStr;
 use std::time::Duration;
 
-use der::asn1::{BitString, Uint, UtcTime};
+use der::asn1::{BitString, UtcTime};
 use ed25519_dalek::{Signature as Ed25519DalekSignature, Signer, SigningKey, VerifyingKey};
 use polyproto::certs::capabilities::Capabilities;
 use polyproto::certs::idcert::IdCert;
 use polyproto::certs::{PublicKeyInfo, Target};
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
+use polyproto::types::x509_cert::SerialNumber;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 use x509_cert::name::RdnSequence;
@@ -26,6 +27,7 @@ use x509_cert::time::{Time, Validity};
 /// ```sh
 /// openssl req -in cert.csr -verify -inform der
 /// ```
+#[allow(clippy::unwrap_used)]
 fn main() {
     let mut csprng = rand::rngs::OsRng;
     let priv_key_actor = Ed25519PrivateKey::gen_keypair(&mut csprng);
@@ -56,7 +58,7 @@ fn main() {
     let cert = IdCert::from_actor_csr(
         csr,
         &priv_key_home_server,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        SerialNumber::from_bytes_be(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         Validity {
             not_before: Time::UtcTime(

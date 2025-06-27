@@ -17,6 +17,7 @@ use polyproto::certs::idcsr::IdCsr;
 use polyproto::errors::composite::CertificateConversionError;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
+use polyproto::types::x509_cert::SerialNumber;
 use polyproto::types::{
     DomainName, FederationId, Identifer, ResourceAccessProperties, ResourceInformation,
 };
@@ -61,7 +62,7 @@ pub fn actor_id_cert(cn: &str) -> IdCert<Ed25519Signature, Ed25519PublicKey> {
     IdCert::from_actor_csr(
         actor_csr(cn, &priv_key),
         &priv_key,
-        Uint::new(&[8]).unwrap(),
+        SerialNumber::from_bytes_be(&[8]).unwrap(),
         home_server_subject(),
         default_validity(),
     )
@@ -86,7 +87,7 @@ pub fn home_server_id_cert() -> IdCert<Ed25519Signature, Ed25519PublicKey> {
     IdCert::from_ca_csr(
         home_server_csr(&priv_key),
         &priv_key,
-        Uint::new(&[8]).unwrap(),
+        SerialNumber::from_bytes_be(&[8]).unwrap(),
         home_server_subject(),
         default_validity(),
     )

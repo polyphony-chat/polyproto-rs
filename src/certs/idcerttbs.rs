@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use der::asn1::Uint;
 use der::{Decode, Encode};
 use log::trace;
 use spki::AlgorithmIdentifierOwned;
@@ -10,7 +9,6 @@ use x509_cert::TbsCertificate;
 use x509_cert::certificate::{Profile, TbsCertificateInner};
 use x509_cert::ext::Extensions;
 use x509_cert::name::{Name, RdnSequence};
-use x509_cert::serial_number::SerialNumber;
 use x509_cert::time::Validity;
 
 use crate::Constrained;
@@ -19,6 +17,7 @@ use crate::api::{HttpClient, core::WellKnown};
 use crate::errors::CertificateConversionError;
 use crate::key::PublicKey;
 use crate::signature::Signature;
+use crate::types::x509_cert::SerialNumber;
 
 use super::capabilities::Capabilities;
 use super::idcsr::IdCsr;
@@ -47,7 +46,7 @@ use super::{PublicKeyInfo, Target};
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct IdCertTbs<S: Signature, P: PublicKey<S>> {
     /// The certificates' serial number, as issued by the Certificate Authority. Unique per home server.
-    pub serial_number: Uint,
+    pub serial_number: SerialNumber,
     /// The signature algorithm used by the Certificate Authority to sign this certificate.
     pub signature_algorithm: AlgorithmIdentifierOwned,
     /// A polyproto Distinguished Name (pDN) "issuer", describing the home server that issued the certificate.
@@ -76,7 +75,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     /// for the usage context of an actor certificate.
     pub fn from_actor_csr(
         id_csr: IdCsr<S, P>,
-        serial_number: Uint,
+        serial_number: SerialNumber,
         signature_algorithm: AlgorithmIdentifierOwned,
         issuer: Name,
         validity: Validity,
@@ -107,7 +106,7 @@ impl<S: Signature, P: PublicKey<S>> IdCertTbs<S, P> {
     /// for the usage context of a home server certificate.
     pub fn from_ca_csr(
         id_csr: IdCsr<S, P>,
-        serial_number: Uint,
+        serial_number: SerialNumber,
         signature_algorithm: AlgorithmIdentifierOwned,
         issuer: Name,
         validity: Validity,
@@ -253,7 +252,9 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
             value.subject_public_key_info,
         ))?;
 
-        let serial_number = Uint::new(value.serial_number.as_bytes())?;
+        let serial_number = SerialNumber(::x509_cert::serial_number::SerialNumber::new(
+            value.serial_number.as_bytes(),
+        )?);
 
         Ok(Self {
             serial_number,
@@ -274,7 +275,9 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<IdCertTbs<S, Q>>
     type Error = CertificateConversionError;
 
     fn try_from(value: IdCertTbs<S, Q>) -> Result<Self, Self::Error> {
-        let serial_number = match SerialNumber::<P>::new(value.serial_number.as_bytes()) {
+        let serial_number = match ::x509_cert::serial_number::SerialNumber::<P>::new(
+            value.serial_number.as_bytes(),
+        ) {
             Ok(sernum) => sernum,
             Err(e) => {
                 return Err(CertificateConversionError::InvalidInput(

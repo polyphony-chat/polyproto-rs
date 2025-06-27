@@ -7,6 +7,7 @@ use polyproto::certs::idcert::IdCert;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use polyproto::types::der::asn1::Uint;
+use polyproto::types::x509_cert::SerialNumber;
 
 use crate::common::{self, Ed25519Signature, init_logger};
 use crate::test_all_platforms;
@@ -27,9 +28,7 @@ fn verify_cache_signature() {
         not_valid_after: u64::MAX,
         cache_signature: private_key
             .sign(
-                (u64::try_from(Uint(some_cert.id_cert_tbs.serial_number.clone()))
-                    .unwrap()
-                    .to_string()
+                (some_cert.id_cert_tbs.serial_number.clone().to_string()
                     + &0.to_string()
                     + &u64::MAX.to_string()
                     + "")
@@ -42,9 +41,7 @@ fn verify_cache_signature() {
     public_key
         .verify_signature(
             &Ed25519Signature::try_from_hex(&signature).unwrap(),
-            (u64::try_from(Uint(some_cert.id_cert_tbs.serial_number))
-                .unwrap()
-                .to_string()
+            (some_cert.id_cert_tbs.serial_number.to_string()
                 + &0.to_string()
                 + &u64::MAX.to_string()
                 + "")
@@ -64,14 +61,7 @@ test_all_platforms! {
         let vkey = skey.public_key.clone();
         let cert = common::actor_id_cert("skyrina");
         let serial_number =
-            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
-                polyproto::errors::InvalidCert::InvalidProperties(
-                    polyproto::errors::ConstraintError::Malformed(Some(format!(
-                        "Serial number is not valid: {}",
-                        e
-                    ))),
-                )
-            }).unwrap();
+            cert.clone().id_cert_tbs.serial_number;
 
         let cacheable_cert = CacheableIdCert {
             cert: cert.to_pem(der::pem::LineEnding::LF).unwrap().to_string(),
@@ -94,15 +84,7 @@ test_all_platforms! {
         let vkey = skey.public_key.clone();
         let cert = common::actor_id_cert("skyrina");
         let serial_number =
-            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
-                polyproto::errors::InvalidCert::InvalidProperties(
-                    polyproto::errors::ConstraintError::Malformed(Some(format!(
-                        "Serial number is not valid: {}",
-                        e
-                    ))),
-                )
-            }).unwrap();
-
+            cert.clone().id_cert_tbs.serial_number;
         let cacheable_cert = CacheableIdCert {
             cert: cert.to_pem(der::pem::LineEnding::LF).unwrap().to_string(),
             invalidated_at: None,
@@ -124,15 +106,8 @@ test_all_platforms! {
         let vkey = skey.public_key.clone();
         let mut cert = common::actor_id_cert("skyrina");
         let serial_number =
-            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
-                polyproto::errors::InvalidCert::InvalidProperties(
-                    polyproto::errors::ConstraintError::Malformed(Some(format!(
-                        "Serial number is not valid: {}",
-                        e
-                    ))),
-                )
-            }).unwrap();
-        cert.id_cert_tbs.serial_number = der::asn1::Uint::new(u128::MAX.to_be_bytes().as_slice()).unwrap();
+            cert.clone().id_cert_tbs.serial_number;
+        cert.id_cert_tbs.serial_number = SerialNumber::from_bytes_be(&[]).unwrap();
         let cacheable_cert = CacheableIdCert {
             cert: cert.to_pem(der::pem::LineEnding::LF).unwrap().to_string(),
             invalidated_at: None,
@@ -152,14 +127,7 @@ test_all_platforms! {
         let vkey = skey.public_key.clone();
         let cert = common::actor_id_cert("skyrina");
         let serial_number =
-            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
-                polyproto::errors::InvalidCert::InvalidProperties(
-                    polyproto::errors::ConstraintError::Malformed(Some(format!(
-                        "Serial number is not valid: {}",
-                        e
-                    ))),
-                )
-            }).unwrap();
+            cert.clone().id_cert_tbs.serial_number;
         let cacheable_cert = CacheableIdCert {
             cert: cert.to_pem(der::pem::LineEnding::LF).unwrap().to_string(),
             invalidated_at: None,
@@ -179,14 +147,7 @@ test_all_platforms! {
         let vkey = skey.public_key.clone();
         let cert = common::actor_id_cert("skyrina");
         let serial_number =
-            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
-                polyproto::errors::InvalidCert::InvalidProperties(
-                    polyproto::errors::ConstraintError::Malformed(Some(format!(
-                        "Serial number is not valid: {}",
-                        e
-                    ))),
-                )
-            }).unwrap();
+            cert.clone().id_cert_tbs.serial_number;
         let cacheable_cert = CacheableIdCert {
             cert: cert.to_pem(der::pem::LineEnding::LF).unwrap().to_string() + "lalalalalalala:3:3:##:3:3;3::#:3",
             invalidated_at: None,
@@ -204,16 +165,9 @@ test_all_platforms! {
         let skey = common::Ed25519PrivateKey::gen_keypair(&mut rand::rngs::OsRng);
         let vkey = skey.public_key.clone();
         let csr = common::actor_csr("skyrina", &skey);
-        let cert = IdCert::from_actor_csr(csr, &skey, Uint::from(8).into(), common::home_server_subject(), common::default_validity()).unwrap();
+        let cert = IdCert::from_actor_csr(csr, &skey, SerialNumber::from_bytes_be(&8u8.to_be_bytes()).unwrap(), common::home_server_subject(), common::default_validity()).unwrap();
         let serial_number =
-            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
-                polyproto::errors::InvalidCert::InvalidProperties(
-                    polyproto::errors::ConstraintError::Malformed(Some(format!(
-                        "Serial number is not valid: {}",
-                        e
-                    ))),
-                )
-            }).unwrap();
+            cert.clone().id_cert_tbs.serial_number;
         let cacheable_cert = CacheableIdCert {
             cert: cert.to_pem(der::pem::LineEnding::LF).unwrap().to_string(),
             invalidated_at: None,
@@ -231,16 +185,9 @@ test_all_platforms! {
         let skey = common::Ed25519PrivateKey::gen_keypair(&mut rand::rngs::OsRng);
         let _vkey = skey.public_key.clone();
         let csr = common::actor_csr("skyrina", &skey);
-        let cert = IdCert::from_actor_csr(csr, &skey, Uint::from(8).into(), common::home_server_subject(), common::default_validity()).unwrap();
+        let cert = IdCert::from_actor_csr(csr, &skey, SerialNumber::from_bytes_be(&8u8.to_be_bytes()).unwrap(), common::home_server_subject(), common::default_validity()).unwrap();
         let serial_number =
-            u64::try_from(Uint(cert.clone().id_cert_tbs.serial_number)).map_err(|e| {
-                polyproto::errors::InvalidCert::InvalidProperties(
-                    polyproto::errors::ConstraintError::Malformed(Some(format!(
-                        "Serial number is not valid: {}",
-                        e
-                    ))),
-                )
-            }).unwrap();
+            cert.clone().id_cert_tbs.serial_number;
         let cacheable_cert = CacheableIdCert {
             cert: cert.clone().to_pem(der::pem::LineEnding::LF).unwrap().to_string(),
             invalidated_at: None,

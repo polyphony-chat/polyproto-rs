@@ -30,6 +30,8 @@ pub enum PublicKeyError {
     #[error("The provided PublicKeyInfo could not be made into a PublicKey")]
     /// The provided PublicKey is invalid
     BadPublicKeyInfo,
+    #[error("Another error occured: {reason}")]
+    Other { reason: &'static str },
 }
 
 #[derive(Error, Debug, PartialEq, Clone)]

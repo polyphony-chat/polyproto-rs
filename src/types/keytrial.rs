@@ -6,8 +6,7 @@ use crate::certs::idcert::IdCert;
 use crate::errors::PublicKeyError;
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
-
-use super::der::asn1::Uint;
+use crate::types::der::asn1::Uint;
 
 #[cfg_attr(feature = "serde", serde_with::serde_as)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -19,7 +18,7 @@ pub struct KeyTrialResponse {
     pub signature: String,
     #[cfg_attr(feature = "serde", serde_as(as = "DisplayFromStr"))]
     /// The serial number of the ID-Cert corresponding to the private identity key used to sign the key trial string.
-    pub serial_number: u64,
+    pub serial_number: Uint,
 }
 
 #[cfg_attr(feature = "serde", serde_with::serde_as)]
@@ -79,8 +78,7 @@ impl KeyTrial {
         let signature = signing_key.sign(self.trial.as_bytes());
         Ok(KeyTrialResponse {
             signature: signature.as_hex(),
-            serial_number: u64::try_from(Uint(cert.id_cert_tbs.serial_number.clone()))
-                .map_err(|_| PublicKeyError::BadPublicKeyInfo)?,
+            serial_number: cert.id_cert_tbs.serial_number.clone().into(),
         })
     }
 }

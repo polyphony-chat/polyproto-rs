@@ -17,6 +17,7 @@ use crate::errors::{
 };
 use crate::key::{PrivateKey, PublicKey};
 use crate::signature::Signature;
+use crate::types::x509_cert::SerialNumber;
 
 use super::Target;
 use super::idcerttbs::IdCertTbs;
@@ -77,7 +78,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     pub fn from_ca_csr(
         id_csr: IdCsr<S, P>,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
-        serial_number: Uint,
+        serial_number: SerialNumber,
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, CertificateConversionError> {
@@ -124,7 +125,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
     pub fn from_actor_csr(
         id_csr: IdCsr<S, P>,
         signing_key: &impl PrivateKey<S, PublicKey = P>,
-        serial_number: Uint,
+        serial_number: SerialNumber,
         issuer: Name,
         validity: Validity,
     ) -> Result<Self, CertificateConversionError> {

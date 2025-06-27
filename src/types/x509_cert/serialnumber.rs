@@ -6,7 +6,8 @@ use std::ops::{Deref, DerefMut};
 
 use log::trace;
 
-use crate::errors::{CertificateConversionError, InvalidInput};
+use crate::errors::{CertificateConversionError, ConstraintError, InvalidInput};
+use crate::types::der::asn1::Uint;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Wrapper type around [x509_cert::serial_number::SerialNumber], providing serde support, if the
@@ -34,7 +35,7 @@ use crate::errors::{CertificateConversionError, InvalidInput};
 ///
 /// The serde de-/serialization implementation for [`SerialNumber`] expects a byte slice representing
 /// a positive integer.
-pub struct SerialNumber(::x509_cert::serial_number::SerialNumber);
+pub struct SerialNumber(pub(crate) ::x509_cert::serial_number::SerialNumber);
 
 impl From<::x509_cert::serial_number::SerialNumber> for SerialNumber {
     fn from(inner: ::x509_cert::serial_number::SerialNumber) -> Self {
@@ -56,6 +57,17 @@ impl Deref for SerialNumber {
     }
 }
 
+impl TryFrom<Uint> for SerialNumber {
+    type Error = ConstraintError;
+
+    fn try_from(value: Uint) -> Result<Self, Self::Error> {
+        Ok(SerialNumber(
+            x509_cert::serial_number::SerialNumber::new(value.as_bytes())
+                .map_err(|e| ConstraintError::Malformed(Some(e.to_string())))?,
+        ))
+    }
+}
+
 impl DerefMut for SerialNumber {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
@@ -65,8 +77,8 @@ impl DerefMut for SerialNumber {
 impl SerialNumber {
     /// Create a new [`SerialNumber`] from a byte slice.
     ///
-    /// The byte slice **must** represent a positive integer.
-    pub fn new(bytes: &[u8]) -> Result<Self, x509_cert::der::Error> {
+    /// The byte slice **must** be big endian and represent a positive integer.
+    pub fn from_bytes_be(bytes: &[u8]) -> Result<Self, x509_cert::der::Error> {
         x509_cert::serial_number::SerialNumber::new(bytes).map(Into::into)
     }
 
@@ -109,6 +121,33 @@ impl SerialNumber {
     }
 }
 
+impl TryFrom<SerialNumber> for der::asn1::Uint {
+    fn try_from(value: SerialNumber) -> Result<Self, Self::Error> {
+        Self::new(value.0.as_bytes())
+    }
+
+    type Error = der::Error;
+}
+
+impl From<SerialNumber> for crate::types::der::asn1::Uint {
+    #[allow(clippy::expect_used)]
+    // Uints have up to 256 MiB of storage space, whereas SerialNumbers are limited to 160 bytes
+    // in length. This conversion should never fail.
+    //
+    // See: <https://docs.rs/der/latest/der/struct.Length.html#:~:text=currently%20supported%3A%20256-,mib,-Source>
+    fn from(value: SerialNumber) -> Self {
+        der::asn1::Uint::new(value.0.as_bytes())
+            .map(|v| v.into())
+            .expect("This should never happen")
+    }
+}
+
+impl std::fmt::Display for SerialNumber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&Uint::from(self.clone()).to_string())
+    }
+}
+
 impl TryFrom<SerialNumber> for u128 {
     type Error = CertificateConversionError;
 
@@ -120,7 +159,8 @@ impl TryFrom<SerialNumber> for u128 {
 impl From<u128> for SerialNumber {
     fn from(value: u128) -> Self {
         // All u128 values are valid serial numbers, so we can unwrap
-        SerialNumber::new(&value.to_be_bytes()).unwrap()
+        #[allow(clippy::unwrap_used)]
+        SerialNumber::from_bytes_be(&value.to_be_bytes()).unwrap()
     }
 }
 
@@ -144,7 +184,7 @@ mod serde_support {
         where
             E: serde::de::Error,
         {
-            SerialNumber::new(v).map_err(serde::de::Error::custom)
+            SerialNumber::from_bytes_be(v).map_err(serde::de::Error::custom)
         }
 
         fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
@@ -156,7 +196,7 @@ mod serde_support {
                 // "Iterate" over the sequence, assuming each element is a byte
                 bytes.push(byte) // Push the byte to the Vec
             }
-            SerialNumber::new(&bytes).map_err(serde::de::Error::custom) // Create a SerialNumber from the Vec
+            SerialNumber::from_bytes_be(&bytes).map_err(serde::de::Error::custom) // Create a SerialNumber from the Vec
         }
     }
 
@@ -180,7 +220,9 @@ mod serde_support {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod test {
+    use der::asn1::Uint;
     use log::trace;
     use serde_json::json;
 
@@ -189,12 +231,83 @@ mod test {
     use super::SerialNumber;
 
     #[test]
+    fn try_from_uint() {
+        init_logger();
+        let serial_number = SerialNumber::from_bytes_be(&2347812387874u128.to_be_bytes()).unwrap();
+        let uint = Uint::new(&2347812387874u128.to_be_bytes()).unwrap();
+        let other_serial =
+            SerialNumber::try_from(crate::types::der::asn1::Uint(uint.clone())).unwrap();
+        dbg!(crate::types::der::asn1::Uint(uint).to_string());
+        assert_eq!(serial_number, other_serial)
+    }
+
+    #[test]
+    fn from_serial_number_for_uint() {
+        let serial_number = SerialNumber::from_bytes_be(&2347812387874u128.to_be_bytes()).unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+
+        // Small natural numbers
+        let serial_number = SerialNumber::from_bytes_be(&0u128.to_be_bytes()).unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+
+        let serial_number = SerialNumber::from_bytes_be(&1u128.to_be_bytes()).unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+
+        let serial_number = SerialNumber::from_bytes_be(&255u128.to_be_bytes()).unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+
+        // Medium-sized natural numbers
+        let serial_number = SerialNumber::from_bytes_be(&65535u128.to_be_bytes()).unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+
+        let serial_number = SerialNumber::from_bytes_be(&4294967295u128.to_be_bytes()).unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+
+        // Large random natural numbers
+        let serial_number =
+            SerialNumber::from_bytes_be(&128253285483725236007410414782089762838u128.to_be_bytes())
+                .unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+
+        let serial_number =
+            SerialNumber::from_bytes_be(&21879077042299220147540107698690186889u128.to_be_bytes())
+                .unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+
+        let serial_number =
+            SerialNumber::from_bytes_be(&54955331587256710244358769277668724413u128.to_be_bytes())
+                .unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+
+        let serial_number =
+            SerialNumber::from_bytes_be(&19245332277226247313033429008138887484u128.to_be_bytes())
+                .unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+
+        let serial_number =
+            SerialNumber::from_bytes_be(&108840297003229100719348976033157371489u128.to_be_bytes())
+                .unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+
+        // Maximum u128 value
+        let serial_number = SerialNumber::from_bytes_be(&u128::MAX.to_be_bytes()).unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+
+        // Insanity
+        let serial_number = SerialNumber::from_bytes_be(&[128; 19]).unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+
+        let serial_number = SerialNumber::from_bytes_be(&[255; 19]).unwrap();
+        let _uint: crate::types::der::asn1::Uint = serial_number.into();
+    }
+
+    #[test]
     fn serialize_deserialize() {
         init_logger();
-        let serial_number = SerialNumber::new(&2347812387874u128.to_be_bytes()).unwrap();
+        let serial_number = SerialNumber::from_bytes_be(&2347812387874u128.to_be_bytes()).unwrap();
         let serialized = json!(serial_number);
         trace!("is_array: {:?}", serialized.is_array());
-        trace!("serialized: {}", serialized);
+        trace!("serialized: {serialized}");
         let deserialized: SerialNumber = serde_json::from_value(serialized).unwrap();
 
         assert_eq!(serial_number, deserialized);
@@ -205,7 +318,7 @@ mod test {
         init_logger();
         let mut val = 0u128;
         loop {
-            let serial_number = SerialNumber::new(&val.to_be_bytes()).unwrap();
+            let serial_number = SerialNumber::from_bytes_be(&val.to_be_bytes()).unwrap();
             let json = json!(serial_number);
             let deserialized: SerialNumber = serde_json::from_value(json).unwrap();
             let u128 = deserialized.try_as_u128().unwrap();
@@ -229,10 +342,10 @@ mod test {
         init_logger();
         let mut val = 1u128;
         loop {
-            let serial_number = SerialNumber::new(&val.to_be_bytes()).unwrap();
+            let serial_number = SerialNumber::from_bytes_be(&val.to_be_bytes()).unwrap();
             let u128 = serial_number.try_as_u128().unwrap();
             assert_eq!(u128, val);
-            trace!("u128: {}", u128);
+            trace!("u128: {u128}");
             if val == u128::MAX {
                 break;
             }
@@ -241,5 +354,13 @@ mod test {
                 None => u128::MAX,
             };
         }
+    }
+
+    #[test]
+    fn hundredsixty_bit_number() {
+        init_logger();
+        let bytes = [3u8; 20];
+        let serial_number = super::SerialNumber::from_bytes_be(&bytes).unwrap();
+        log::debug!("Got serial_number {serial_number:?}");
     }
 }

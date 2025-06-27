@@ -2,10 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use bigdecimal::num_bigint::BigUint;
 use der::{Any, DecodePem};
 use log::{debug, trace};
 use spki::AlgorithmIdentifier;
 
+use crate::Constrained;
 use crate::certs::Target;
 use crate::certs::idcert::IdCert;
 use crate::key::PublicKey;
@@ -144,23 +146,18 @@ impl CacheableIdCert {
                 crate::errors::ConstraintError::Malformed(Some(e.to_string())),
             )
         })?;
-        let serial_number =
-            u64::try_from(Uint(raw_cert.id_cert_tbs.serial_number)).map_err(|e| {
-                crate::errors::InvalidCert::InvalidProperties(
-                    crate::errors::ConstraintError::Malformed(Some(format!(
-                        "Serial number is not valid: {}",
-                        e
-                    ))),
-                )
-            })?;
-        let string_to_check = serial_number.to_string()
+        raw_cert.id_cert_tbs.serial_number.validate(None)?;
+        #[allow(clippy::arithmetic_side_effects)]
+        // Arithmetic side effects on strs and Strings are extremely unlikely.
+        // If the host fails to allocate information for a string, you likely have a bigger issue anyways.
+        let string_to_check = raw_cert.id_cert_tbs.serial_number.to_string()
             + &self.not_valid_before.to_string()
             + &self.not_valid_after.to_string()
             + &self
                 .invalidated_at
                 .map(|v| v.to_string())
                 .unwrap_or("".to_string());
-        trace!("Computed string: {}", string_to_check);
+        debug!("Computed string: {string_to_check}");
         verifying_key
             .verify_signature(
                 &S::try_from_hex(&self.cache_signature).map_err(|e| {

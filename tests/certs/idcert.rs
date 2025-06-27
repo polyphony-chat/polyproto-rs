@@ -16,6 +16,7 @@ use polyproto::certs::{PublicKeyInfo, Target};
 use polyproto::errors::composite::CertificateConversionError;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
+use polyproto::types::x509_cert::SerialNumber;
 use rand::rngs::OsRng;
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SignatureBitStringEncoding};
 use thiserror::Error;
@@ -54,7 +55,7 @@ fn test_create_actor_cert() {
     let cert = IdCert::from_actor_csr(
         csr,
         &priv_key,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        SerialNumber::from_bytes_be(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         default_validity(),
     )
@@ -102,7 +103,7 @@ fn test_create_ca_cert() {
     let cert = IdCert::from_ca_csr(
         csr,
         &priv_key,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        SerialNumber::from_bytes_be(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
         default_validity(),
     )
@@ -153,7 +154,7 @@ fn mismatched_dcs_in_csr_and_cert() {
     let cert = IdCert::from_actor_csr(
         csr,
         &priv_key,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        SerialNumber::from_bytes_be(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         default_validity(),
     )
@@ -185,7 +186,7 @@ fn cert_from_pem() {
     let cert = IdCert::from_actor_csr(
         csr,
         &priv_key_home_server,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        SerialNumber::from_bytes_be(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         default_validity(),
     )
@@ -214,7 +215,7 @@ fn cert_from_pem() {
     let cert = IdCert::from_ca_csr(
         csr,
         &priv_key_home_server,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        SerialNumber::from_bytes_be(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
         default_validity(),
     )
@@ -256,7 +257,7 @@ fn cert_from_der() {
     let cert = IdCert::from_actor_csr(
         csr,
         &priv_key_home_server,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        SerialNumber::from_bytes_be(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         default_validity(),
     )
@@ -288,7 +289,7 @@ fn cert_from_der() {
     let cert = IdCert::from_ca_csr(
         csr,
         &priv_key_home_server,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        SerialNumber::from_bytes_be(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
         default_validity(),
     )
@@ -339,13 +340,13 @@ fn invalid_signature() {
     let cert = IdCert::from_actor_csr(
         csr,
         &priv_key_home_server,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        SerialNumber::from_bytes_be(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("DC=polyphony,DC=chat").unwrap(),
         default_validity(),
     )
     .unwrap();
     let mut other_cert = cert.clone();
-    other_cert.id_cert_tbs.serial_number = Uint::new(&[12, 13, 11]).unwrap();
+    other_cert.id_cert_tbs.serial_number = SerialNumber::from_bytes_be(&[12, 13, 11]).unwrap();
     assert!(other_cert
         .full_verify_actor(
             Time::UtcTime(UtcTime::from_unix_duration(Duration::from_secs(100)).unwrap(),)
@@ -365,14 +366,14 @@ fn invalid_signature() {
     let cert = IdCert::from_ca_csr(
         csr,
         &priv_key_home_server,
-        Uint::new(&8932489u64.to_be_bytes()).unwrap(),
+        SerialNumber::from_bytes_be(&8932489u64.to_be_bytes()).unwrap(),
         RdnSequence::from_str("CN=root,DC=polyphony,DC=chat").unwrap(),
         default_validity(),
     )
     .unwrap();
 
     let mut other_cert = cert.clone();
-    other_cert.id_cert_tbs.serial_number = Uint::new(&[12, 13, 11]).unwrap();
+    other_cert.id_cert_tbs.serial_number = SerialNumber::from_bytes_be(&[12, 13, 11]).unwrap();
     assert!(other_cert
         .full_verify_home_server(
             Time::UtcTime(UtcTime::from_unix_duration(Duration::from_secs(100)).unwrap(),)

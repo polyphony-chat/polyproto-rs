@@ -59,7 +59,7 @@ async fn rotate_server_identity_key() {
     let id_cert = IdCert::from_ca_csr(
         id_csr,
         &home_server_signing_key,
-        Uint::new(9u64.to_be_bytes().as_slice()).unwrap(),
+        SerialNumber::from_bytes_be(&9u8.to_be_bytes()).unwrap(),
         home_server_subject(),
         Validity {
             not_before: x509_cert::time::Time::GeneralTime(
@@ -309,7 +309,7 @@ fn encrypted_pkm(serial: u128) -> EncryptedPkm {
     let key = gen_priv_key();
     let pkm = String::from_utf8_lossy(key.key.as_bytes()).to_string();
     EncryptedPkm {
-        serial_number: SerialNumber::new(&serial.to_be_bytes()).unwrap(),
+        serial_number: SerialNumber::from_bytes_be(&serial.to_be_bytes()).unwrap(),
         key_data: PrivateKeyInfo {
             algorithm: AlgorithmIdentifierOwned::new(
                 ObjectIdentifier::new("0.1.1.2.3.4.5.3.2.43.23.32").unwrap(),
@@ -839,7 +839,7 @@ async fn set_up_redirect() {
     let fid = FederationId::new("xenia@example.com").unwrap();
     let keytrials = KeyTrialResponse {
         signature: "".to_string(),
-        serial_number: 1,
+        serial_number: Uint::new(&1u8.to_be_bytes()).unwrap().into(),
     };
     server.expect(
         Expectation::matching(all_of![
@@ -907,7 +907,7 @@ async fn verify_link_visible_actual_domain_names() {
         )
         .unwrap(),
         keys.get(1).unwrap(),
-        polyproto::types::der::asn1::Uint::from(1).0,
+        SerialNumber::from_bytes_be(&1u8.to_be_bytes()).unwrap(),
         Name::from_str("DC=one,DC=example,DC=com").unwrap(),
         common::default_validity(),
     )
@@ -921,7 +921,7 @@ async fn verify_link_visible_actual_domain_names() {
         )
         .unwrap(),
         keys.get(2).unwrap(),
-        polyproto::types::der::asn1::Uint::from(1).0,
+        SerialNumber::from_bytes_be(&1u8.to_be_bytes()).unwrap(),
         Name::from_str("DC=two,DC=example,DC=com").unwrap(),
         common::default_validity(),
     )
@@ -938,7 +938,7 @@ async fn verify_link_visible_actual_domain_names() {
         )
         .unwrap(),
         keys.get(1).unwrap(),
-        polyproto::types::der::asn1::Uint::from(1).0,
+        SerialNumber::from_bytes_be(&1u8.to_be_bytes()).unwrap(),
         Name::from_str("DC=one,DC=example,DC=com").unwrap(),
         common::default_validity(),
     )
@@ -955,7 +955,7 @@ async fn verify_link_visible_actual_domain_names() {
         )
         .unwrap(),
         keys.get(2).unwrap(),
-        polyproto::types::der::asn1::Uint::from(1).0,
+        SerialNumber::from_bytes_be(&1u8.to_be_bytes()).unwrap(),
         Name::from_str("DC=two,DC=example,DC=com").unwrap(),
         common::default_validity(),
     )
