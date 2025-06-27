@@ -32,7 +32,9 @@ mod registration_required {
             match id_cert.full_verify_home_server(
                 std::time::SystemTime::now()
                     .duration_since(UNIX_EPOCH)
-                    .unwrap()
+                    .map_err(|e| RequestError::Custom {
+                        reason: e.to_string(),
+                    })?
                     .as_secs(),
             ) {
                 Ok(_) => (),

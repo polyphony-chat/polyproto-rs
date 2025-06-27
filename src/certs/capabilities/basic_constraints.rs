@@ -59,7 +59,9 @@ impl TryFrom<Attribute> for BasicConstraints {
             .into());
         }
         let values = value.values;
-        if values.len() != 1usize {
+        let element = if let Some(item) = values.get(0) {
+            item
+        } else {
             return Err(CertificateConversionError::InvalidInput(
                 InvalidInput::Length {
                     min_length: 1,
@@ -67,8 +69,7 @@ impl TryFrom<Attribute> for BasicConstraints {
                     actual_length: values.len().to_string(),
                 },
             ));
-        }
-        let element = values.get(0).expect("This should be infallible. Report this issue at https://github.com/polyphony-chat/polyproto");
+        };
         if element.tag() != Tag::Sequence {
             return Err(CertificateConversionError::InvalidInput(
                 InvalidInput::Malformed(format!(
@@ -86,6 +87,7 @@ impl TryFrom<Attribute> for BasicConstraints {
             match value.tag() {
                 Tag::Boolean => {
                     // Keep track of how many Boolean tags we encounter
+                    #[allow(clippy::arithmetic_side_effects)] // last i checked, 0 + 1 = 1 < 255
                     if num_ca == 0 {
                         num_ca += 1;
                         ca = any_to_bool(value.clone())?;
@@ -99,6 +101,7 @@ impl TryFrom<Attribute> for BasicConstraints {
                 }
                 Tag::Integer => {
                     // Keep track of how many Integer tags we encounter
+                    #[allow(clippy::arithmetic_side_effects)]
                     if num_path_length == 0 {
                         num_path_length += 1;
                         path_length = Some(any_to_u64(value.clone())?);
@@ -218,16 +221,62 @@ impl TryFrom<Extension> for BasicConstraints {
         let mut path_length: Option<u64> = None;
         for item in sequence.iter() {
             match item.tag() {
+                // TODO: lots of repetition. I do not like repetition.
                 Tag::Boolean => {
-                    bool_encounters += 1;
+                    bool_encounters = match bool_encounters.checked_add(1) {
+                        Some(new) => new,
+                        None => return Err(CertificateConversionError::InvalidCert(
+                            crate::errors::InvalidCert::InvalidProperties(
+                                ConstraintError::OutOfBounds
+                                { 
+                                    lower: 0,
+                                    upper: 255,
+                                    actual: "> 255".to_owned(),
+                                    reason:
+                                    "Encountered a suspicious amount of tags in this certificate extension"
+                                    .to_owned()
+                                })
+                            )
+                        ),
+                    };
                     ca = any_to_bool(item.clone())?;
                 }
                 Tag::Integer => {
-                    int_encounters += 1;
+                    int_encounters = match int_encounters.checked_add(1) {
+                        Some(new) => new,
+                        None => return Err(CertificateConversionError::InvalidCert(
+                            crate::errors::InvalidCert::InvalidProperties(
+                                ConstraintError::OutOfBounds
+                                { 
+                                    lower: 0,
+                                    upper: 255,
+                                    actual: "> 255".to_owned(),
+                                    reason:
+                                    "Encountered a suspicious amount of tags in this certificate extension"
+                                    .to_owned()
+                                })
+                            )
+                        ),
+                    };
                     path_length = Some(any_to_u64(item.clone())?);
                 }
                 Tag::Null => {
-                    null_encounters += 1;
+                    null_encounters = match null_encounters.checked_add(1) {
+                        Some(new) => new,
+                        None => return Err(CertificateConversionError::InvalidCert(
+                            crate::errors::InvalidCert::InvalidProperties(
+                                ConstraintError::OutOfBounds
+                                { 
+                                    lower: 0,
+                                    upper: 255,
+                                    actual: "> 255".to_owned(),
+                                    reason:
+                                    "Encountered a suspicious amount of tags in this certificate extension"
+                                    .to_owned()
+                                })
+                            )
+                        ),
+                    };
                     path_length = None;
                 }
                 _ => {
@@ -291,6 +340,7 @@ fn any_to_u64(value: Any) -> Result<u64, ConstraintError> {
             // into a u64.
             let mut buf = [0u8; 8];
             let len = 8.min(value.value().len());
+            #[allow(clippy::indexing_slicing)] // This is fine as long as len <= 8, which is true.
             buf[..len].copy_from_slice(value.value());
             Ok(u64::from_be_bytes(buf))
         }
