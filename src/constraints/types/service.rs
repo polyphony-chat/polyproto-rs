@@ -28,8 +28,7 @@ impl Constrained for ServiceName {
             regex::Regex::new(r"[^[:lower:][:digit:]\-_]").expect("Failed to compile regex!");
         if regex.is_match(&stringified) {
             return Err(ConstraintError::Malformed(Some(format!(
-                "The ServiceName contains invalid characters: \"{}\" contains characters that are not lowercase letters, digits, hyphens, or underscores",
-                stringified
+                "The ServiceName contains invalid characters: \"{stringified}\" contains characters that are not lowercase letters, digits, hyphens, or underscores"
             ))));
         }
         Ok(())

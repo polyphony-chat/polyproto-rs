@@ -187,7 +187,7 @@ impl TryFrom<Extension> for BasicConstraints {
     /// these resulting [BasicConstraints].
     fn try_from(value: Extension) -> Result<Self, Self::Error> {
         trace!("Converting Extension to BasicConstraints");
-        trace!("Extension: {:#?}", value);
+        trace!("Extension: {value:#?}");
         #[allow(unreachable_patterns)]
         if value.critical && !matches!(value.extn_id.to_string().as_str(), OID_BASIC_CONSTRAINTS) {
             // Error if we encounter a "critical" X.509 extension which we do not know of
@@ -242,8 +242,7 @@ impl TryFrom<Extension> for BasicConstraints {
             }
             if bool_encounters > 1 || int_encounters > 1 || null_encounters > 1 {
                 warn!(
-                    "Encountered too many values in BasicConstraints. BasicConstraints are likely malformed. BasicConstraints: {:#?}",
-                    value
+                    "Encountered too many values in BasicConstraints. BasicConstraints are likely malformed. BasicConstraints: {value:#?}"
                 );
                 return Err(CertificateConversionError::InvalidInput(
                     InvalidInput::Length {

@@ -90,7 +90,7 @@ impl KeyUsages {
     /// ```
     pub fn from_bitstring(bitstring: BitString) -> Result<Self, CertificateConversionError> {
         let mut byte_array = bitstring.raw_bytes().to_vec();
-        log::trace!("[from_bitstring] BitString raw bytes: {:?}", byte_array);
+        log::trace!("[from_bitstring] BitString raw bytes: {byte_array:?}");
         let mut key_usages = Vec::new();
         if byte_array == [0] || byte_array.is_empty() {
             // TODO: PLEASE write a test for this. Is an empty byte array valid? Is a byte array with a single 0 valid, and does it mean that no KeyUsage is set? -bitfl0wer
@@ -135,7 +135,7 @@ impl KeyUsages {
                 "Could not properly convert this BitString to KeyUsages. The BitString contains a value not representable by KeyUsages".to_string(),
             )));
         }
-        log::debug!("[from_bitstring] Converted KeyUsages: {:?}", key_usages);
+        log::debug!("[from_bitstring] Converted KeyUsages: {key_usages:?}");
         Ok(KeyUsages { key_usages })
     }
 
@@ -189,8 +189,8 @@ impl KeyUsages {
             // bits.
             unused_bits = 7;
         }
-        log::debug!("[to_bitstring] Unused bits: {}", unused_bits);
-        log::debug!("[to_bitstring] Encoded values: {:?}", encoded_numbers_vec);
+        log::debug!("[to_bitstring] Unused bits: {unused_bits}");
+        log::debug!("[to_bitstring] Encoded values: {encoded_numbers_vec:?}");
         BitString::new(unused_bits, encoded_numbers_vec)
             .expect("Error when converting KeyUsages to BitString. Please report this error to https://github.com/polyphony-chat/polyproto")
     }
@@ -225,7 +225,7 @@ impl TryFrom<Attribute> for KeyUsages {
             }
         };
         let inner_value = value.values.get(0).expect("Illegal state. Please report this error to https://github.com/polyphony-chat/polyproto");
-        log::debug!("Inner value: {:?}", inner_value);
+        log::debug!("Inner value: {inner_value:?}");
         KeyUsages::from_bitstring(BitString::from_der(&inner_value.to_der()?)?)
     }
 }

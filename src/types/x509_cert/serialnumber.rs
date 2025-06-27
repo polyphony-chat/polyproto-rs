@@ -106,7 +106,7 @@ impl SerialNumber {
         if *bytes.first().unwrap() == 0 {
             bytes.remove(0);
         }
-        trace!("bytes: {:?}", bytes);
+        trace!("bytes: {bytes:?}");
         if bytes.len() > 16 {
             return Err(InvalidInput::Length {
                 min_length: 1,

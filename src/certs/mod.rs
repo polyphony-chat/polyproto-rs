@@ -66,7 +66,7 @@ impl SessionId {
 
     /// Converts this [SessionId] into a [Name] for use in a certificate.
     pub fn to_rdn_sequence(&self) -> Name {
-        RdnSequence::from_str(&format!("uniqueIdentifier={}", self)).unwrap()
+        RdnSequence::from_str(&format!("uniqueIdentifier={self}")).unwrap()
     }
 
     /// Returns the inner [Ia5String] of this [SessionId] as an owned value.

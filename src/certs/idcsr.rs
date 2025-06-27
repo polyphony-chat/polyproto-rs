@@ -84,7 +84,7 @@ impl<S: Signature, P: PublicKey<S>> IdCsr<S, P> {
             signature_algorithm,
             signature,
         };
-        log::trace!("[IdCsr::new()] Validating self with Target: {:?}", target);
+        log::trace!("[IdCsr::new()] Validating self with Target: {target:?}");
         id_csr.validate(target)?;
         Ok(id_csr)
     }

@@ -87,7 +87,7 @@ impl BackendBehavior for TungsteniteBackend {
             .next()
             .await
             .map(|o| o.map(GatewayMessage::from));
-        trace!("Received first message: {:?}", maybe_first_message);
+        trace!("Received first message: {maybe_first_message:?}");
         let message = match maybe_first_message {
             Some(message) => match message {
                 Ok(message) => message,
@@ -100,7 +100,7 @@ impl BackendBehavior for TungsteniteBackend {
             Payload::Hello(hello) => hello,
             _ => return Err(Error::NoHello),
         };
-        trace!("Got hello! {:?}", hello);
+        trace!("Got hello! {hello:?}");
         let (kill_send, kill_receive) = watch::channel::<Closed>(Closed::Exhausted);
         // The received_message_sender sends messages received from the WebSocket server from inside
         // the task_handle to all receivers.
@@ -132,7 +132,7 @@ impl BackendBehavior for TungsteniteBackend {
                         };
                         let message = GatewayMessage::from(tungstenite_message);
                         trace!("Received gateway message, updating receivers");
-                        trace!("Message: {:?}", message);
+                        trace!("Message: {message:?}");
                         match received_message_sender.send(message) {
                             Ok(_) => trace!("Updated all receivers"),
                             Err(e) => debug!("Failed to update receivers. Don't care though, we ball (task will not exit) {e}"),

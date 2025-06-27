@@ -223,7 +223,7 @@ fn rdns_to_url(rdn_sequence: &RdnSequence) -> Result<url::Url, url::ParseError> 
         url_str += ".";
     }
     let _ = url_str.pop();
-    trace!(r#"Trying to parse string "{}" as url::Url..."#, url_str);
+    trace!(r#"Trying to parse string "{url_str}" as url::Url..."#);
     Url::parse(url_str.trim())
 }
 
@@ -256,7 +256,7 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
             value.serial_number.as_bytes(),
         )?);
 
-        Ok(Self {
+        let id_cert_tbs = Self {
             serial_number,
             signature_algorithm: value.signature,
             issuer: value.issuer,
@@ -265,7 +265,10 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<TbsCertificateInner<P>>
             subject_public_key: subject_public_key_info,
             capabilities,
             s: std::marker::PhantomData,
-        })
+        };
+        id_cert_tbs.validate(None)?;
+
+        Ok(id_cert_tbs)
     }
 }
 
@@ -282,8 +285,7 @@ impl<P: Profile, S: Signature, Q: PublicKey<S>> TryFrom<IdCertTbs<S, Q>>
             Err(e) => {
                 return Err(CertificateConversionError::InvalidInput(
                     crate::errors::base::InvalidInput::Malformed(format!(
-                        "Could not convert serial number: {}",
-                        e
+                        "Could not convert serial number: {e}"
                     )),
                 ));
             }

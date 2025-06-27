@@ -14,13 +14,11 @@ use super::*;
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCsrInner<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
         log::trace!(
-            "[IdCsrInner::validate()] validating capabilities for target: {:?}",
-            target
+            "[IdCsrInner::validate()] validating capabilities for target: {target:?}"
         );
         self.capabilities.validate(target)?;
         log::trace!(
-            "[IdCsrInner::validate()] validating subject for target: {:?}",
-            target
+            "[IdCsrInner::validate()] validating subject for target: {target:?}"
         );
         self.subject.validate(target)?;
         if let Some(target) = target {
@@ -48,8 +46,7 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsrInner<S, P> {
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
         log::trace!(
-            "[IdCsr::validate()] validating inner CSR with target {:?}",
-            target
+            "[IdCsr::validate()] validating inner CSR with target {target:?}"
         );
         self.inner_csr.validate(target)?;
         log::trace!("[IdCsr::validate()] verifying signature");
@@ -65,7 +62,7 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
             Ok(_) => (),
             Err(_) => {
                 log::warn!(
-                    "[IdCsr::validate()] {}", ERR_MSG_SIGNATURE_MISMATCH);
+                    "[IdCsr::validate()] {ERR_MSG_SIGNATURE_MISMATCH}");
                 return Err(ConstraintError::Malformed(Some(ERR_MSG_SIGNATURE_MISMATCH.to_string())))}
         };
         Ok(())
@@ -74,10 +71,7 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
 
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCert<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
-        log::trace!(
-            "[IdCert::validate()] validating inner IdCertTbs with target {:?}",
-            target
-        );
+        log::trace!("[IdCert::validate()] validating inner IdCertTbs with target {target:?}",);
         self.id_cert_tbs.validate(target)?;
         Ok(())
     }
@@ -86,7 +80,7 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCert<S, P> {
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCertTbs<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
         log::trace!(
-            "Validating if DER encoding is intact for certificate serial {:?}",
+            "Validating if DER encoding is intact for certificate serial {}",
             self.serial_number
         );
         match self.clone().to_der() {
@@ -98,10 +92,11 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCertTbs<S, P> {
                 )));
             }
         };
-        log::trace!("validating capabilities for target: {:?}", target);
+        log::trace!("validating capabilities for target: {target:?}");
         self.capabilities.validate(target)?;
         self.issuer.validate(Some(Target::HomeServer))?;
         self.subject.validate(target)?;
+        self.serial_number.validate(target)?;
         log::trace!("Checking if domain components of issuer and subject are equal");
         log::trace!("Issuer: {}", self.issuer);
         log::trace!("Subject: {}", self.subject);

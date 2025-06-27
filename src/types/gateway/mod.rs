@@ -462,7 +462,7 @@ impl<'de> Deserialize<'de> for CoreEvent {
                         ),
                         Opcode::RequestHeartbeat => Payload::RequestHeartbeat,
                     };
-                    trace!("d: {:?}", d);
+                    trace!("d: {d:?}");
                     let event = CoreEvent {
                         n: "core".to_string(),
                         op: op.into(),
@@ -511,26 +511,22 @@ where
             match T::try_from(num_u64) {
                 Ok(converted_value) => Ok(converted_value),
                 Err(e) => Err(crate::errors::InvalidInput::Malformed(format!(
-                    "Conversion error from number: {:?}",
-                    e
+                    "Conversion error from number: {e:?}"
                 ))),
             }
         }
         Value::String(str) => match str.parse::<u64>() {
             Ok(converted_u64) => T::try_from(converted_u64).map_err(|e| {
                 crate::errors::InvalidInput::Malformed(format!(
-                    "Conversion error from string: {:?}",
-                    e
+                    "Conversion error from string: {e:?}"
                 ))
             }),
             Err(e) => Err(crate::errors::InvalidInput::Malformed(format!(
-                "Conversion error from string: {:?}",
-                e
+                "Conversion error from string: {e:?}"
             ))),
         },
         other => Err(crate::errors::InvalidInput::Malformed(format!(
-            "Expected String or Integer, found value {:?}",
-            other
+            "Expected String or Integer, found value {other:?}"
         ))),
     }
 }

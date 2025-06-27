@@ -64,7 +64,7 @@ impl Heartbeat {
                                 continue
                             },
                         };
-                        trace!("Received AnyEvent {:?}", any_payload);
+                        trace!("Received AnyEvent {any_payload:?}");
                         if let Some(s) = any_payload.s { received_sequences.push(s) }
                         let any_payload_namespace = {
                             if any_payload.n.len() > 64 {
@@ -78,7 +78,7 @@ impl Heartbeat {
                         let core_payload = match CoreEvent::try_from(any_payload) {
                             Ok(p) => p,
                             Err(e) => {
-                                debug!(r#"Payload with namespace "{}" and opcode {} does not seem to have valid CoreEvent data. Assuming it is not a manual heartbeat request and continuing."#, any_payload_namespace, any_payload_opcode);
+                                debug!(r#"Payload with namespace "{any_payload_namespace}" and opcode {any_payload_opcode} does not seem to have valid CoreEvent data. Assuming it is not a manual heartbeat request and continuing."#);
                                 trace!("Actual error: {e}");
                                 continue;
                             }
@@ -132,7 +132,7 @@ impl Heartbeat {
             .to_string(),
         );
         let send_result = message_sender.send(message);
-        trace!("Heartbeat send result: {:?}", send_result);
+        trace!("Heartbeat send result: {send_result:?}");
         match send_result {
             Ok(_) => trace!("Sent heartbeat!"),
             Err(e) => {

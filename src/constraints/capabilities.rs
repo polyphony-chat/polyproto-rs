@@ -65,8 +65,7 @@ impl Constrained for Capabilities {
             }
             if !key_cert_sign {
                 return Err(ConstraintError::Malformed(Some(format!(
-                    "{} Missing capability \"KeyCertSign\"",
-                    ERR_MSG_HOME_SERVER_MISSING_CA_ATTR
+                    "{ERR_MSG_HOME_SERVER_MISSING_CA_ATTR} Missing capability \"KeyCertSign\""
                 ))));
             }
         }

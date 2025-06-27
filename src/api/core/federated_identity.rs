@@ -27,7 +27,7 @@ mod registration_required {
                 .send()
                 .await;
             let pem = HttpClient::handle_response::<String>(request_response).await?;
-            log::debug!("Received IdCert: \n{}", pem);
+            log::debug!("Received IdCert: \n{pem}");
             let id_cert = IdCert::<S, T::PublicKey>::from_pem_unchecked(&pem)?;
             match id_cert.full_verify_home_server(
                 std::time::SystemTime::now()
@@ -184,7 +184,7 @@ mod registration_not_required {
                 request = request.body(json!({ "timestamp": time }).to_string());
             }
             let response = request.send().await;
-            trace!("Got response: {:?}", response);
+            trace!("Got response: {response:?}");
             let id_cert = HttpClient::handle_response::<CacheableIdCert>(response).await?;
             Ok(id_cert)
         }

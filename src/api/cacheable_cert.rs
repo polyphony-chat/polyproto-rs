@@ -2,9 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use bigdecimal::num_bigint::BigUint;
 use der::{Any, DecodePem};
-use log::{debug, trace};
+use log::debug;
 use spki::AlgorithmIdentifier;
 
 use crate::Constrained;
@@ -12,7 +11,6 @@ use crate::certs::Target;
 use crate::certs::idcert::IdCert;
 use crate::key::PublicKey;
 use crate::signature::Signature;
-use crate::types::der::asn1::Uint;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]

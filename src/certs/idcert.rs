@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use der::asn1::Uint;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
 use x509_cert::Certificate;
@@ -132,7 +131,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         log::trace!("[IdCert::from_actor_csr()] creating actor certificate");
         let signature_algorithm = signing_key.algorithm_identifier();
         log::trace!("[IdCert::from_actor_csr()] creating IdCertTbs");
-        log::trace!("[IdCert::from_actor_csr()] Issuer: {}", issuer);
+        log::trace!("[IdCert::from_actor_csr()] Issuer: {issuer}");
         log::trace!(
             "[IdCert::from_actor_csr()] Subject: {}",
             id_csr.inner_csr.subject
@@ -293,8 +292,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             Ok(der) => der,
             Err(_) => {
                 log::warn!(
-                    "[IdCert::full_verify_actor(&self)] {}",
-                    ERR_CERTIFICATE_TO_DER_ERROR
+                    "[IdCert::full_verify_actor(&self)] {ERR_CERTIFICATE_TO_DER_ERROR}"
                 );
                 return Err(InvalidCert::InvalidProperties(ConstraintError::Malformed(
                     Some(ERR_CERTIFICATE_TO_DER_ERROR.to_string()),
@@ -327,8 +325,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
             Ok(data) => data,
             Err(_) => {
                 log::warn!(
-                    "[IdCert::full_verify_home_server(&self)] {}",
-                    ERR_CERTIFICATE_TO_DER_ERROR
+                    "[IdCert::full_verify_home_server(&self)] {ERR_CERTIFICATE_TO_DER_ERROR}"
                 );
                 return Err(InvalidCert::InvalidProperties(ConstraintError::Malformed(
                     Some(ERR_CERTIFICATE_TO_DER_ERROR.to_string()),

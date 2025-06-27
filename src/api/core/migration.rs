@@ -204,7 +204,7 @@ mod registration_not_required {
                 Ok(text) => from_str::<Vec<KeyTrialResponse>>(&text)
                     .map_err(RequestError::DeserializationError),
                 Err(e) => Err(RequestError::Custom {
-                    reason: format!("Could not get the full response text: {}", e),
+                    reason: format!("Could not get the full response text: {e}"),
                 }),
             }
         }
