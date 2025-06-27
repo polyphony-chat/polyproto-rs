@@ -1,6 +1,6 @@
 [package]
 name = "polyproto"
-version = "0.10.0"
+version = "0.11.0"
 edition = "2024"
 license = "MPL-2.0"
 description = "(Generic) Rust types and traits to quickly get a polyproto implementation up and running"
@@ -71,7 +71,6 @@ rand = "0.8.5"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140" }
 serde_test = "1.0.177"
-polyproto = { path = "./", features = ["types", "reqwest", "serde"] }
 env_logger = "0.11.7"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]

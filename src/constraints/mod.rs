@@ -22,6 +22,7 @@ use crate::{
 mod capabilities;
 mod certs;
 mod name;
+mod serial_number;
 mod session_id;
 #[cfg(feature = "types")]
 mod types;

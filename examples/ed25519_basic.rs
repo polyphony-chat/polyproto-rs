@@ -6,6 +6,8 @@
 // This example is not complete and should not be copy-pasted into a production environment without
 // further scrutiny and consideration.
 
+#![allow(clippy::unwrap_used)]
+
 use std::str::FromStr;
 
 use der::asn1::BitString;

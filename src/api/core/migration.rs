@@ -248,6 +248,7 @@ mod registration_not_required {
             }
             let request = request.build()?;
             let response = self.send_request(request).await?;
+            #[allow(clippy::unwrap_used)] // HeaderValue::from_str("0") is always valid.
             let return_body_size_string = response
                 .headers()
                 .get("X-P2-Return-Body-Size-Limit")
@@ -348,5 +349,16 @@ mod registration_not_required {
             let response = self.send_request(request).await?;
             matches_status_code(&[StatusCode::OK, StatusCode::NO_CONTENT], response.status())
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use http::HeaderValue;
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn header_value_zero() {
+        HeaderValue::from_str("0").unwrap();
     }
 }

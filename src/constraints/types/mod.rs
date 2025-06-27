@@ -4,7 +4,6 @@
 
 mod federation_id;
 mod rawr;
-mod serial_number;
 mod service;
 
 use crate::Constrained;
