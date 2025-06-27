@@ -5,7 +5,7 @@
 /*!
 <img src="https://cloud.bitfl0wer.de/apps/files_sharing/publicpreview/2qCxoXJ27yW7QNR?file=/&fileId=1143147&x=256&y=256&a=true" align="left" alt="a purple cog, split in the middle along the horizontal axis with a gap inbetween the two halves. three overlayed, offset sinus-like waves travel through that gap. each wave has a different shade of purple" width="128px" height="auto"></img>
 
-### `polyproto`
+### polyproto
 
 ![dev-status]
 [![Discord]][Discord-invite]
@@ -27,20 +27,20 @@ this crate provides a set of types and traits to quickly implement the polyproto
 Simply add cryptography and signature algorithm crates of your choice to the mix, and you are ready
 to go.
 
-All polyproto certificate types can be converted to and from the types offered by the `x509_cert`
+All polyproto certificate types can be converted to and from the types offered by the x509_cert
 crate.
 
 ## Implementing polyproto
 
-Start by implementing the trait `[crate::signature::Signature]` for a signature algorithm of your
-Start by implementing the trait `[crate::signature::Signature]` for a signature algorithm of your
-choice. Popular crates for cryptography and signature algorithms supply their own `PublicKey` and
-`PrivateKey` types. You should extend upon these types with your own structs and implement the
-`[crate::key]` traits for these new structs.
-`[crate::key]` traits for these new structs.
+Start by implementing the trait [crate::signature::Signature] for a signature algorithm of your
+Start by implementing the trait [crate::signature::Signature] for a signature algorithm of your
+choice. Popular crates for cryptography and signature algorithms supply their own PublicKey and
+PrivateKey types. You should extend upon these types with your own structs and implement the
+[crate::key] traits for these new structs.
+[crate::key] traits for these new structs.
 
-You can then use the `[crate::certs]` types to build certificates using your implementations of the
-You can then use the `[crate::certs]` types to build certificates using your implementations of the
+You can then use the [crate::certs] types to build certificates using your implementations of the
+You can then use the [crate::certs] types to build certificates using your implementations of the
 aforementioned traits.
 
 **View the [examples](./examples/)** directory for a simple example on how to implement and use this
@@ -66,40 +66,40 @@ This crate has not undergone any security audits.
 
 !!! warning
 
-    As of `v0.10`, the `wasm` target is currently untested. Support will be re-added in the future.
+As of v0.10, the wasm target is currently untested. Support will be re-added in the future.
 
 !!! warning
 
-    As of `v0.10`, the `wasm` target is currently untested. Support will be re-added in the future.
+As of v0.10, the wasm target is currently untested. Support will be re-added in the future.
 
-This crate is designed to work with the `wasm32-unknown-unknown` target. To compile for `wasm`, you
-will have to use the `wasm` feature:
+This crate is designed to work with the wasm32-unknown-unknown target. To compile for wasm, you
+will have to use the wasm feature:
 
-```toml
+toml
 [dependencies]
 polyproto = { version = "0", features = ["wasm"] }
-```
 
-## HTTP API client through `reqwest`
 
-If the `reqwest` feature is activated, this crate offers a polyproto HTTP API client, using the
-`reqwest` crate.
+## HTTP API client through reqwest
 
-### Alternatives to `reqwest`
+If the reqwest feature is activated, this crate offers a polyproto HTTP API client, using the
+reqwest crate.
 
-If you would like to implement an HTTP client using something other than `reqwest`, simply enable
-the `types` and `serde` features. Using these features, you can implement your own HTTP client, with
+### Alternatives to reqwest
+
+If you would like to implement an HTTP client using something other than reqwest, simply enable
+the types and serde features. Using these features, you can implement your own HTTP client, with
 the polyproto crate acting as a single source of truth for request and response types, as well as
-request routes and methods through the exported `static` `Route`s.
+request routes and methods through the exported static Routes.
 
 ## WebSocket Gateway client
 
-Since `v0.10`, this crate ships polyproto WebSocket Gateway client functionality, gated behind the `gateway` feature.
-The implementation of this feature is super backend-agnostic—though, for now, we have sealed the needed traits, and are only shipping a `tokio-tungstenite` backend for testing.
+Since v0.10, this crate ships polyproto WebSocket Gateway client functionality, gated behind the gateway feature.
+The implementation of this feature is super backend-agnostic—though, for now, we have sealed the needed traits, and are only shipping a tokio-tungstenite backend for testing.
 
 The gateway handles establishing a connection to the server, sending regular heartbeats at the specified interval and responding to Opcode 11—the manual heartbeat request.
 
-Apart from the Hello payload, library consumers can easily get access to all messages received from the gateway by calling `subscribe()` on the internal `tokio::sync::watch::Sender<GatewayMessage>`. This means that this crate handles only the bare necessities of connecting to the gateway, and that you are free to handle incoming messages however you would like to. Our `GatewayMessage` type is `.into()` and `From::<>`-compatible with `tokio_tungstenite::tungstenite::Message`, so that you are not locked into using our message types, should you not want that.
+Apart from the Hello payload, library consumers can easily get access to all messages received from the gateway by calling subscribe() on the internal tokio::sync::watch::Sender<GatewayMessage>. This means that this crate handles only the bare necessities of connecting to the gateway, and that you are free to handle incoming messages however you would like to. Our GatewayMessage type is .into() and From::<>-compatible with tokio_tungstenite::tungstenite::Message, so that you are not locked into using our message types, should you not want that.
 
 ## Versioning and MSRV
 
@@ -147,20 +147,20 @@ of this project.
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-/// The OID for the `domainComponent` RDN
+/// The OID for the domainComponent RDN
 pub const OID_RDN_DOMAIN_COMPONENT: &str = "0.9.2342.19200300.100.1.25";
-/// The OID for the `commonName` RDN
+/// The OID for the commonName RDN
 pub const OID_RDN_COMMON_NAME: &str = "2.5.4.3";
-/// The OID for the `uniqueIdentifier` RDN
+/// The OID for the uniqueIdentifier RDN
 pub const OID_RDN_UNIQUE_IDENTIFIER: &str = "0.9.2342.19200300.100.1.44";
-/// The OID for the `uid` RDN
+/// The OID for the uid RDN
 pub const OID_RDN_UID: &str = "0.9.2342.19200300.100.1.1";
 
 use certs::Target;
 use errors::base::ConstraintError;
 
 #[cfg(any(feature = "reqwest", feature = "types"))]
-/// Ready-to-use API routes, implemented using `reqwest`
+/// Ready-to-use API routes, implemented using reqwest
 pub mod api;
 /// Generic polyproto certificate types and traits.
 pub mod certs;
@@ -189,7 +189,7 @@ pub use x509_cert::name::*;
 
 #[cfg(feature = "types")]
 pub(crate) mod sealer {
-    /// > Ferri-Stik: An adhesive as strong as `rustc`!
+    /// > Ferri-Stik: An adhesive as strong as rustc!
     ///
     /// Look up "sealed trait pattern rust" to learn more.
     pub trait Glue {}
@@ -197,17 +197,17 @@ pub(crate) mod sealer {
 
 /// Types implementing [Constrained] can be validated to be well-formed.
 ///
-/// ## `Target` parameter
+/// ## Target parameter
 ///
-/// The `target` parameter is used to specify the context in which the type should be validated.
-/// For example: Specifying a [Target] of `Actor` would also check that the IdCert is not a CA
+/// The target parameter is used to specify the context in which the type should be validated.
+/// For example: Specifying a [Target] of Actor would also check that the IdCert is not a CA
 /// certificate, among other things.
 ///
-/// If the `target` is `None`, the type will be validated without
+/// If the target is None, the type will be validated without
 /// considering this context. If you know the context in which the type will be used, there is no
 /// reason to not specify it, and you would only reap negative consequences for not doing so.
 ///
-/// Valid reasons to specify `None` as the `target` are, for example, if you parse a type from a
+/// Valid reasons to specify None as the target are, for example, if you parse a type from a
 /// file and do not know the context in which it will be used. Be careful when doing this; ideally,
 /// find a way to find out the context in which the type will be used.
 ///
