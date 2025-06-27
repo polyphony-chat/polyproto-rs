@@ -119,14 +119,32 @@ impl FromStr for Uint {
 #[cfg(feature = "serde")]
 mod serde {
     use super::*;
+    use ::serde::de::Visitor;
     use ::serde::{Deserialize, Serialize};
+
+    struct UintVisitor;
+
+    impl<'v> Visitor<'v> for UintVisitor {
+        type Value = Uint;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("an integer between 0 and 2^1024*1024*256")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: ::serde::de::Error,
+        {
+            Uint::from_str(v).map_err(|e| E::custom(e.to_string()))
+        }
+    }
 
     impl<'de> Deserialize<'de> for Uint {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: ::serde::Deserializer<'de>,
         {
-            todo!()
+            deserializer.deserialize_str(UintVisitor)
         }
     }
 
@@ -135,7 +153,7 @@ mod serde {
         where
             S: ::serde::Serializer,
         {
-            todo!()
+            serializer.serialize_str(self.to_string().as_str())
         }
     }
 }
