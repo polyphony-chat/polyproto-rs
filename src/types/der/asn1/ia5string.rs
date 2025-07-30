@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use std::hash::Hash;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, PartialEq, Clone, Eq, PartialOrd, Ord)]
@@ -53,6 +54,12 @@ impl From<der::asn1::Ia5String> for Ia5String {
 impl From<Ia5String> for der::asn1::Ia5String {
     fn from(s: Ia5String) -> Self {
         s.0
+    }
+}
+
+impl Hash for Ia5String {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.as_bytes().hash(state);
     }
 }
 
