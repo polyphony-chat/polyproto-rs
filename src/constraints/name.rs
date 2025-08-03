@@ -38,7 +38,7 @@ impl Constrained for Name {
                 "[Name::validate()] Determining OID of RDN {rdn} and performing appropriate validation"
             );
             for item in rdn.0.iter() {
-                match item.oid.to_string().as_str() {
+                match item.oid {
                     OID_RDN_UID => {
                         log::trace!("[Name::validate()] Found UID in RDN: {item}");
                         num_uid += 1;
@@ -106,9 +106,7 @@ impl Constrained for Name {
         } else if num_uid != 0 {
             validate_dc_matches_dc_in_uid(&vec_dc, &uid)?;
         }
-        log::trace!(
-            "Encountered {num_uid} UID components and {num_cn} Common Name components"
-        );
+        log::trace!("Encountered {num_uid} UID components and {num_cn} Common Name components");
         if num_uid != 0 && num_cn != 0 {
             log::trace!("Validating UID username matches Common Name");
             validate_uid_username_matches_cn(&uid, &cn)?;
@@ -163,16 +161,12 @@ fn validate_dc_matches_dc_in_uid(
     vec_dc: &[RelativeDistinguishedName],
     uid: &RelativeDistinguishedName,
 ) -> Result<(), ConstraintError> {
-    debug!(
-        "Validating vec_dc {vec_dc:?} and uid {uid} have same domain components"
-    );
+    debug!("Validating vec_dc {vec_dc:?} and uid {uid} have same domain components");
     // Find the position of the @ in the UID
     let position_of_at = match uid.to_string().find('@') {
         Some(pos) => pos,
         None => {
-            log::warn!(
-                "[validate_dc_matches_dc_in_uid] UID {uid} does not contain an @"
-            );
+            log::warn!("[validate_dc_matches_dc_in_uid] UID {uid} does not contain an @");
             return Err(ConstraintError::Malformed(Some(
                 "UID does not contain an @".to_string(),
             )));
@@ -245,9 +239,7 @@ fn validate_uid_username_matches_cn(
     let position_of_at = match uid_str.find('@') {
         Some(pos) => pos,
         None => {
-            log::warn!(
-                "[validate_dc_matches_dc_in_uid] UID \"{uid}\" does not contain an @"
-            );
+            log::warn!("[validate_dc_matches_dc_in_uid] UID \"{uid}\" does not contain an @");
             return Err(ConstraintError::Malformed(Some(
                 "UID does not contain an @".to_string(),
             )));

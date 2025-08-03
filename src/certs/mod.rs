@@ -177,14 +177,14 @@ pub fn equal_domain_components(name_1: &Name, name_2: &Name) -> bool {
     let mut domain_components_2 = Vec::new();
     for rdn in name_1.0.iter() {
         for ava in rdn.0.iter() {
-            if ava.oid.to_string().as_str() == OID_RDN_DOMAIN_COMPONENT {
+            if ava.oid == OID_RDN_DOMAIN_COMPONENT {
                 domain_components_1.push(String::from_utf8_lossy(ava.value.value()));
             }
         }
     }
     for rdn in name_2.0.iter() {
         for ava in rdn.0.iter() {
-            if ava.oid.to_string().as_str() == OID_RDN_DOMAIN_COMPONENT {
+            if ava.oid == OID_RDN_DOMAIN_COMPONENT {
                 domain_components_2.push(String::from_utf8_lossy(ava.value.value()));
             }
         }

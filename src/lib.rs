@@ -148,13 +148,15 @@ of this project.
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 /// The OID for the domainComponent RDN
-pub const OID_RDN_DOMAIN_COMPONENT: &str = "0.9.2342.19200300.100.1.25";
+pub const OID_RDN_DOMAIN_COMPONENT: ObjectIdentifier =
+    ObjectIdentifier::new_unwrap("0.9.2342.19200300.100.1.25");
 /// The OID for the commonName RDN
-pub const OID_RDN_COMMON_NAME: &str = "2.5.4.3";
+pub const OID_RDN_COMMON_NAME: ObjectIdentifier = ObjectIdentifier::new_unwrap("2.5.4.3");
 /// The OID for the uniqueIdentifier RDN
-pub const OID_RDN_UNIQUE_IDENTIFIER: &str = "0.9.2342.19200300.100.1.44";
+pub const OID_RDN_UNIQUE_IDENTIFIER: ObjectIdentifier =
+    ObjectIdentifier::new_unwrap("0.9.2342.19200300.100.1.44");
 /// The OID for the uid RDN
-pub const OID_RDN_UID: &str = "0.9.2342.19200300.100.1.1";
+pub const OID_RDN_UID: ObjectIdentifier = ObjectIdentifier::new_unwrap("0.9.2342.19200300.100.1.1");
 
 use certs::Target;
 use errors::base::ConstraintError;
@@ -184,6 +186,7 @@ mod constraints;
 
 pub use der;
 pub use spki;
+use spki::ObjectIdentifier;
 pub use url;
 pub use x509_cert::name::*;
 
