@@ -6,7 +6,8 @@ use x509_cert::name::{Name, RelativeDistinguishedName};
 use crate::certs::SessionId;
 use crate::types::{DomainName, FederationId};
 use crate::{
-    OID_RDN_COMMON_NAME, OID_RDN_DOMAIN_COMPONENT, OID_RDN_UID, OID_RDN_UNIQUE_IDENTIFIER,
+    Constrained, OID_RDN_COMMON_NAME, OID_RDN_DOMAIN_COMPONENT, OID_RDN_UID,
+    OID_RDN_UNIQUE_IDENTIFIER,
 };
 
 /// Higher-level abstraction of X.509 [distinguished names](https://ldap.com/ldap-dns-and-rdns/),
@@ -65,21 +66,57 @@ impl TryFrom<Name> for ActorDN {
     type Error = crate::errors::InvalidInput;
 
     fn try_from(x509_distinguished_name: Name) -> Result<Self, Self::Error> {
-        let federation_id: AttributeTypeAndValue;
-        let domain_name: AttributeTypeAndValue;
-        let session_id: AttributeTypeAndValue;
-        let additional_fields: AttributeTypeAndValue;
+        x509_distinguished_name
+            .validate(Some(crate::certs::Target::Actor))
+            .map_err(|e| crate::errors::InvalidInput::Malformed(e.to_string()))?;
+        let mut maybe_federation_id: Option<AttributeTypeAndValue> = None;
+        let mut maybe_local_name: Option<AttributeTypeAndValue> = None;
+        let mut maybe_domain_names: Vec<AttributeTypeAndValue> = Vec::new();
+        let mut maybe_session_id: Option<AttributeTypeAndValue> = None;
+        let mut maybe_additional_fields: Vec<AttributeTypeAndValue> = Vec::new();
         for relative_distinguished_name in x509_distinguished_name.0.into_iter() {
             for attribute_value_and_item in relative_distinguished_name.0.iter() {
                 match attribute_value_and_item.oid {
-                    OID_RDN_COMMON_NAME => (),
-                    OID_RDN_UID => (),
-                    OID_RDN_UNIQUE_IDENTIFIER => (),
-                    OID_RDN_DOMAIN_COMPONENT => (),
-                    other => (),
+                    OID_RDN_COMMON_NAME => {
+                        make_some_or_error(attribute_value_and_item, &mut maybe_local_name)?
+                    }
+                    OID_RDN_UID => {
+                        make_some_or_error(attribute_value_and_item, &mut maybe_federation_id)?
+                    }
+                    OID_RDN_UNIQUE_IDENTIFIER => {
+                        make_some_or_error(attribute_value_and_item, &mut maybe_session_id)?
+                    }
+                    OID_RDN_DOMAIN_COMPONENT => {
+                        maybe_domain_names.push(attribute_value_and_item.clone())
+                    }
+                    _other => maybe_additional_fields.push(attribute_value_and_item.clone()),
                 }
             }
         }
+        // TODO: Ok now we have it all (hopefully); lets confirm that fact, turn the individual fields into their strongly typed counterparts and then return a full ActorDN!
+        if let Some(some_federation_id) = maybe_federation_id {
+            todo!()
+        }
+
         todo!()
+    }
+}
+
+/// Helper function. Takes an exclusive reference `Option<AttributeTypeAndValue>`, inspects if it
+/// holds a value, and
+///
+/// - Errors appropriately, if it already holds a value
+/// - Else, updates the `None` value with the passed `attribute_value_and_item`, then returns `Ok(())`
+fn make_some_or_error(
+    attribute_value_and_item: &AttributeTypeAndValue,
+    value_to_update: &mut Option<AttributeTypeAndValue>,
+) -> Result<(), crate::errors::InvalidInput> {
+    if value_to_update.is_none() {
+        *value_to_update = Some(attribute_value_and_item.clone());
+        Ok(())
+    } else {
+        Err(crate::errors::InvalidInput::Malformed(
+            "Found multiple entries for same OID, where only one OID is allowed".to_owned(),
+        ))
     }
 }
