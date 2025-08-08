@@ -2,10 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use der::Encode;
 use regex::Regex;
+use x509_cert::attr::AttributeTypeAndValue;
 
-use crate::Constrained;
-use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX};
+use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX, InvalidInput};
+use crate::{Constrained, OID_RDN_UID};
 
 /// The regular expression for a valid `FederationId`.
 pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)$";
@@ -225,5 +227,54 @@ mod serde {
                 Identifer::FederationId(federation_id) => federation_id.serialize(serializer),
             }
         }
+    }
+}
+
+impl TryFrom<AttributeTypeAndValue> for FederationId {
+    type Error = ConstraintError;
+
+    fn try_from(value: AttributeTypeAndValue) -> Result<Self, Self::Error> {
+        if value.oid != OID_RDN_UID {
+            return Err(InvalidInput::Malformed(format!(
+                "This value has OID {}, which does not match OID {OID_RDN_UID}",
+                value.oid
+            ))
+            .into());
+        }
+        let attribute_value = value.value.value();
+        let string = String::from_utf8_lossy(attribute_value);
+        FederationId::new(&string)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use der::Any;
+    use x509_cert::ext::pkix::name::DirectoryString;
+
+    use super::*;
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn from_attribute_type_and_value() {
+        let directory_string = DirectoryString::Utf8String(String::from("input@in.put"));
+        let attribute_and_value = AttributeTypeAndValue {
+            oid: OID_RDN_UID,
+            value: Any::encode_from(&directory_string).unwrap(),
+        };
+        // Ok so this works! that means, that we can convert a directorystring into a Rust string, because Rust strings are utf8
+        // I think we should test this with the other types of DirectoryString, and then finish the
+        // conversion
+        assert!(FederationId::try_from(attribute_and_value).is_ok());
+
+        let directory_string = DirectoryString::Utf8String(String::from("input@in.put"));
+        let attribute_and_value = AttributeTypeAndValue {
+            oid: OID_RDN_UID,
+            value: Any::encode_from(&directory_string).unwrap(),
+        };
+        // Ok so this works! that means, that we can convert a directorystring into a Rust string, because Rust strings are utf8
+        // I think we should test this with the other types of DirectoryString, and then finish the
+        // conversion
+        assert!(FederationId::try_from(attribute_and_value).is_err())
     }
 }
