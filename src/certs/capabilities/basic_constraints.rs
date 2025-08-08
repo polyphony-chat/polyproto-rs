@@ -228,7 +228,7 @@ impl TryFrom<Extension> for BasicConstraints {
                         None => return Err(CertificateConversionError::InvalidCert(
                             crate::errors::InvalidCert::InvalidProperties(
                                 ConstraintError::OutOfBounds
-                                { 
+                                {
                                     lower: 0,
                                     upper: 255,
                                     actual: "> 255".to_owned(),
@@ -247,7 +247,7 @@ impl TryFrom<Extension> for BasicConstraints {
                         None => return Err(CertificateConversionError::InvalidCert(
                             crate::errors::InvalidCert::InvalidProperties(
                                 ConstraintError::OutOfBounds
-                                { 
+                                {
                                     lower: 0,
                                     upper: 255,
                                     actual: "> 255".to_owned(),
@@ -266,7 +266,7 @@ impl TryFrom<Extension> for BasicConstraints {
                         None => return Err(CertificateConversionError::InvalidCert(
                             crate::errors::InvalidCert::InvalidProperties(
                                 ConstraintError::OutOfBounds
-                                { 
+                                {
                                     lower: 0,
                                     upper: 255,
                                     actual: "> 255".to_owned(),

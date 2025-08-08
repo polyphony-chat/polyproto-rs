@@ -291,9 +291,7 @@ impl<S: Signature, P: PublicKey<S>> IdCert<S, P> {
         let der = match self.id_cert_tbs.clone().to_der() {
             Ok(der) => der,
             Err(_) => {
-                log::warn!(
-                    "[IdCert::full_verify_actor(&self)] {ERR_CERTIFICATE_TO_DER_ERROR}"
-                );
+                log::warn!("[IdCert::full_verify_actor(&self)] {ERR_CERTIFICATE_TO_DER_ERROR}");
                 return Err(InvalidCert::InvalidProperties(ConstraintError::Malformed(
                     Some(ERR_CERTIFICATE_TO_DER_ERROR.to_string()),
                 )));

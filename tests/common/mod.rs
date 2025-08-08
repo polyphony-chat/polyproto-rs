@@ -36,8 +36,7 @@ pub(crate) fn init_logger() {
 
 pub fn actor_subject(cn: &str) -> Name {
     Name::from_str(&format!(
-        "CN={},DC=polyphony,DC=chat,UID={}@polyphony.chat,uniqueIdentifier=client1",
-        cn, cn
+        "CN={cn},DC=polyphony,DC=chat,UID={cn}@polyphony.chat,uniqueIdentifier=client1",
     ))
     .unwrap()
 }

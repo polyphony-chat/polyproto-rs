@@ -13,13 +13,9 @@ use super::*;
 
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCsrInner<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
-        log::trace!(
-            "[IdCsrInner::validate()] validating capabilities for target: {target:?}"
-        );
+        log::trace!("[IdCsrInner::validate()] validating capabilities for target: {target:?}");
         self.capabilities.validate(target)?;
-        log::trace!(
-            "[IdCsrInner::validate()] validating subject for target: {target:?}"
-        );
+        log::trace!("[IdCsrInner::validate()] validating subject for target: {target:?}");
         self.subject.validate(target)?;
         if let Some(target) = target {
             match target {
@@ -45,9 +41,7 @@ impl<S: Signature, P: PublicKey<S>> Constrained for IdCsrInner<S, P> {
 
 impl<S: Signature, P: PublicKey<S>> Constrained for IdCsr<S, P> {
     fn validate(&self, target: Option<Target>) -> Result<(), ConstraintError> {
-        log::trace!(
-            "[IdCsr::validate()] validating inner CSR with target {target:?}"
-        );
+        log::trace!("[IdCsr::validate()] validating inner CSR with target {target:?}");
         self.inner_csr.validate(target)?;
         log::trace!("[IdCsr::validate()] verifying signature");
         match self.inner_csr.subject_public_key.verify_signature(
