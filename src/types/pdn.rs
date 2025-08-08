@@ -94,10 +94,14 @@ impl TryFrom<Name> for ActorDN {
             }
         }
         // TODO: Ok now we have it all (hopefully); lets confirm that fact, turn the individual fields into their strongly typed counterparts and then return a full ActorDN!
-        if let Some(some_federation_id) = maybe_federation_id {
-            todo!()
-        }
-
+        let federation_id = FederationId::try_from(match maybe_federation_id {
+            Some(fid) => fid,
+            None => {
+                return Err(crate::errors::InvalidInput::Malformed(String::from(
+                    "Expected Federation ID in ActorDN, found none",
+                )));
+            }
+        })?;
         todo!()
     }
 }
