@@ -4,6 +4,7 @@ use x509_cert::attr::AttributeTypeAndValue;
 use x509_cert::name::{Name, RelativeDistinguishedName};
 
 use crate::certs::SessionId;
+use crate::types::local_name::LocalName;
 use crate::types::{DomainName, FederationId};
 use crate::{
     Constrained, OID_RDN_COMMON_NAME, OID_RDN_DOMAIN_COMPONENT, OID_RDN_UID,
@@ -99,6 +100,14 @@ impl TryFrom<Name> for ActorDN {
             None => {
                 return Err(crate::errors::InvalidInput::Malformed(String::from(
                     "Expected Federation ID in ActorDN, found none",
+                )));
+            }
+        })?;
+        let local_name = LocalName::try_from(match maybe_local_name {
+            Some(ln) => ln,
+            None => {
+                return Err(crate::errors::InvalidInput::Malformed(String::from(
+                    "Expected Local Name in ActorDN, found none",
                 )));
             }
         })?;
