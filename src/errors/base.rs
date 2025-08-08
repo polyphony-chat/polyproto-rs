@@ -44,3 +44,43 @@ pub enum InvalidInput {
         actual_length: String,
     },
 }
+
+impl From<InvalidInput> for ConstraintError {
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    fn from(value: InvalidInput) -> Self {
+        match value {
+            InvalidInput::Malformed(m) => Self::Malformed(Some(m)),
+            InvalidInput::Length {
+                min_length,
+                max_length,
+                actual_length,
+            } => Self::OutOfBounds {
+                lower: min_length as i32,
+                upper: max_length as i32,
+                actual: actual_length,
+                reason: String::from("Out of bounds; no further reason specified"),
+            },
+        }
+    }
+}
+
+impl From<ConstraintError> for InvalidInput {
+    #[allow(clippy::cast_sign_loss)]
+    fn from(value: ConstraintError) -> Self {
+        match value {
+            ConstraintError::Malformed(m) => {
+                InvalidInput::Malformed(m.unwrap_or("No further context provided".to_owned()))
+            }
+            ConstraintError::OutOfBounds {
+                lower,
+                upper,
+                actual,
+                reason: _reason,
+            } => InvalidInput::Length {
+                min_length: lower as usize,
+                max_length: upper as usize,
+                actual_length: actual,
+            },
+        }
+    }
+}
