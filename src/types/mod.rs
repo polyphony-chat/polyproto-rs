@@ -12,6 +12,8 @@ pub mod encrypted_pkm;
 /// Module defining the [FederationId] type.
 #[cfg(feature = "types")]
 pub mod federation_id;
+/// Module defining the [LocalName] type.
+pub mod local_name;
 /// Module defining the [PolyprotoDistinguishedName] type.
 pub mod pdn;
 
