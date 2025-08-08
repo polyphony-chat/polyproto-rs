@@ -262,9 +262,6 @@ mod test {
             oid: OID_RDN_UID,
             value: Any::encode_from(&directory_string).unwrap(),
         };
-        // Ok so this works! that means, that we can convert a directorystring into a Rust string, because Rust strings are utf8
-        // I think we should test this with the other types of DirectoryString, and then finish the
-        // conversion
         assert!(FederationId::try_from(attribute_and_value).is_ok());
 
         let directory_string = DirectoryString::Utf8String(String::from("input@in.put"));
@@ -272,9 +269,6 @@ mod test {
             oid: OID_RDN_UID,
             value: Any::encode_from(&directory_string).unwrap(),
         };
-        // Ok so this works! that means, that we can convert a directorystring into a Rust string, because Rust strings are utf8
-        // I think we should test this with the other types of DirectoryString, and then finish the
-        // conversion
         assert!(FederationId::try_from(attribute_and_value).is_err())
     }
 }
