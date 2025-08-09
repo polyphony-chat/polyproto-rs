@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 use std::hash::Hash;
 
 use x509_cert::attr::AttributeTypeAndValue;
@@ -28,9 +32,10 @@ pub enum PolyprotoDistinguishedName {
 /// providing easier access to inner values compared to using [x509_cert::name::Name] in a raw manner.
 pub struct ActorDN {
     federation_id: FederationId,
+    local_name: LocalName,
     domain_name: DomainName,
     session_id: SessionId,
-    additional_fields: Vec<RelativeDistinguishedName>,
+    additional_fields: RelativeDistinguishedName,
 }
 
 impl Hash for ActorDN {
@@ -38,9 +43,10 @@ impl Hash for ActorDN {
         self.federation_id.hash(state);
         self.domain_name.hash(state);
         self.session_id.hash(state);
-        self.additional_fields
-            .iter()
-            .for_each(|additional_field| additional_field.to_string().hash(state));
+        self.additional_fields.0.iter().for_each(|item| {
+            item.oid.hash(state);
+            item.value.value().hash(state);
+        });
     }
 }
 
@@ -94,7 +100,6 @@ impl TryFrom<Name> for ActorDN {
                 }
             }
         }
-        // TODO: Ok now we have it all (hopefully); lets confirm that fact, turn the individual fields into their strongly typed counterparts and then return a full ActorDN!
         let federation_id = FederationId::try_from(match maybe_federation_id {
             Some(fid) => fid,
             None => {
@@ -112,7 +117,21 @@ impl TryFrom<Name> for ActorDN {
             }
         })?;
         let domain_name = DomainName::try_from(maybe_domain_names.as_slice())?;
-        todo!()
+        let session_id = SessionId::try_from(match maybe_session_id {
+            Some(s_id) => s_id,
+            None => {
+                return Err(crate::errors::InvalidInput::Malformed(String::from(
+                    "Expected Local Name in ActorDN, found none",
+                )));
+            }
+        })?;
+        Ok(ActorDN {
+            federation_id,
+            domain_name,
+            session_id,
+            local_name,
+            additional_fields: RelativeDistinguishedName::try_from(maybe_additional_fields).map_err(|e| crate::errors::InvalidInput::Malformed(format!("Could not parse ActorDN additional_fields: Name attribute contained additional information which was not a valid RelativeDistinguishedName: {e}")))?,
+        })
     }
 }
 
