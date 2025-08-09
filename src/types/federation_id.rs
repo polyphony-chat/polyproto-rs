@@ -2,11 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use std::str::FromStr;
+
+use der::Any;
 use der::asn1::PrintableString;
 use regex::Regex;
 use x509_cert::attr::AttributeTypeAndValue;
 use x509_cert::ext::pkix::name::DirectoryString;
-use x509_cert::name::RdnSequence;
+use x509_cert::name::{RdnSequence, RelativeDistinguishedName};
 
 use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX, InvalidInput};
 use crate::{Constrained, OID_RDN_DOMAIN_COMPONENT, OID_RDN_UID};
@@ -34,6 +37,7 @@ pub struct DomainName {
 impl DomainName {
     /// Validates input, then creates a new [DomainName].
     pub fn new(domain_name: &str) -> Result<Self, ConstraintError> {
+        #[allow(clippy::unwrap_used)]
         let regex = Regex::new(REGEX_DOMAIN_NAME).unwrap();
         if regex.is_match(domain_name) {
             Ok(Self {
@@ -76,17 +80,29 @@ impl TryFrom<&[AttributeTypeAndValue]> for DomainName {
     }
 }
 
-impl From<DomainName> for AttributeTypeAndValue {
-    fn from(value: DomainName) -> Self {
-        let printable_string = DirectoryString::PrintableString(PrintableString::new(value.))
-        todo!()
+impl TryFrom<DomainName> for AttributeTypeAndValue {
+    type Error = der::Error;
+
+    fn try_from(value: DomainName) -> Result<Self, Self::Error> {
+        let printable_string =
+            DirectoryString::PrintableString(PrintableString::new(value.value.as_str())?);
+        Ok(Self {
+            oid: OID_RDN_DOMAIN_COMPONENT,
+            value: Any::encode_from(&printable_string)?,
+        })
     }
 }
 
-impl From<DomainName> for RdnSequence {
-    fn from(value: DomainName) -> Self {
-        todo!()
+impl TryFrom<DomainName> for RdnSequence {
+    fn try_from(value: DomainName) -> Result<Self, Self::Error> {
+        let mut rdns = Vec::new();
+        for split in value.value.split('.') {
+            rdns.push(RelativeDistinguishedName::from_str(split)?);
+        }
+        Ok(RdnSequence(rdns))
     }
+
+    type Error = der::Error;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
