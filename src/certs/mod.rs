@@ -91,6 +91,12 @@ impl TryFrom<Ia5String> for SessionId {
     }
 }
 
+impl From<SessionId> for Name {
+    fn from(value: SessionId) -> Self {
+        value.to_rdn_sequence()
+    }
+}
+
 impl TryFrom<AttributeTypeAndValue> for SessionId {
     type Error = ConstraintError;
 
