@@ -12,6 +12,7 @@ use x509_cert::ext::pkix::name::DirectoryString;
 use x509_cert::name::{RdnSequence, RelativeDistinguishedName};
 
 use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX, InvalidInput};
+use crate::types::local_name::LocalName;
 use crate::{Constrained, OID_RDN_DOMAIN_COMPONENT, OID_RDN_UID};
 
 /// The regular expression for a valid `FederationId`.
@@ -109,9 +110,9 @@ impl TryFrom<DomainName> for RdnSequence {
 /// A `FederationId` is a globally unique identifier for an actor in the context of polyproto.
 pub struct FederationId {
     /// Must be unique on each instance.
-    pub(crate) local_name: String,
+    pub(crate) local_name: LocalName,
     /// Includes top-level domain, second-level domain and other subdomains. Address which the actors' home server can be reached at.
-    pub(crate) domain_name: String,
+    pub(crate) domain_name: DomainName,
 }
 
 impl FederationId {
@@ -131,8 +132,8 @@ impl FederationId {
             let local_name = id[0..separator_position].to_string();
             let domain_name = id[separator_position + 1..].to_string();
             let fid = Self {
-                local_name,
-                domain_name,
+                local_name: LocalName::new(&local_name)?,
+                domain_name: DomainName::new(&domain_name)?,
             };
             fid.validate(None)?;
             Ok(fid)
