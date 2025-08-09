@@ -9,11 +9,12 @@ use der::asn1::BitString;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
+use x509_cert::attr::AttributeTypeAndValue;
 use x509_cert::name::{Name, RdnSequence};
 
 use crate::errors::CertificateConversionError;
 use crate::types::der::asn1::Ia5String;
-use crate::{Constrained, ConstraintError, OID_RDN_DOMAIN_COMPONENT};
+use crate::{Constrained, ConstraintError, OID_RDN_DOMAIN_COMPONENT, OID_RDN_UNIQUE_IDENTIFIER};
 
 /// Additional capabilities ([x509_cert::ext::Extensions] or [x509_cert::attr::Attributes], depending
 /// on the context) of X.509 certificates.
@@ -87,6 +88,25 @@ impl TryFrom<Ia5String> for SessionId {
 
     fn try_from(value: Ia5String) -> Result<Self, Self::Error> {
         SessionId::new_validated(value.to_string().as_str())
+    }
+}
+
+impl TryFrom<AttributeTypeAndValue> for SessionId {
+    type Error = ConstraintError;
+
+    fn try_from(value: AttributeTypeAndValue) -> Result<Self, Self::Error> {
+        if value.oid != OID_RDN_UNIQUE_IDENTIFIER {
+            return Err(ConstraintError::Malformed(Some(format!(
+                "Expected OID for uniqueIdentifier {OID_RDN_UNIQUE_IDENTIFIER}, found OID {}",
+                value.oid
+            ))));
+        }
+        let ia5string = Ia5String::new(value.value.value()).map_err(|e| {
+            ConstraintError::Malformed(Some(format!(
+                "Value found in uniqueIdentifier is not a valid Ia5String: {e}"
+            )))
+        })?;
+        Self::try_from(ia5string)
     }
 }
 
