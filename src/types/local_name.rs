@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 use std::str::FromStr;
 
 use x509_cert::attr::AttributeTypeAndValue;
@@ -24,6 +28,12 @@ impl LocalName {
         let local_name = LocalName(name.to_owned());
         local_name.validate(None)?;
         Ok(local_name)
+    }
+}
+
+impl std::fmt::Display for LocalName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
     }
 }
 
