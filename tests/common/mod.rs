@@ -18,6 +18,7 @@ use polyproto::errors::composite::CertificateConversionError;
 use polyproto::key::{PrivateKey, PublicKey};
 use polyproto::signature::Signature;
 use polyproto::types::x509_cert::SerialNumber;
+#[cfg(feature = "types")]
 use polyproto::types::{
     DomainName, FederationId, Identifer, ResourceAccessProperties, ResourceInformation,
 };
@@ -254,6 +255,7 @@ impl PublicKey<Ed25519Signature> for Ed25519PublicKey {
 }
 
 /// Retrieve some example [ResourceInformation].
+#[cfg(feature = "types")]
 pub(crate) fn example_resource_information() -> [ResourceInformation; 2] {
     [
         ResourceInformation {

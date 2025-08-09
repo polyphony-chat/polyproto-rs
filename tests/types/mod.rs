@@ -7,3 +7,5 @@ mod federation_id;
 #[cfg(feature = "gateway")]
 mod gateway;
 mod keys;
+#[cfg(feature = "types")]
+mod pdn;

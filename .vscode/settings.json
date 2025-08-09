@@ -1,16 +1,3 @@
 {
-	"markiscodecoverage.searchCriteria": ".coverage/lcov*.info",
-	// --- Toggle the below setting using line comments to enable/disable working with wasm platforms ---
-	"rust-analyzer.cargo.features": ["types", "reqwest", "gateway", "serde"]
-	// --- Toggle the below settings using line comments to enable/disable working with wasm platforms ---
-	// "rust-analyzer.cargo.features": [
-	// 	"_wasm_bindgen",
-	// 	"wasm",
-	// 	"types",
-	// 	"reqwest",
-	// 	"gateway",
-	// 	"serde"
-	// ],
-	// "rust-analyzer.cargo.noDefaultFeatures": true,
-	// "rust-analyzer.cargo.target": "wasm32-unknown-unknown"
+	"markiscodecoverage.searchCriteria": ".coverage/lcov*.info"
 }
