@@ -111,6 +111,7 @@ impl TryFrom<Name> for ActorDN {
                 )));
             }
         })?;
+        let domain_name = DomainName::try_from(maybe_domain_names.as_slice())?;
         todo!()
     }
 }
