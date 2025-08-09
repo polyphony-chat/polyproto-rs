@@ -2,12 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use der::Encode;
+use der::asn1::PrintableString;
 use regex::Regex;
 use x509_cert::attr::AttributeTypeAndValue;
+use x509_cert::ext::pkix::name::DirectoryString;
+use x509_cert::name::RdnSequence;
 
 use crate::errors::{ConstraintError, ERR_MSG_FEDERATION_ID_REGEX, InvalidInput};
-use crate::{Constrained, OID_RDN_UID};
+use crate::{Constrained, OID_RDN_DOMAIN_COMPONENT, OID_RDN_UID};
 
 /// The regular expression for a valid `FederationId`.
 pub static REGEX_FEDERATION_ID: &str = r"\b([a-z0-9._%+-]+)@([a-z0-9-]+(\.[a-z0-9-]+)*)$";
@@ -48,6 +50,42 @@ impl DomainName {
 impl std::fmt::Display for DomainName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.value)
+    }
+}
+
+impl TryFrom<&[AttributeTypeAndValue]> for DomainName {
+    type Error = ConstraintError;
+
+    fn try_from(values: &[AttributeTypeAndValue]) -> Result<Self, Self::Error> {
+        if let Some(non_rdn) = values
+            .iter()
+            .find(|element| element.oid != OID_RDN_DOMAIN_COMPONENT)
+        {
+            return Err(ConstraintError::Malformed(Some(format!(
+                "Found a value with OID {} when expecting only DomainComponent values of OID {OID_RDN_DOMAIN_COMPONENT}",
+                non_rdn.oid
+            ))));
+        }
+        let mut domain_components = Vec::with_capacity(values.len());
+        for value in values.iter() {
+            let attribute_value = value.value.value();
+            let string = String::from_utf8_lossy(attribute_value);
+            domain_components.push(string);
+        }
+        DomainName::new(domain_components.join(".").as_str())
+    }
+}
+
+impl From<DomainName> for AttributeTypeAndValue {
+    fn from(value: DomainName) -> Self {
+        let printable_string = DirectoryString::PrintableString(PrintableString::new(value.))
+        todo!()
+    }
+}
+
+impl From<DomainName> for RdnSequence {
+    fn from(value: DomainName) -> Self {
+        todo!()
     }
 }
 
@@ -248,6 +286,7 @@ impl TryFrom<AttributeTypeAndValue> for FederationId {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test {
     use der::Any;
     use x509_cert::ext::pkix::name::DirectoryString;
@@ -270,5 +309,70 @@ mod test {
             value: Any::encode_from(&directory_string).unwrap(),
         };
         assert!(FederationId::try_from(attribute_and_value).is_err())
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn domain_name_from_attribute_type_and_value_success() {
+        // Test successful parsing with valid domain components
+        let domain_components = vec![
+            AttributeTypeAndValue {
+                oid: OID_RDN_DOMAIN_COMPONENT,
+                value: Any::encode_from(&DirectoryString::Utf8String("example".to_string()))
+                    .unwrap(),
+            },
+            AttributeTypeAndValue {
+                oid: OID_RDN_DOMAIN_COMPONENT,
+                value: Any::encode_from(&DirectoryString::Utf8String("com".to_string())).unwrap(),
+            },
+        ];
+
+        let result = DomainName::try_from(domain_components.as_slice());
+        assert!(result.is_ok());
+        let domain_name = result.unwrap();
+        assert_eq!(domain_name.to_string(), "example.com");
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn domain_name_from_attribute_type_and_value_invalid_oid() {
+        // Test error case with invalid OID
+        let invalid_components = vec![
+            AttributeTypeAndValue {
+                oid: OID_RDN_DOMAIN_COMPONENT,
+                value: Any::encode_from(&DirectoryString::Utf8String("example".to_string()))
+                    .unwrap(),
+            },
+            AttributeTypeAndValue {
+                oid: OID_RDN_UID, // Wrong OID - should be OID_RDN_DOMAIN_COMPONENT
+                value: Any::encode_from(&DirectoryString::Utf8String("com".to_string())).unwrap(),
+            },
+        ];
+
+        let result = DomainName::try_from(invalid_components.as_slice());
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ConstraintError::Malformed(Some(msg)) => {
+                assert!(msg.contains("Found a value with OID"));
+                assert!(msg.contains("when expecting only DomainComponent values"));
+            }
+            _ => panic!("Expected ConstraintError::Malformed with message"),
+        }
+    }
+
+    #[test]
+    fn domain_name_from_empty_attribute_array() {
+        // Test edge case with empty input
+        let empty_components: Vec<AttributeTypeAndValue> = vec![];
+        let result = DomainName::try_from(empty_components.as_slice());
+
+        // Empty input should attempt to create an empty domain name, which should fail validation
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ConstraintError::Malformed(Some(msg)) => {
+                assert!(msg.contains("does not match regex"));
+            }
+            _ => panic!("Expected ConstraintError::Malformed for invalid domain name"),
+        }
     }
 }
