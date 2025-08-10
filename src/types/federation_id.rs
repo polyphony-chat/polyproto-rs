@@ -38,17 +38,11 @@ pub struct DomainName {
 impl DomainName {
     /// Validates input, then creates a new [DomainName].
     pub fn new(domain_name: &str) -> Result<Self, ConstraintError> {
-        #[allow(clippy::unwrap_used)]
-        let regex = Regex::new(REGEX_DOMAIN_NAME).unwrap();
-        if regex.is_match(domain_name) {
-            Ok(Self {
-                value: domain_name.to_string(),
-            })
-        } else {
-            Err(ConstraintError::Malformed(Some(String::from(
-                "Supplied domain name does not match regex",
-            ))))
-        }
+        let dn = Self {
+            value: domain_name.to_string(),
+        };
+        dn.validate(None)?;
+        Ok(dn)
     }
 }
 
