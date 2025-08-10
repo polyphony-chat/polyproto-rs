@@ -25,17 +25,29 @@ pub enum PolyprotoDistinguishedName {
     HomeServerDn(HomeServerDN),
 }
 
+impl From<ActorDN> for PolyprotoDistinguishedName {
+    fn from(value: ActorDN) -> Self {
+        Self::ActorDn(value)
+    }
+}
+
+impl From<HomeServerDN> for PolyprotoDistinguishedName {
+    fn from(value: HomeServerDN) -> Self {
+        Self::HomeServerDn(value)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A [PolyprotoDistinguishedName] with all necessary fields for an actor certificate.
 ///
 /// This struct is a higher-level abstraction of X.509 [distinguished names](https://ldap.com/ldap-dns-and-rdns/),
 /// providing easier access to inner values compared to using [x509_cert::name::Name] in a raw manner.
 pub struct ActorDN {
-    federation_id: FederationId,
-    local_name: LocalName,
-    domain_name: DomainName,
-    session_id: SessionId,
-    additional_fields: RelativeDistinguishedName,
+    pub federation_id: FederationId,
+    pub local_name: LocalName,
+    pub domain_name: DomainName,
+    pub session_id: SessionId,
+    pub additional_fields: RelativeDistinguishedName,
 }
 
 impl Hash for ActorDN {
@@ -56,16 +68,17 @@ impl Hash for ActorDN {
 /// This struct is a higher-level abstraction of X.509 [distinguished names](https://ldap.com/ldap-dns-and-rdns/),
 /// providing easier access to inner values compared to using [x509_cert::name::Name] in a raw manner.
 pub struct HomeServerDN {
-    domain_name: DomainName,
-    additional_fields: Vec<RelativeDistinguishedName>,
+    pub domain_name: DomainName,
+    pub additional_fields: RelativeDistinguishedName,
 }
 
 impl Hash for HomeServerDN {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.domain_name.hash(state);
-        self.additional_fields
-            .iter()
-            .for_each(|additional_field| additional_field.to_string().hash(state));
+        self.additional_fields.0.iter().for_each(|item| {
+            item.oid.hash(state);
+            item.value.value().hash(state);
+        });
     }
 }
 
@@ -130,6 +143,33 @@ impl TryFrom<Name> for ActorDN {
             domain_name,
             session_id,
             local_name,
+            additional_fields: RelativeDistinguishedName::try_from(maybe_additional_fields).map_err(|e| crate::errors::InvalidInput::Malformed(format!("Could not parse ActorDN additional_fields: Name attribute contained additional information which was not a valid RelativeDistinguishedName: {e}")))?,
+        })
+    }
+}
+
+impl TryFrom<Name> for HomeServerDN {
+    type Error = crate::errors::InvalidInput;
+
+    fn try_from(x509_distinguished_name: Name) -> Result<Self, Self::Error> {
+        x509_distinguished_name
+            .validate(Some(crate::certs::Target::Actor))
+            .map_err(|e| crate::errors::InvalidInput::Malformed(e.to_string()))?;
+        let mut maybe_domain_names: Vec<AttributeTypeAndValue> = Vec::new();
+        let mut maybe_additional_fields: Vec<AttributeTypeAndValue> = Vec::new();
+        for relative_distinguished_name in x509_distinguished_name.0.into_iter() {
+            for attribute_value_and_item in relative_distinguished_name.0.iter() {
+                match attribute_value_and_item.oid {
+                    OID_RDN_DOMAIN_COMPONENT => {
+                        maybe_domain_names.push(attribute_value_and_item.clone())
+                    }
+                    _other => maybe_additional_fields.push(attribute_value_and_item.clone()),
+                }
+            }
+        }
+        let domain_name = DomainName::try_from(maybe_domain_names.as_slice())?;
+        Ok(HomeServerDN {
+            domain_name,
             additional_fields: RelativeDistinguishedName::try_from(maybe_additional_fields).map_err(|e| crate::errors::InvalidInput::Malformed(format!("Could not parse ActorDN additional_fields: Name attribute contained additional information which was not a valid RelativeDistinguishedName: {e}")))?,
         })
     }
