@@ -63,3 +63,192 @@ impl Constrained for HomeServerDN {
         self.domain_name.validate(None)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::certs::SessionId;
+    use crate::types::{DomainName, FederationId, local_name::LocalName};
+    use x509_cert::name::RelativeDistinguishedName;
+
+    fn create_valid_actor_dn() -> ActorDN {
+        let federation_id = FederationId::new("alice@example.com").unwrap();
+        let local_name = LocalName::new("alice").unwrap();
+        let domain_name = DomainName::new("example.com").unwrap();
+        let session_id = SessionId::new_validated("validSessionId123").unwrap();
+        let additional_fields = RelativeDistinguishedName(der::asn1::SetOfVec::new());
+
+        ActorDN {
+            federation_id,
+            local_name,
+            domain_name,
+            session_id,
+            additional_fields,
+        }
+    }
+
+    fn create_valid_home_server_dn() -> HomeServerDN {
+        let domain_name = DomainName::new("example.com").unwrap();
+        let additional_fields = RelativeDistinguishedName(der::asn1::SetOfVec::new());
+
+        HomeServerDN {
+            domain_name,
+            additional_fields,
+        }
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn polyproto_distinguished_name_actor_with_actor_target_validates() {
+        let actor_dn = create_valid_actor_dn();
+        let pdn = PolyprotoDistinguishedName::ActorDn(actor_dn);
+
+        assert!(pdn.validate(Some(Target::Actor)).is_ok());
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn polyproto_distinguished_name_actor_with_none_target_validates() {
+        let actor_dn = create_valid_actor_dn();
+        let pdn = PolyprotoDistinguishedName::ActorDn(actor_dn);
+
+        assert!(pdn.validate(None).is_ok());
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn polyproto_distinguished_name_home_server_with_home_server_target_validates() {
+        let home_server_dn = create_valid_home_server_dn();
+        let pdn = PolyprotoDistinguishedName::HomeServerDn(home_server_dn);
+
+        assert!(pdn.validate(Some(Target::HomeServer)).is_ok());
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn polyproto_distinguished_name_home_server_with_none_target_validates() {
+        let home_server_dn = create_valid_home_server_dn();
+        let pdn = PolyprotoDistinguishedName::HomeServerDn(home_server_dn);
+
+        assert!(pdn.validate(None).is_ok());
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn polyproto_distinguished_name_actor_with_home_server_target_fails() {
+        let actor_dn = create_valid_actor_dn();
+        let pdn = PolyprotoDistinguishedName::ActorDn(actor_dn);
+
+        let result = pdn.validate(Some(Target::HomeServer));
+        assert!(result.is_err());
+
+        let error = result.unwrap_err();
+        assert!(matches!(error, ConstraintError::Malformed(_)));
+        assert!(error.to_string().contains("malformed"));
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn polyproto_distinguished_name_home_server_with_actor_target_fails() {
+        let home_server_dn = create_valid_home_server_dn();
+        let pdn = PolyprotoDistinguishedName::HomeServerDn(home_server_dn);
+
+        let result = pdn.validate(Some(Target::Actor));
+        assert!(result.is_err());
+
+        let error = result.unwrap_err();
+        assert!(matches!(error, ConstraintError::Malformed(_)));
+        assert!(error.to_string().contains("malformed"));
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn actor_dn_valid_components_validates() {
+        let actor_dn = create_valid_actor_dn();
+
+        assert!(actor_dn.validate(Some(Target::Actor)).is_ok());
+        assert!(actor_dn.validate(None).is_ok());
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn actor_dn_mismatched_local_name_fails() {
+        let federation_id = FederationId::new("alice@example.com").unwrap();
+        let local_name = LocalName::new("bob").unwrap(); // Mismatch!
+        let domain_name = DomainName::new("example.com").unwrap();
+        let session_id = SessionId::new_validated("validSessionId123").unwrap();
+        let additional_fields = RelativeDistinguishedName(der::asn1::SetOfVec::new());
+
+        let actor_dn = ActorDN {
+            federation_id,
+            local_name,
+            domain_name,
+            session_id,
+            additional_fields,
+        };
+
+        let result = actor_dn.validate(None);
+        assert!(result.is_err());
+
+        let error = result.unwrap_err();
+        assert!(matches!(error, ConstraintError::Malformed(_)));
+        // The validation should fail because components don't match
+        assert!(error.to_string().contains("malformed"));
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn actor_dn_mismatched_domain_name_fails() {
+        let federation_id = FederationId::new("alice@example.com").unwrap();
+        let local_name = LocalName::new("alice").unwrap();
+        let domain_name = DomainName::new("different.com").unwrap(); // Mismatch!
+        let session_id = SessionId::new_validated("validSessionId123").unwrap();
+        let additional_fields = RelativeDistinguishedName(der::asn1::SetOfVec::new());
+
+        let actor_dn = ActorDN {
+            federation_id,
+            local_name,
+            domain_name,
+            session_id,
+            additional_fields,
+        };
+
+        let result = actor_dn.validate(None);
+        assert!(result.is_err());
+
+        let error = result.unwrap_err();
+        assert!(matches!(error, ConstraintError::Malformed(_)));
+        // The validation should fail because components don't match
+        assert!(error.to_string().contains("malformed"));
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn home_server_dn_valid_domain_validates() {
+        let home_server_dn = create_valid_home_server_dn();
+
+        assert!(home_server_dn.validate(None).is_ok());
+        assert!(home_server_dn.validate(Some(Target::HomeServer)).is_ok());
+    }
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn home_server_dn_invalid_domain_fails() {
+        let invalid_domain = DomainName {
+            value: String::new(),
+        }; // Empty domain should fail
+        let additional_fields = RelativeDistinguishedName(der::asn1::SetOfVec::new());
+
+        let home_server_dn = HomeServerDN {
+            domain_name: invalid_domain,
+            additional_fields,
+        };
+
+        let result = home_server_dn.validate(None);
+        assert!(result.is_err());
+
+        let error = result.unwrap_err();
+        assert!(matches!(error, ConstraintError::Malformed(_)));
+        assert!(error.to_string().contains("malformed"));
+    }
+}
