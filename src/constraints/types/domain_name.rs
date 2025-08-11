@@ -50,18 +50,15 @@ mod tests {
             let domain_name = DomainName::new(case).unwrap();
             assert!(
                 domain_name.validate(None).is_ok(),
-                "DomainName '{}' should validate",
-                case
+                "DomainName '{case}' should validate"
             );
             assert!(
                 domain_name.validate(Some(Target::Actor)).is_ok(),
-                "DomainName '{}' should validate with Actor target",
-                case
+                "DomainName '{case}' should validate with Actor target"
             );
             assert!(
                 domain_name.validate(Some(Target::HomeServer)).is_ok(),
-                "DomainName '{}' should validate with HomeServer target",
-                case
+                "DomainName '{case}' should validate with HomeServer target"
             );
         }
     }
@@ -110,8 +107,7 @@ mod tests {
             let result = DomainName::new(case);
             assert!(
                 result.is_err(),
-                "DomainName construction should fail for invalid format: '{}'",
-                case
+                "DomainName construction should fail for invalid format: '{case}'"
             );
         }
     }

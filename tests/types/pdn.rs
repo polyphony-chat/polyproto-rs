@@ -46,7 +46,7 @@ fn test_actor_dn_from_different_usernames() {
 
         // Convert to ActorDN - should succeed for all valid usernames
         let result = ActorDN::try_from(subject_name);
-        assert!(result.is_ok(), "Failed to convert valid certificate for user: {}", username);
+        assert!(result.is_ok(), "Failed to convert valid certificate for user: {username}");
     }
 }
 }
@@ -97,7 +97,7 @@ fn test_actor_dn_missing_federation_id() {
     assert!(result.is_err());
 
     let error = result.unwrap_err();
-    println!("Missing Federation ID error: {}", error);
+    println!("Missing Federation ID error: {error}");
     // This fails at the Name validation level before reaching ActorDN parsing
     assert!(error.to_string().contains("malformed") || error.to_string().contains("validation"));
 }
@@ -131,7 +131,7 @@ fn test_actor_dn_missing_session_id() {
     assert!(result.is_err());
 
     let error = result.unwrap_err();
-    println!("Missing Session ID error: {}", error);
+    println!("Missing Session ID error: {error}");
     // This fails at the Name validation level before reaching ActorDN parsing
     assert!(error.to_string().contains("expected to be between") || error.to_string().contains("malformed"));
 }
@@ -149,7 +149,7 @@ fn test_actor_dn_duplicate_oid_error() {
     assert!(result.is_err());
 
     let error = result.unwrap_err();
-    println!("Duplicate OID error: {}", error);
+    println!("Duplicate OID error: {error}");
     // This fails at the Name validation level before reaching ActorDN parsing
     assert!(error.to_string().contains("expected to be between") || error.to_string().contains("malformed"));
 }
@@ -186,7 +186,7 @@ fn test_actor_dn_roundtrip_conversion() {
 
         // Convert to ActorDN - should succeed for all valid users
         let result = ActorDN::try_from(original_subject.clone());
-        assert!(result.is_ok(), "Roundtrip conversion should succeed for user: {}", user);
+        assert!(result.is_ok(), "Roundtrip conversion should succeed for user: {user}");
     }
 }
 }

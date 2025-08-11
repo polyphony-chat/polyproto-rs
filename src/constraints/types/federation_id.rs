@@ -47,18 +47,15 @@ mod tests {
             let federation_id = FederationId::new(case).unwrap();
             assert!(
                 federation_id.validate(None).is_ok(),
-                "FederationId '{}' should validate",
-                case
+                "FederationId '{case}' should validate"
             );
             assert!(
                 federation_id.validate(Some(Target::Actor)).is_ok(),
-                "FederationId '{}' should validate with Actor target",
-                case
+                "FederationId '{case}' should validate with Actor target"
             );
             assert!(
                 federation_id.validate(Some(Target::HomeServer)).is_ok(),
-                "FederationId '{}' should validate with HomeServer target",
-                case
+                "FederationId '{case}' should validate with HomeServer target"
             );
         }
     }
@@ -93,8 +90,7 @@ mod tests {
             let result = FederationId::new(case);
             assert!(
                 result.is_err(),
-                "FederationId construction should fail for invalid format: '{}'",
-                case
+                "FederationId construction should fail for invalid format: '{case}'"
             );
         }
     }

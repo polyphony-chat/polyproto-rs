@@ -140,8 +140,8 @@ mod test {
         let json = json!(alg);
         let deserialized: AlgorithmIdentifierOwned = serde_json::from_value(json).unwrap();
         assert_eq!(alg, deserialized);
-        trace!("deserialized: {:?}", deserialized);
-        trace!("original: {:?}", alg);
+        trace!("deserialized: {deserialized:?}");
+        trace!("original: {alg:?}");
 
         let bytes = [48, 6, 6, 3, 43, 6, 1, 5, 1, 4, 5, 5, 23, 2, 0, 0];
         let bitstring = BitString::from_bytes(&bytes).unwrap();
@@ -151,8 +151,8 @@ mod test {
         );
         let json = json!(alg);
         let deserialized: AlgorithmIdentifierOwned = serde_json::from_value(json).unwrap();
-        trace!("deserialized: {:?}", deserialized);
-        trace!("original: {:?}", alg);
+        trace!("deserialized: {deserialized:?}");
+        trace!("original: {alg:?}");
         assert_eq!(alg, deserialized);
     }
 }

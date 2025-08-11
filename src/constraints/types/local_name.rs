@@ -44,18 +44,15 @@ mod tests {
             let local_name = LocalName::new(case).unwrap();
             assert!(
                 local_name.validate(None).is_ok(),
-                "LocalName '{}' should validate",
-                case
+                "LocalName '{case}' should validate"
             );
             assert!(
                 local_name.validate(Some(Target::Actor)).is_ok(),
-                "LocalName '{}' should validate with Actor target",
-                case
+                "LocalName '{case}' should validate with Actor target"
             );
             assert!(
                 local_name.validate(Some(Target::HomeServer)).is_ok(),
-                "LocalName '{}' should validate with HomeServer target",
-                case
+                "LocalName '{case}' should validate with HomeServer target"
             );
         }
     }
@@ -72,8 +69,7 @@ mod tests {
             let result = LocalName::new(case);
             assert!(
                 result.is_err(),
-                "LocalName construction should fail for invalid format: '{}'",
-                case
+                "LocalName construction should fail for invalid format: '{case}'"
             );
         }
     }
@@ -94,8 +90,7 @@ mod tests {
             let local_name = LocalName::new(case).unwrap();
             assert!(
                 local_name.validate(None).is_ok(),
-                "LocalName edge case '{}' should validate",
-                case
+                "LocalName edge case '{case}' should validate"
             );
         }
     }
