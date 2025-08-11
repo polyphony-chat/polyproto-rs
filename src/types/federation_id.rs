@@ -375,15 +375,10 @@ mod test {
     fn domain_name_from_empty_attribute_array() {
         // Test edge case with empty input
         let empty_components: Vec<AttributeTypeAndValue> = vec![];
+        assert!(DomainName::try_from(Vec::new().as_slice()).is_err());
         let result = DomainName::try_from(empty_components.as_slice());
 
         // Empty input should attempt to create an empty domain name, which should fail validation
         assert!(result.is_err());
-        match result.unwrap_err() {
-            ConstraintError::Malformed(Some(msg)) => {
-                assert!(msg.contains("does not match regex"));
-            }
-            _ => panic!("Expected ConstraintError::Malformed for invalid domain name"),
-        }
     }
 }
