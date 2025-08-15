@@ -1,3 +1,8 @@
+> [!IMPORTANT]
+> 📦️ We moved! Come check out our new place over on [Codeberg](https://codeberg.org/polyphony)! ([Repository link](https://codeberg.org/polyphony/polyproto-rs))
+>
+> We have moved to [Codeberg](https://codeberg.org/polyphony) as our primary Git Forge, and the project is *alive and well* over there! :purple_heart: The GitHub repositories will be archived and potentially deleted in the future.
+
 <img src="https://cloud.bitfl0wer.de/apps/files_sharing/publicpreview/2qCxoXJ27yW7QNR?file=/&fileId=1143147&x=256&y=256&a=true" align="left" alt="a purple cog, split in the middle along the horizontal axis with a gap inbetween the two halves. three overlayed, offset sinus-like waves travel through that gap. each wave has a different shade of purple" width="128px" height="auto"></img>
 
 ### `polyproto`
