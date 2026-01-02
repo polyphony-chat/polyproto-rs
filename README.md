@@ -3,12 +3,15 @@
 >
 > We have moved to [Codeberg](https://codeberg.org/polyphony) as our primary Git Forge, and the project is *alive and well* over there! :purple_heart: The GitHub repositories will be archived and potentially deleted in the future.
 
+
+<details>
+  <summary>Old README (outdated!)</summary>
+
 <img src="https://cloud.bitfl0wer.de/apps/files_sharing/publicpreview/2qCxoXJ27yW7QNR?file=/&fileId=1143147&x=256&y=256&a=true" align="left" alt="a purple cog, split in the middle along the horizontal axis with a gap inbetween the two halves. three overlayed, offset sinus-like waves travel through that gap. each wave has a different shade of purple" width="128px" height="auto"></img>
 
 ### `polyproto`
 
 ![dev-status]
-[![Discord]][Discord-invite]
 [![Build][build-shield]][build-url]
 [![Coverage][coverage-shield]][coverage-url]
 [![FAQ-shield]][FAQ]
@@ -112,10 +115,10 @@ of this project.
 [build-url]: https://github.com/polyphony-chat/polyproto-rs/blob/main/.github/workflows/build_and_test.yml
 [coverage-shield]: https://coveralls.io/repos/github/polyphony-chat/polyproto-rs/badge.svg?branch=main
 [coverage-url]: https://coveralls.io/github/polyphony-chat/polyproto-rs?branch=main
-[Discord]: https://dcbadge.vercel.app/api/server/m3FpcapGDD?style=flat
-[Discord-invite]: https://discord.com/invite/m3FpcapGDD
 [crates-link]: https://crates.io/crates/polyproto
 [docs]: https://docs.polyphony.chat/Protocol%20Specifications/core/
 [overview]: https://docs.polyphony.chat/Overviews/core/
 [FAQ-shield]: https://img.shields.io/badge/Frequently_Asked_Questions_(FAQ)-ff62bd
 [FAQ]: https://github.com/polyphony-chat/.github/blob/main/FAQ.md
+
+</details>
